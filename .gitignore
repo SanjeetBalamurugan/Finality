@@ -1,0 +1,14 @@
+# Visual-Studio
+
+*.sln
+*.slnx
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
+# Directories
+.vs/
+bin/
+bin-int/
+obj/
+ipch/
