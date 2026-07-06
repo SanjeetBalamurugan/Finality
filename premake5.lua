@@ -3,6 +3,9 @@ workspace "Finality"
     startproject "Sandbox"
     staticruntime "off"
 
+    filter "action:vs*"
+        buildoptions { "/utf-8" }
+
     configurations { "Debug", "Release" }
 
     outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
@@ -18,12 +21,15 @@ workspace "Finality"
         defines { "NDEBUG" }
         optimize "On"
     
+    -- Dependencies
+    group "Dependencies"
+        include "Scripts/premake_glfw.lua" -- GLFW
+        include "Scripts/premake_vk.lua" -- VULKAN
+    group ""
+            
     -- Projects
        include "FinalityEngine"
        include "Sandbox"
-
-    -- Dependencies
-        include "Scripts/premake_glfw.lua" -- GLFW
     
     -- Scripts
         include "Scripts/premake_actions.lua"

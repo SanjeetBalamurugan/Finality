@@ -3,7 +3,9 @@
 
 int main(int argc, char const *argv[])
 {
+    FINALITY::RendererAPI api = FINALITY::RendererAPI::VULKAN;
     FINALITY::Application app;
-    app.OnInit();
+    app.Init(api);
+
     return 0;
 }

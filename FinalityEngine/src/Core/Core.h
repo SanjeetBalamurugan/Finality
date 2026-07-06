@@ -13,3 +13,7 @@
         #define FAPI
     #endif
 #endif
+
+#ifdef FINALITY_INCLUDE_VULKAN
+    #define GLFW_INCLUDE_VULKAN
+#endif // FINALITY_INCLUDE_VULKAN

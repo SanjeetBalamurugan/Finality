@@ -4,7 +4,11 @@
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 
-void FINALITY::Application::OnInit()
+#include "Log.h"
+
+void FINALITY::Application::Init(RendererAPI api)
 {
-	std::cout << "Hello" << std::endl;
+	Logger::Init();
+
+	FI_CORE_INFO("FINALITY ENGINE");
 }
