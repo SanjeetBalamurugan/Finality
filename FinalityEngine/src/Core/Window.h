@@ -16,13 +16,14 @@ namespace FINALITY
 	class FAPI Window
 	{
 	public:
-		Window(WindowSpec specification)
-			: m_Specification(specification) {};
+		virtual ~Window() = default;
 
-		virtual void OnInit() = 0;
-		virtual void OnUpdate() = 0;
-		virtual void OnEnd() = 0;
-	private:
-		WindowSpec m_Specification;
+		virtual void Initialize(const WindowSpec& specification) = 0;
+		virtual void Update() = 0;
+		virtual void Shutdown() = 0;
+
+		virtual bool ShouldClose() const = 0;
+		virtual uint32_t GetWidth() const = 0;
+		virtual uint32_t GetHeight() const = 0;
 	};
 }
