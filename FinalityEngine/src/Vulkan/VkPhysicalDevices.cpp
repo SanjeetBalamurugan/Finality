@@ -85,7 +85,7 @@ uint32_t FINALITY::VkPhysicalDevices::SelectDevice(VkQueueFlags requiredQueueTyp
 			if ((QFamilyProp.queueFlags & requiredQueueTypes) && ((bool)m_Devices[i].qSupportsPresent[j] == supportsPresent)) {
 				m_DevIndex = i;
 				int QueueFamily = j;
-				printf("Using GFX device %d and queue family %d\n", m_DevIndex, QueueFamily);
+				FI_CORE_INFO("Using Device {} and queue family {}", m_DevIndex, QueueFamily);
 				return QueueFamily;
 			}
 		}

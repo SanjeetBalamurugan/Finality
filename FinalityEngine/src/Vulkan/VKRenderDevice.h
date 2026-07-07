@@ -36,6 +36,9 @@ namespace FINALITY
 
 		void CreateSurface(const NativeWindowHandle& handle);
 		void DestroySurface();
+
+		void CreateDevice();
+		void DestroyDevice();
 	public:
 		void Initialize(const NativeWindowHandle& handle) override;
 		void Shutdown() override;
@@ -61,5 +64,7 @@ namespace FINALITY
 		VkSurfaceKHR m_Surface = nullptr;
 
 		VkPhysicalDevices m_Devices;
+		uint32_t m_QueueFamily;
+		VkDevice m_Device;
 	};
 }

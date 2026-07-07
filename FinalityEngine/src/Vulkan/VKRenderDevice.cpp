@@ -184,6 +184,45 @@ void FINALITY::VKRenderDevice::DestroySurface()
 	vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
 }
 
+void FINALITY::VKRenderDevice::CreateDevice()
+{
+	float qPriorities[] = { 1.0f };
+
+	VkDeviceQueueCreateInfo qInfo = {
+		.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.queueFamilyIndex = m_QueueFamily,
+		.queueCount = 1,
+		.pQueuePriorities = &qPriorities[0]
+	};
+
+	std::vector<const char*> DevExts = {
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+		VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME
+	};
+
+	VkPhysicalDeviceFeatures deviceFeatures{};
+	//deviceFeatures.geometryShader = VK_TRUE; // TODO: Maybe in future, add error handling here, too lazy i am now
+	//deviceFeatures.tessellationShader = VK_TRUE; // TODO: Same Here
+
+	VkDeviceCreateInfo createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	createInfo.pQueueCreateInfos = &qInfo;
+	createInfo.queueCreateInfoCount = 1;
+	createInfo.pEnabledFeatures = &deviceFeatures;
+	createInfo.enabledExtensionCount = (uint32_t)DevExts.size();
+	createInfo.ppEnabledExtensionNames = DevExts.data();
+
+	VkResult res = vkCreateDevice(m_Devices.SelectedDevice().device, &createInfo, nullptr, &m_Device);
+	CHECK_VK_RESULT(res, "vkCreateDevice");
+}
+
+void FINALITY::VKRenderDevice::DestroyDevice()
+{
+	vkDestroyDevice(m_Device, nullptr);
+}
+
 void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 {
 	this->CreateInstance();
@@ -191,10 +230,15 @@ void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 	this->CreateSurface(handle);
 
 	m_Devices.Initialize(m_Instance, m_Surface);
+	m_QueueFamily = m_Devices.SelectDevice(VK_QUEUE_GRAPHICS_BIT, true);
+
+	this->CreateDevice();
 }
 
 void FINALITY::VKRenderDevice::Shutdown()
 {
+	DestroyDevice();
+
 	if (m_EnableValidationLayers) {
 		DestroyDebugUtilsMessengerEXT(m_Instance, m_DebugMessanger, nullptr);
 	}
