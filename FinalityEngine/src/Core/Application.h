@@ -2,6 +2,7 @@
 #include "Core.h"
 #include "RenderTypes.h"
 #include "Window.h"
+#include "RenderDevice.h"
 
 #include <memory>
 
@@ -17,6 +18,7 @@ namespace FINALITY
 	private:
 		RendererAPI m_CurrentAPI = RendererAPI::NONE;
 		std::unique_ptr<Window> m_Window;
+		std::unique_ptr<RenderDevice> m_RenderDevice;
 
 		bool m_Running = false;
 	};

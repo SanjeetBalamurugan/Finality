@@ -1,5 +1,9 @@
 #pragma once
 
+#define ENGINE_VERSION_MAJOR 1
+#define ENGINE_VERSION_MINOR 0
+#define ENGINE_VERSION_PATCH 0
+
 #ifdef _WIN32
     #ifdef FINALITY_BUILD_DLL
         #define FAPI __declspec(dllexport)

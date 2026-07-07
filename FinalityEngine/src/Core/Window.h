@@ -25,5 +25,7 @@ namespace FINALITY
 		virtual bool ShouldClose() const = 0;
 		virtual uint32_t GetWidth() const = 0;
 		virtual uint32_t GetHeight() const = 0;
+
+		virtual WindowSpec GetSpecifications() const = 0;
 	};
 }

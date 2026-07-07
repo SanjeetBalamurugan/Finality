@@ -6,6 +6,10 @@
 
 #include "GLFWWindowImpl.h"
 
+// Vulkan Specific
+#include <Vulkan/VKRenderDevice.h>
+//
+
 #include "Log.h"
 
 void FINALITY::Application::Initialize(const RendererAPI& api, const WindowSpec& spec)
@@ -29,21 +33,49 @@ void FINALITY::Application::Initialize(const RendererAPI& api, const WindowSpec&
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
+	switch (api)
+	{
+	case RendererAPI::VULKAN:
+		m_RenderDevice = std::make_unique<VKRenderDevice>();
+		break;
+	default:
+		FI_CORE_ERROR("UNKNOWN API!!!");
+		std::exit(EXIT_FAILURE);
+		break;
+	}
+
+	m_RenderDevice->Initialize();
+
 	m_Window = std::make_unique<GLFWWindowImpl>();
 	m_Window->Initialize(spec);
+
+	m_RenderDevice->SetWindowSpec(spec);
+
+	m_Running = true;
 }
 
 void FINALITY::Application::Update()
 {
-	while (!m_Window->ShouldClose())
+	while (!m_Window->ShouldClose() && m_Running)
 	{
 		m_Window->Update();
+
+		m_RenderDevice->BeginFrame();
+
+		// Frame logic like draw calls here
+
+		m_RenderDevice->Clear(0.1f, 0.2f, 0.3f, 1.0f);
+
+		m_RenderDevice->EndFrame();
+		m_RenderDevice->PresentFrame();
 	}
+
+	m_Running = false;
 }
 
 void FINALITY::Application::Shutdown()
 {
-	m_Window->Shutdown();
-	if (!m_Running)
-		glfwTerminate();
+	if (m_Window) m_Window->Shutdown();
+	if (m_RenderDevice) m_RenderDevice->Shutdown();
+	if (!m_Running) glfwTerminate();
 }
