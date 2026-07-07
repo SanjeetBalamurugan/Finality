@@ -7,6 +7,7 @@
 #include "VKCore.h"
 
 #include <vector>
+#include "VkPhysicalDevices.h"
 
 namespace FINALITY
 {
@@ -32,8 +33,11 @@ namespace FINALITY
 			VkDebugUtilsMessengerEXT debugMessenger,
 			const VkAllocationCallbacks* pAllocator);
 		void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
+
+		void CreateSurface(const NativeWindowHandle& handle);
+		void DestroySurface();
 	public:
-		void Initialize() override;
+		void Initialize(const NativeWindowHandle& handle) override;
 		void Shutdown() override;
 
 		void BeginFrame() override;
@@ -54,5 +58,8 @@ namespace FINALITY
 		VkInstance m_Instance = nullptr;
 		VkApplicationInfo m_AppInfo;
 		VkDebugUtilsMessengerEXT m_DebugMessanger;
+		VkSurfaceKHR m_Surface = nullptr;
+
+		VkPhysicalDevices m_Devices;
 	};
 }

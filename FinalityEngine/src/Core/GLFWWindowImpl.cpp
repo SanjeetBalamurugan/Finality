@@ -1,6 +1,9 @@
 #include "GLFWWindowImpl.h"
 #include "Log.h"
 
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
+
 void FINALITY::GLFWWindowImpl::Initialize(const WindowSpec& specification)
 {
 	m_Specification = specification;
@@ -18,6 +21,10 @@ void FINALITY::GLFWWindowImpl::Initialize(const WindowSpec& specification)
 		glfwTerminate();
 		std::exit(EXIT_FAILURE);
 	}
+
+	// Create Native Handles
+	m_NativeHandle.WindowHandle = static_cast<void*>(m_Window);
+	m_NativeHandle.DeviceContext = static_cast<void*>(glfwGetWin32Window(m_Window));
 }
 
 void FINALITY::GLFWWindowImpl::Update()

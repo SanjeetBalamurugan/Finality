@@ -10,7 +10,7 @@ namespace FINALITY
 	public:
 		~RenderDevice() = default;
 
-		virtual void Initialize() = 0;
+		virtual void Initialize(const NativeWindowHandle& handle) = 0;
 		virtual void Shutdown() = 0;
 
 		virtual void BeginFrame() = 0;

@@ -44,11 +44,10 @@ void FINALITY::Application::Initialize(const RendererAPI& api, const WindowSpec&
 		break;
 	}
 
-	m_RenderDevice->Initialize();
-
 	m_Window = std::make_unique<GLFWWindowImpl>();
 	m_Window->Initialize(spec);
 
+	m_RenderDevice->Initialize(m_Window->GetNativeHandles());
 	m_RenderDevice->SetWindowSpec(spec);
 
 	m_Running = true;

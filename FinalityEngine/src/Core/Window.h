@@ -13,6 +13,12 @@ namespace FINALITY
 		bool isFullscreen;
 	};
 
+	struct NativeWindowHandle
+	{
+		void* WindowHandle;		// HWND (Win32), ANativeWindow* (Android), NSWindow*/UIWindow* (Apple) 
+		void* DeviceContext;	// HINSTANCE (Win32), null for others
+	};
+
 	class FAPI Window
 	{
 	public:
@@ -27,5 +33,6 @@ namespace FINALITY
 		virtual uint32_t GetHeight() const = 0;
 
 		virtual WindowSpec GetSpecifications() const = 0;
+		virtual NativeWindowHandle GetNativeHandles() const = 0;
 	};
 }

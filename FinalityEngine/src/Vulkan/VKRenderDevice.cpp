@@ -99,7 +99,23 @@ VKAPI_ATTR VkBool32 VKAPI_CALL FINALITY::VKRenderDevice::DebugCallback(VkDebugUt
 	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
 	void* pUserData)
 {
-	FI_CORE_ERROR("Validation Layer: {}", pCallbackData->pMessage);
+	if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+	{
+		FI_CORE_ERROR("Validation [ERROR]: {}", pCallbackData->pMessage);
+	}
+	else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+	{
+		FI_CORE_WARN("Validation [WARNING]: {}", pCallbackData->pMessage);
+	}
+	else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
+	{
+		FI_CORE_INFO("Validation [INFO]: {}", pCallbackData->pMessage);
+	}
+	else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
+	{
+		FI_CORE_INFO("Validation [VERBOSE]: {}", pCallbackData->pMessage);
+	}
+
 	return VK_FALSE;
 }
 
@@ -148,10 +164,33 @@ void FINALITY::VKRenderDevice::PopulateDebugMessengerCreateInfo(VkDebugUtilsMess
 	createInfo.pfnUserCallback = DebugCallback;
 }
 
-void FINALITY::VKRenderDevice::Initialize()
+void FINALITY::VKRenderDevice::CreateSurface(const NativeWindowHandle& handle)
+{
+	GLFWwindow* window = (GLFWwindow*)handle.WindowHandle;
+	VkResult res = glfwCreateWindowSurface(m_Instance, window, nullptr, &m_Surface);
+	CHECK_VK_RESULT(res, "Vulkan Surface Creation");
+}
+
+void FINALITY::VKRenderDevice::DestroySurface()
+{
+	PFN_vkDestroySurfaceKHR vkDestroySurface = nullptr;
+	vkDestroySurface = (PFN_vkDestroySurfaceKHR)vkGetInstanceProcAddr(m_Instance, "vkDestroySurfaceKHR");
+
+	if (!vkDestroySurface)
+	{
+		FI_CORE_ERROR("Cannot find the address of vkDestroySurfaceKHR");
+	}
+
+	vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
+}
+
+void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 {
 	this->CreateInstance();
 	this->SetupDebugMessanger();
+	this->CreateSurface(handle);
+
+	m_Devices.Initialize(m_Instance, m_Surface);
 }
 
 void FINALITY::VKRenderDevice::Shutdown()
@@ -159,6 +198,8 @@ void FINALITY::VKRenderDevice::Shutdown()
 	if (m_EnableValidationLayers) {
 		DestroyDebugUtilsMessengerEXT(m_Instance, m_DebugMessanger, nullptr);
 	}
+
+	DestroySurface();
 	vkDestroyInstance(m_Instance, nullptr);
 }
 
