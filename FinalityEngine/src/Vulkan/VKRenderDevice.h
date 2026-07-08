@@ -41,6 +41,8 @@ namespace FINALITY
 		void DestroyDevice();
 
 		void CreateSwapChain();
+		void CreateCommandBuffers(uint32_t count);
+		void CreateCommandBufferPool();
 	public:
 		void Initialize(const NativeWindowHandle& handle) override;
 		void Shutdown() override;
@@ -72,5 +74,8 @@ namespace FINALITY
 		VkPhysicalDevices m_Devices;
 		uint32_t m_QueueFamily;
 		VkDevice m_Device;
+
+		std::vector<VkCommandBuffer> m_CMDBuffers;
+		VkCommandPool m_CMDBufPool;
 	};
 }

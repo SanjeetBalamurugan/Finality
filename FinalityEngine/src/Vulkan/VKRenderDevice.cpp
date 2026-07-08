@@ -276,6 +276,33 @@ void FINALITY::VKRenderDevice::CreateSwapChain()
 	}
 }
 
+void FINALITY::VKRenderDevice::CreateCommandBuffers(uint32_t count)
+{
+	m_CMDBuffers.resize(count);
+
+	VkCommandBufferAllocateInfo cmdBufAllocInfo{};
+	cmdBufAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	cmdBufAllocInfo.pNext = nullptr;
+	cmdBufAllocInfo.commandPool = m_CMDBufPool;
+	cmdBufAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	cmdBufAllocInfo.commandBufferCount = count;
+
+	VkResult res = vkAllocateCommandBuffers(m_Device, &cmdBufAllocInfo, m_CMDBuffers.data());
+	CHECK_VK_RESULT(res, "vkAllocateCommandBuffers error");
+}
+
+void FINALITY::VKRenderDevice::CreateCommandBufferPool()
+{
+	VkCommandPoolCreateInfo cmdPoolCreateInfo{};
+	cmdPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	cmdPoolCreateInfo.flags = 0;
+	cmdPoolCreateInfo.pNext = nullptr;
+	cmdPoolCreateInfo.queueFamilyIndex = m_QueueFamily;
+
+	VkResult res = vkCreateCommandPool(m_Device, &cmdPoolCreateInfo, nullptr, &m_CMDBufPool);
+	CHECK_VK_RESULT(res, "vkCreateCommandPool error");
+}
+
 void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 {
 	this->CreateInstance();
@@ -287,6 +314,9 @@ void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 
 	this->CreateDevice();
 	this->CreateSwapChain();
+	this->CreateCommandBufferPool();
+
+	this->CreateCommandBuffers(m_Images.size());
 }
 
 void FINALITY::VKRenderDevice::Shutdown()
