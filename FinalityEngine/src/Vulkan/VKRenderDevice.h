@@ -39,6 +39,8 @@ namespace FINALITY
 
 		void CreateDevice();
 		void DestroyDevice();
+
+		void CreateSwapChain();
 	public:
 		void Initialize(const NativeWindowHandle& handle) override;
 		void Shutdown() override;
@@ -62,6 +64,10 @@ namespace FINALITY
 		VkApplicationInfo m_AppInfo;
 		VkDebugUtilsMessengerEXT m_DebugMessanger;
 		VkSurfaceKHR m_Surface = nullptr;
+		VkSwapchainKHR m_SwapChain = nullptr;
+
+		std::vector<VkImage> m_Images;
+		std::vector<VkImageView> m_ImageViews;
 
 		VkPhysicalDevices m_Devices;
 		uint32_t m_QueueFamily;

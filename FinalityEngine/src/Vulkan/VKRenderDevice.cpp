@@ -3,6 +3,7 @@
 #include <vector>
 
 #include <GLFW/glfw3.h>
+#include "VkHelpers.h"
 
 void FINALITY::VKRenderDevice::CreateInstance()
 {
@@ -223,6 +224,58 @@ void FINALITY::VKRenderDevice::DestroyDevice()
 	vkDestroyDevice(m_Device, nullptr);
 }
 
+void FINALITY::VKRenderDevice::CreateSwapChain()
+{
+	const VkSurfaceCapabilitiesKHR& SurfaceCaps = m_Devices.SelectedDevice().surfaceCapabilities;
+	uint32_t NumImages = ChooseNumImages(SurfaceCaps);
+
+	const std::vector<VkPresentModeKHR>& PresentModes = m_Devices.SelectedDevice().presentModes;
+	VkPresentModeKHR PresentMode = ChoosePresentMode(PresentModes);
+
+	VkSurfaceFormatKHR SurfaceFormat = ChooseSurfaceFormatAndColorSpace(m_Devices.SelectedDevice().surfaceFormats);
+
+	VkSwapchainCreateInfoKHR SwapChainCreateInfo{};
+	SwapChainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+	SwapChainCreateInfo.pNext = nullptr;
+	SwapChainCreateInfo.flags = 0;
+	SwapChainCreateInfo.surface = m_Surface;
+	SwapChainCreateInfo.minImageCount = NumImages;
+	SwapChainCreateInfo.imageFormat = SurfaceFormat.format;
+	SwapChainCreateInfo.imageColorSpace = SurfaceFormat.colorSpace;
+	SwapChainCreateInfo.imageExtent = SurfaceCaps.currentExtent;
+	SwapChainCreateInfo.imageArrayLayers = 1;
+	SwapChainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	SwapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	SwapChainCreateInfo.queueFamilyIndexCount = 1;
+	SwapChainCreateInfo.pQueueFamilyIndices = &m_QueueFamily;
+	SwapChainCreateInfo.preTransform = SurfaceCaps.currentTransform;
+	SwapChainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+	SwapChainCreateInfo.presentMode = PresentMode;
+
+	VkResult res = vkCreateSwapchainKHR(m_Device, &SwapChainCreateInfo, nullptr, &m_SwapChain);
+	CHECK_VK_RESULT(res, "vkCreateSwapchainKHR");
+
+	uint32_t NumSwapChainImages = 0;
+	res = vkGetSwapchainImagesKHR(m_Device, m_SwapChain, &NumSwapChainImages, nullptr);
+	CHECK_VK_RESULT(res, "vkGetSwapchainImagesKHR");
+	assert(NumImages == NumSwapChainImages);
+
+	m_Images.resize(NumSwapChainImages);
+	m_ImageViews.resize(NumSwapChainImages);
+
+	res = vkGetSwapchainImagesKHR(m_Device, m_SwapChain, &NumSwapChainImages, m_Images.data());
+	CHECK_VK_RESULT(res, "vkGetSwapchainImagesKHR");
+
+	int LayerCount = 1;
+	int MipLevels = 1;
+
+	for (size_t i = 0; i < NumSwapChainImages; i++)
+	{
+		m_ImageViews[i] = CreateImageView(m_Device, m_Images[i], SurfaceFormat.format,
+			VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D, LayerCount, MipLevels);
+	}
+}
+
 void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 {
 	this->CreateInstance();
@@ -233,10 +286,18 @@ void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 	m_QueueFamily = m_Devices.SelectDevice(VK_QUEUE_GRAPHICS_BIT, true);
 
 	this->CreateDevice();
+	this->CreateSwapChain();
 }
 
 void FINALITY::VKRenderDevice::Shutdown()
 {
+	for (size_t i = 0; i < m_ImageViews.size(); i++)
+	{
+		vkDestroyImageView(m_Device, m_ImageViews[i], nullptr);
+	}
+
+	vkDestroySwapchainKHR(m_Device, m_SwapChain, nullptr);
+
 	DestroyDevice();
 
 	if (m_EnableValidationLayers) {
