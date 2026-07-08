@@ -75,3 +75,17 @@ static VkImageView CreateImageView(VkDevice device, VkImage image, VkFormat form
 
 	return imageView;
 }
+
+static VkSemaphore VkCreateSemaphore(VkDevice device)
+{
+	VkSemaphoreCreateInfo semaphoreCreateInfo{};
+	semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+	semaphoreCreateInfo.pNext = nullptr;
+	semaphoreCreateInfo.flags = 0;
+
+	VkSemaphore semaphore;
+	VkResult res = vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &semaphore);
+	CHECK_VK_RESULT(res, "vkCreateSemaphore");
+
+	return semaphore;
+}

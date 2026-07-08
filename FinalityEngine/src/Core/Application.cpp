@@ -63,7 +63,7 @@ void FINALITY::Application::Update()
 
 		// Frame logic like draw calls here
 
-		m_RenderDevice->Clear(0.1f, 0.2f, 0.3f, 1.0f);
+		m_RenderDevice->Clear(0.1f, 0.8f, 0.3f, 1.0f);
 
 		m_RenderDevice->EndFrame();
 		m_RenderDevice->PresentFrame();

@@ -8,6 +8,7 @@
 
 #include <vector>
 #include "VkPhysicalDevices.h"
+#include "VkQueue.h"
 
 namespace FINALITY
 {
@@ -43,6 +44,8 @@ namespace FINALITY
 		void CreateSwapChain();
 		void CreateCommandBuffers(uint32_t count);
 		void CreateCommandBufferPool();
+		void BeginCommandBuffers(VkCommandBuffer cmdBuf, uint32_t usageFlags);
+		void RecordCommandBuffers();
 	public:
 		void Initialize(const NativeWindowHandle& handle) override;
 		void Shutdown() override;
@@ -77,5 +80,8 @@ namespace FINALITY
 
 		std::vector<VkCommandBuffer> m_CMDBuffers;
 		VkCommandPool m_CMDBufPool;
+
+		VKQueue m_Queue;
+		uint32_t m_ImageIndex = 0;
 	};
 }

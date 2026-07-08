@@ -303,6 +303,72 @@ void FINALITY::VKRenderDevice::CreateCommandBufferPool()
 	CHECK_VK_RESULT(res, "vkCreateCommandPool error");
 }
 
+void FINALITY::VKRenderDevice::BeginCommandBuffers(VkCommandBuffer cmdBuf, uint32_t usageFlags)
+{
+	VkCommandBufferBeginInfo cmdBufBeginInfo{};
+	cmdBufBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	cmdBufBeginInfo.pNext = nullptr;
+	cmdBufBeginInfo.flags = usageFlags;
+	cmdBufBeginInfo.pInheritanceInfo = nullptr;
+
+	VkResult res = vkBeginCommandBuffer(cmdBuf, &cmdBufBeginInfo);
+	CHECK_VK_RESULT(res, "vkBeginCommandBuffer error");
+}
+
+void FINALITY::VKRenderDevice::RecordCommandBuffers()
+{
+	VkClearColorValue ClearColor = { 1.0f, 0.0f, 0.0f, 0.0f };
+
+	VkImageSubresourceRange imageRange{};
+	imageRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	imageRange.baseMipLevel = 0;
+	imageRange.levelCount = 1;
+	imageRange.baseArrayLayer = 0;
+	imageRange.layerCount = 1;
+
+	for (uint32_t i = 0; i < m_CMDBuffers.size(); i++) {
+		VkImageMemoryBarrier presentToClearBarrier{};
+		presentToClearBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		presentToClearBarrier.pNext = nullptr;
+		presentToClearBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+		presentToClearBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		presentToClearBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		presentToClearBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		presentToClearBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		presentToClearBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		presentToClearBarrier.image = m_Images[i];
+		presentToClearBarrier.subresourceRange = imageRange;
+
+		VkImageMemoryBarrier clearToPresentBarrier{};
+		clearToPresentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		clearToPresentBarrier.pNext = nullptr;
+		clearToPresentBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		clearToPresentBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+		clearToPresentBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		clearToPresentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		clearToPresentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		clearToPresentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		clearToPresentBarrier.image = m_Images[i];
+		clearToPresentBarrier.subresourceRange = imageRange;
+
+		this->BeginCommandBuffers(m_CMDBuffers[i], VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
+
+		vkCmdPipelineBarrier(m_CMDBuffers[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+			0,  // dependency flags
+			0, NULL, // memory barriers
+			0, NULL, // buffer memory barriers
+			1, &presentToClearBarrier); // image memory barriers
+
+		vkCmdClearColorImage(m_CMDBuffers[i], m_Images[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &ClearColor, 1, &imageRange);
+
+		vkCmdPipelineBarrier(m_CMDBuffers[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+			0, 0, NULL, 0, NULL, 1, &clearToPresentBarrier);
+
+		VkResult res = vkEndCommandBuffer(m_CMDBuffers[i]);
+		CHECK_VK_RESULT(res, "vkEndCommandBuffer error");
+	}
+}
+
 void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 {
 	this->CreateInstance();
@@ -316,11 +382,15 @@ void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 	this->CreateSwapChain();
 	this->CreateCommandBufferPool();
 
+	m_Queue.Initialize(m_Device, m_SwapChain, m_QueueFamily, 0);
 	this->CreateCommandBuffers(m_Images.size());
+	this->RecordCommandBuffers();
 }
 
 void FINALITY::VKRenderDevice::Shutdown()
 {
+	m_Queue.ShutDown();
+
 	for (size_t i = 0; i < m_ImageViews.size(); i++)
 	{
 		vkDestroyImageView(m_Device, m_ImageViews[i], nullptr);
@@ -340,16 +410,21 @@ void FINALITY::VKRenderDevice::Shutdown()
 
 void FINALITY::VKRenderDevice::BeginFrame()
 {
+	m_ImageIndex = m_Queue.AcquireNextImage();
 }
 
 void FINALITY::VKRenderDevice::EndFrame()
 {
+	m_Queue.SubmitASync(m_CMDBuffers[m_ImageIndex]);
 }
 
 void FINALITY::VKRenderDevice::PresentFrame()
 {
+	m_Queue.Present(m_ImageIndex);
+	m_Queue.WaitIdle(); // Temp fix for now
 }
 
 void FINALITY::VKRenderDevice::Clear(float r, float g, float b, float a)
 {
+	
 }
