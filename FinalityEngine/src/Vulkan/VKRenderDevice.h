@@ -60,7 +60,7 @@ namespace FINALITY
 
 		void Clear(float r, float g, float b, float a) override;
 		void SetWindowSpec(const WindowSpec& spec) override { m_Spec = spec; }
-
+		VkDevice GetActiveDevice() const { return m_Device; }
 	private:
 		WindowSpec m_Spec;
 		const std::vector<const char*> m_ValidationLayers = {
@@ -91,5 +91,7 @@ namespace FINALITY
 		VkRenderPass m_RenderPass;
 		std::vector<VkFramebuffer> m_FrameBuffers;
 		VkSurfaceFormatKHR m_SurfaceFormats;
+
+		VkClearColorValue m_ClearColor;
 	};
 }

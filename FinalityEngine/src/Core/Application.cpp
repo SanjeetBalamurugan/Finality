@@ -1,5 +1,6 @@
 #include "Application.h"
 #include <iostream>
+#include <chrono>
 
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
@@ -11,8 +12,12 @@
 //
 
 #include "Log.h"
+#include <Scene/SceneManager.h>
+#include "RenderCommand.h"
 
-void FINALITY::Application::Initialize(const RendererAPI& api, const WindowSpec& spec)
+FINALITY::RendererAPI FINALITY::Application::s_CurrentAPI = RendererAPI::NONE;
+
+void FINALITY::Application::Initialize(const RendererAPI& api, const WindowSpec& spec, std::unique_ptr<Game> game)
 {
 	Logger::Init();
 
@@ -44,26 +49,43 @@ void FINALITY::Application::Initialize(const RendererAPI& api, const WindowSpec&
 		break;
 	}
 
+	s_CurrentAPI = api;
+
+	m_CurrentGame = std::move(game);
+
 	m_Window = std::make_unique<GLFWWindowImpl>();
 	m_Window->Initialize(spec);
 
 	m_RenderDevice->SetWindowSpec(spec);
 	m_RenderDevice->Initialize(m_Window->GetNativeHandles());
+	FINALITY::RenderCommand::Init(m_RenderDevice.get());
+
+	m_CurrentGame->Init();
+	SceneManager::GetInstance().Initialize();
 
 	m_Running = true;
 }
 
 void FINALITY::Application::Update()
 {
+	auto lastFrameTime = std::chrono::high_resolution_clock::now();
+	float deltaTime = 0.0f;
+
 	while (!m_Window->ShouldClose() && m_Running)
 	{
+		auto currentFrameTime = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<float> elapsed = currentFrameTime - lastFrameTime;
+		deltaTime = elapsed.count();
+
+		lastFrameTime = currentFrameTime;
+
 		m_Window->Update();
 
 		m_RenderDevice->BeginFrame();
 
 		// Frame logic like draw calls here
-
-		m_RenderDevice->Clear(0.1f, 0.8f, 0.3f, 1.0f);
+		m_CurrentGame->Update(deltaTime);
+		SceneManager::GetInstance().Update(deltaTime);
 
 		m_RenderDevice->EndFrame();
 		m_RenderDevice->PresentFrame();
@@ -74,6 +96,9 @@ void FINALITY::Application::Update()
 
 void FINALITY::Application::Shutdown()
 {
+	SceneManager::GetInstance().Shutdown();
+
+	if (m_CurrentGame) m_CurrentGame->Destroy();
 	if (m_Window) m_Window->Shutdown();
 	if (m_RenderDevice) m_RenderDevice->Shutdown();
 	if (!m_Running) glfwTerminate();

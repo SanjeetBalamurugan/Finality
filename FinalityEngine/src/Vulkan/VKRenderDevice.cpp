@@ -296,7 +296,7 @@ void FINALITY::VKRenderDevice::CreateCommandBufferPool()
 {
 	VkCommandPoolCreateInfo cmdPoolCreateInfo{};
 	cmdPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	cmdPoolCreateInfo.flags = 0;
+	cmdPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 	cmdPoolCreateInfo.pNext = nullptr;
 	cmdPoolCreateInfo.queueFamilyIndex = m_QueueFamily;
 
@@ -318,9 +318,8 @@ void FINALITY::VKRenderDevice::BeginCommandBuffers(VkCommandBuffer cmdBuf, uint3
 
 void FINALITY::VKRenderDevice::RecordCommandBuffers()
 {
-	VkClearColorValue ClearColor = { 1.0f, 0.0f, 0.0f, 0.0f };
 	VkClearValue ClearValue{};
-	ClearValue.color = ClearColor;
+	ClearValue.color = m_ClearColor;
 
 	VkRenderPassBeginInfo RenderPassBeginInfo{};
 	RenderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -334,7 +333,9 @@ void FINALITY::VKRenderDevice::RecordCommandBuffers()
 	RenderPassBeginInfo.pClearValues = &ClearValue;
 
 	for (uint32_t i = 0; i < m_CMDBuffers.size(); i++) {
-		this->BeginCommandBuffers(m_CMDBuffers[i], VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
+		vkResetCommandBuffer(m_CMDBuffers[i], 0);
+		
+		this->BeginCommandBuffers(m_CMDBuffers[i], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
 		RenderPassBeginInfo.framebuffer = m_FrameBuffers[i];
 		vkCmdBeginRenderPass(m_CMDBuffers[i], &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -445,7 +446,6 @@ void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 	m_RenderPass = this->CreateSimpleRenderPass();
 	m_FrameBuffers = this->CreateFrameBuffers();
 	this->CreateCommandBuffers(m_Images.size());
-	this->RecordCommandBuffers();
 }
 
 void FINALITY::VKRenderDevice::Shutdown()
@@ -479,6 +479,7 @@ void FINALITY::VKRenderDevice::BeginFrame()
 
 void FINALITY::VKRenderDevice::EndFrame()
 {
+	this->RecordCommandBuffers();
 	m_Queue.SubmitASync(m_CMDBuffers[m_ImageIndex]);
 }
 
@@ -490,5 +491,5 @@ void FINALITY::VKRenderDevice::PresentFrame()
 
 void FINALITY::VKRenderDevice::Clear(float r, float g, float b, float a)
 {
-	
+	m_ClearColor = { r, g, b, a };
 }
