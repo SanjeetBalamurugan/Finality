@@ -17,7 +17,8 @@ newaction {
             "*.slnx",
             "*.vcxproj",
             "*.vcxproj.filters",
-            "*.vcxproj.user"
+            "*.vcxproj.user",
+            "*.spv"
         }
 
         for _, dir in ipairs(directories) do

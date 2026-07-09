@@ -19,8 +19,6 @@ int main(int argc, char const *argv[])
     std::string outputFilePath = argv[2];
     std::string graphicsAPI = argv[3];
 
-    std::cout << inputFilePath << std::endl;
-
     std::ifstream inputFile(inputFilePath);
     if (!inputFile.is_open())
     {
@@ -49,7 +47,5 @@ int main(int argc, char const *argv[])
 
     std::ofstream outFile(outputFilePath, std::ios::binary);
     outFile.write(reinterpret_cast<const char*>(result.cbegin()), (result.cend() - result.cbegin()) * sizeof(uint32_t));
-
-    std::cin.get();
     std::exit(EXIT_SUCCESS);
 }

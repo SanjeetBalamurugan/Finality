@@ -12,3 +12,6 @@ bin/
 bin-int/
 obj/
 ipch/
+
+# Compiled Shaders
+*.spv
