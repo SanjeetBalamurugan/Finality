@@ -20,6 +20,8 @@ project "FIShaderCompiler"
         filter "system:linux or macosx"
             links { "vulkan" }
         filter {}
+
+        links { "shaderc_shared" } 
     else
         print("Vulkan SDK not found.")
     end

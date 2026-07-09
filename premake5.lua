@@ -2,6 +2,7 @@ workspace "Finality"
     architecture "x64"
     startproject "Sandbox"
     staticruntime "off"
+    cppdialect "C++20"
 
     filter "action:vs*"
         buildoptions { "/utf-8" }
