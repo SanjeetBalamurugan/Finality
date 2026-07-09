@@ -36,7 +36,7 @@ namespace FINALITY
 		void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 
 		void CreateSurface(const NativeWindowHandle& handle);
-		void DestroySurface();
+		void DestroySurface() const;
 
 		void CreateDevice();
 		void DestroyDevice();
@@ -46,6 +46,10 @@ namespace FINALITY
 		void CreateCommandBufferPool();
 		void BeginCommandBuffers(VkCommandBuffer cmdBuf, uint32_t usageFlags);
 		void RecordCommandBuffers();
+
+		std::vector<VkFramebuffer> CreateFrameBuffers() const;
+		VkRenderPass CreateSimpleRenderPass();
+		void DestroyFramebuffers();
 	public:
 		void Initialize(const NativeWindowHandle& handle) override;
 		void Shutdown() override;
@@ -83,5 +87,9 @@ namespace FINALITY
 
 		VKQueue m_Queue;
 		uint32_t m_ImageIndex = 0;
+
+		VkRenderPass m_RenderPass;
+		std::vector<VkFramebuffer> m_FrameBuffers;
+		VkSurfaceFormatKHR m_SurfaceFormats;
 	};
 }

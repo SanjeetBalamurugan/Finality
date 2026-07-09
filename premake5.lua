@@ -31,5 +31,10 @@ workspace "Finality"
        include "FinalityEngine"
        include "Sandbox"
     
+    -- Tools
+    group "Tools"
+        include "FIShaderCompiler"
+    group ""
+
     -- Scripts
         include "Scripts/premake_actions.lua"

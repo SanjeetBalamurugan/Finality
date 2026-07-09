@@ -172,7 +172,7 @@ void FINALITY::VKRenderDevice::CreateSurface(const NativeWindowHandle& handle)
 	CHECK_VK_RESULT(res, "Vulkan Surface Creation");
 }
 
-void FINALITY::VKRenderDevice::DestroySurface()
+void FINALITY::VKRenderDevice::DestroySurface() const
 {
 	PFN_vkDestroySurfaceKHR vkDestroySurface = nullptr;
 	vkDestroySurface = (PFN_vkDestroySurfaceKHR)vkGetInstanceProcAddr(m_Instance, "vkDestroySurfaceKHR");
@@ -233,6 +233,7 @@ void FINALITY::VKRenderDevice::CreateSwapChain()
 	VkPresentModeKHR PresentMode = ChoosePresentMode(PresentModes);
 
 	VkSurfaceFormatKHR SurfaceFormat = ChooseSurfaceFormatAndColorSpace(m_Devices.SelectedDevice().surfaceFormats);
+	m_SurfaceFormats = SurfaceFormat;
 
 	VkSwapchainCreateInfoKHR SwapChainCreateInfo{};
 	SwapChainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -318,54 +319,112 @@ void FINALITY::VKRenderDevice::BeginCommandBuffers(VkCommandBuffer cmdBuf, uint3
 void FINALITY::VKRenderDevice::RecordCommandBuffers()
 {
 	VkClearColorValue ClearColor = { 1.0f, 0.0f, 0.0f, 0.0f };
+	VkClearValue ClearValue{};
+	ClearValue.color = ClearColor;
 
-	VkImageSubresourceRange imageRange{};
-	imageRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	imageRange.baseMipLevel = 0;
-	imageRange.levelCount = 1;
-	imageRange.baseArrayLayer = 0;
-	imageRange.layerCount = 1;
+	VkRenderPassBeginInfo RenderPassBeginInfo{};
+	RenderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	RenderPassBeginInfo.pNext = nullptr;
+	RenderPassBeginInfo.renderPass = m_RenderPass;
+	RenderPassBeginInfo.renderArea.offset.x = 0;
+	RenderPassBeginInfo.renderArea.offset.y = 0;
+	RenderPassBeginInfo.renderArea.extent.width = m_Spec.width;
+	RenderPassBeginInfo.renderArea.extent.height = m_Spec.height;
+	RenderPassBeginInfo.clearValueCount = 1;
+	RenderPassBeginInfo.pClearValues = &ClearValue;
 
 	for (uint32_t i = 0; i < m_CMDBuffers.size(); i++) {
-		VkImageMemoryBarrier presentToClearBarrier{};
-		presentToClearBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		presentToClearBarrier.pNext = nullptr;
-		presentToClearBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-		presentToClearBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		presentToClearBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		presentToClearBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		presentToClearBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		presentToClearBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		presentToClearBarrier.image = m_Images[i];
-		presentToClearBarrier.subresourceRange = imageRange;
-
-		VkImageMemoryBarrier clearToPresentBarrier{};
-		clearToPresentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		clearToPresentBarrier.pNext = nullptr;
-		clearToPresentBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		clearToPresentBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-		clearToPresentBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		clearToPresentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-		clearToPresentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		clearToPresentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		clearToPresentBarrier.image = m_Images[i];
-		clearToPresentBarrier.subresourceRange = imageRange;
-
 		this->BeginCommandBuffers(m_CMDBuffers[i], VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
 
-		vkCmdPipelineBarrier(m_CMDBuffers[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-			0,  // dependency flags
-			0, NULL, // memory barriers
-			0, NULL, // buffer memory barriers
-			1, &presentToClearBarrier); // image memory barriers
+		RenderPassBeginInfo.framebuffer = m_FrameBuffers[i];
+		vkCmdBeginRenderPass(m_CMDBuffers[i], &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-		vkCmdClearColorImage(m_CMDBuffers[i], m_Images[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &ClearColor, 1, &imageRange);
-
-		vkCmdPipelineBarrier(m_CMDBuffers[i], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-			0, 0, NULL, 0, NULL, 1, &clearToPresentBarrier);
+		vkCmdEndRenderPass(m_CMDBuffers[i]);
 
 		VkResult res = vkEndCommandBuffer(m_CMDBuffers[i]);
 		CHECK_VK_RESULT(res, "vkEndCommandBuffer error");
+	}
+}
+
+std::vector<VkFramebuffer> FINALITY::VKRenderDevice::CreateFrameBuffers() const
+{
+	std::vector<VkFramebuffer> FrameBuffers;
+	FrameBuffers.resize(m_Images.size());
+
+	for (uint32_t i = 0; i < m_Images.size(); i++) {
+		std::vector<VkImageView> Attachments;
+		Attachments.push_back(m_ImageViews[i]);
+
+		VkFramebufferCreateInfo fbCreateInfo{};
+		fbCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		fbCreateInfo.pNext = nullptr;
+		fbCreateInfo.renderPass = m_RenderPass;
+		fbCreateInfo.attachmentCount = (uint32_t)Attachments.size();
+		fbCreateInfo.pAttachments = Attachments.data();
+		fbCreateInfo.width = (uint32_t)m_Spec.width;
+		fbCreateInfo.height = (uint32_t)m_Spec.height;
+		fbCreateInfo.layers = 1;
+
+		VkResult res = vkCreateFramebuffer(m_Device, &fbCreateInfo, NULL, &FrameBuffers[i]);
+		CHECK_VK_RESULT(res, "vkCreateFramebuffer");
+	}
+	return FrameBuffers;
+}
+
+VkRenderPass FINALITY::VKRenderDevice::CreateSimpleRenderPass()
+{
+	VkAttachmentDescription ColorAttachment{};
+	ColorAttachment.flags = 0;
+	ColorAttachment.format = m_SurfaceFormats.format;
+	ColorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	ColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	ColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	ColorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	ColorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	ColorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	ColorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+	VkAttachmentReference ColorAttachRef{};
+	ColorAttachRef.attachment = 0;
+	ColorAttachRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	VkSubpassDescription SubpassDesc{};
+	SubpassDesc.flags = 0;
+	SubpassDesc.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	SubpassDesc.inputAttachmentCount = 0;
+	SubpassDesc.pInputAttachments = nullptr;
+	SubpassDesc.colorAttachmentCount = 1;
+	SubpassDesc.pColorAttachments = &ColorAttachRef;
+	SubpassDesc.pResolveAttachments = nullptr;
+	SubpassDesc.pDepthStencilAttachment = nullptr;
+	SubpassDesc.preserveAttachmentCount = 0;
+	SubpassDesc.pPreserveAttachments = nullptr;
+
+	std::vector<VkAttachmentDescription> Attachments;
+	Attachments.push_back(ColorAttachment);
+
+	VkRenderPassCreateInfo RenderPassCreateInfo{};
+	RenderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	RenderPassCreateInfo.pNext = nullptr;
+	RenderPassCreateInfo.flags = 0;
+	RenderPassCreateInfo.attachmentCount = (uint32_t)Attachments.size();
+	RenderPassCreateInfo.pAttachments = Attachments.data();
+	RenderPassCreateInfo.subpassCount = 1;
+	RenderPassCreateInfo.pSubpasses = &SubpassDesc;
+	RenderPassCreateInfo.dependencyCount = 0;
+	RenderPassCreateInfo.pDependencies = nullptr;
+
+	VkRenderPass RenderPass;
+	VkResult res = vkCreateRenderPass(m_Device, &RenderPassCreateInfo, nullptr, &RenderPass);
+	CHECK_VK_RESULT(res, "vkCreateRenderPass");
+
+	return RenderPass;
+}
+
+void FINALITY::VKRenderDevice::DestroyFramebuffers()
+{
+	for (int i = 0; i < m_FrameBuffers.size(); i++) {
+		vkDestroyFramebuffer(m_Device, m_FrameBuffers[i], nullptr);
 	}
 }
 
@@ -383,6 +442,8 @@ void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 	this->CreateCommandBufferPool();
 
 	m_Queue.Initialize(m_Device, m_SwapChain, m_QueueFamily, 0);
+	m_RenderPass = this->CreateSimpleRenderPass();
+	m_FrameBuffers = this->CreateFrameBuffers();
 	this->CreateCommandBuffers(m_Images.size());
 	this->RecordCommandBuffers();
 }
@@ -390,8 +451,11 @@ void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 void FINALITY::VKRenderDevice::Shutdown()
 {
 	m_Queue.ShutDown();
+	this->DestroyFramebuffers();
+	vkDestroyRenderPass(m_Device, m_RenderPass, nullptr);
+	if (m_CMDBufPool) vkDestroyCommandPool(m_Device, m_CMDBufPool, nullptr);
 
-	for (size_t i = 0; i < m_ImageViews.size(); i++)
+	for (uint32_t i = 0; i < m_ImageViews.size(); i++)
 	{
 		vkDestroyImageView(m_Device, m_ImageViews[i], nullptr);
 	}

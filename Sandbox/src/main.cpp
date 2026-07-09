@@ -4,7 +4,7 @@
 int main(int argc, char const *argv[])
 {
     FINALITY::RendererAPI api = FINALITY::RendererAPI::VULKAN;
-    FINALITY::WindowSpec spec = { .title = "Hello", .width = 500, .height = 500, .isFullscreen = false };
+    FINALITY::WindowSpec spec = { .title = "Hello", .width = 1000, .height = 600, .isFullscreen = false };
     FINALITY::Application app;
     
     app.Initialize(api, spec);

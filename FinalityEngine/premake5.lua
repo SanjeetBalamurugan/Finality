@@ -25,6 +25,11 @@ project "FinalityEngine"
         "GLFW"
     }
 
+    dependson
+    {
+        "FIShaderCompiler"
+    } -- Move this to editor project if i actually make it
+
     -- Importing Vulkan
     local vulkan = GetVulkanSDK()
     if vulkan then
