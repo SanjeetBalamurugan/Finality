@@ -7,7 +7,8 @@ project "FinalityEngine"
     files {
         "src/**.h",
         "src/**.cpp",
-        "src/**.c"
+        "src/**.c",
+        "src/**.inl"
     }
 
     includedirs {

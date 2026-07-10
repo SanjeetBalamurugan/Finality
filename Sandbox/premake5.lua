@@ -13,7 +13,8 @@ project "Sandbox"
         "src",
         "../FinalityEngine/src",
         "../vendor/glm",
-        "../vendor/entt/include"
+        "../vendor/entt/include",
+        "../vendor/spdlog/include/"
     }
 
     links {

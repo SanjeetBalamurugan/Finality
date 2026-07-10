@@ -21,10 +21,8 @@ namespace FINALITY
 	};
 }
 
-#define FI_CORE_ERROR(...)  ::FINALITY::Logger::GetCoreLogger()->error(__VA_ARGS__)
-#define FI_CORE_WARN(...)   ::FINALITY::Logger::GetCoreLogger()->warn(__VA_ARGS__)
-#define FI_CORE_INFO(...)   ::FINALITY::Logger::GetCoreLogger()->info(__VA_ARGS__)
-
-#define ME_ERROR(...)       ::FINALITY::Logger::GetClientLogger()->error(__VA_ARGS__)
-#define ME_WARN(...)        ::FINALITY::Logger::GetClientLogger()->warn(__VA_ARGS__)
-#define ME_INFO(...)        ::FINALITY::Logger::GetClientLogger()->info(__VA_ARGS__)
+#ifdef FINALITY_BUILD_DLL
+	#define FI_CORE_ERROR(...)  ::FINALITY::Logger::GetCoreLogger()->error(__VA_ARGS__)
+	#define FI_CORE_WARN(...)   ::FINALITY::Logger::GetCoreLogger()->warn(__VA_ARGS__)
+	#define FI_CORE_INFO(...)   ::FINALITY::Logger::GetCoreLogger()->info(__VA_ARGS__)
+#endif
