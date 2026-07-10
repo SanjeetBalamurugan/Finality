@@ -1,7 +1,7 @@
 #pragma once
 #include <Core/Core.h>
-#include "RenderTypes.h"
-#include "RenderDevice.h"
+#include <Core/RenderTypes.h>
+#include <Core/RenderDevice.h>
 #include <memory>
 
 #include <string>

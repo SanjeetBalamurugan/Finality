@@ -1,6 +1,8 @@
 #pragma once
 #include <Core/Core.h>
 
+#include <entt.hpp>
+
 namespace FINALITY
 {
 	class FAPI Scene

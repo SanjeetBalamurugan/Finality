@@ -11,7 +11,9 @@ project "Sandbox"
 
     includedirs {
         "src",
-        "../FinalityEngine/src"
+        "../FinalityEngine/src",
+        "../vendor/glm",
+        "../vendor/entt/include"
     }
 
     links {

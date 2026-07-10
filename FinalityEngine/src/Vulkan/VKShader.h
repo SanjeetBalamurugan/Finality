@@ -1,7 +1,7 @@
 #pragma once
 #include "VKCore.h"
 
-#include <Core/Shader.h>
+#include <Renderer/Shader.h>
 
 namespace FINALITY
 {
