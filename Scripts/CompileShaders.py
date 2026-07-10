@@ -16,7 +16,7 @@ compileQueue = list(vertexShaders) + list(fragmentShaders)
 for shaderPath in compileQueue:
     p = pathlib.Path(shaderPath)
 
-    outputName = p.name + ".vk.spv"
+    outputName = p.name + ".spv"
     outputPath = p.parent / outputName
     print("Compiling", p.name, "to", outputPath)
 
