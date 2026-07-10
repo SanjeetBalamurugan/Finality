@@ -16,24 +16,7 @@ namespace FINALITY
 	{
 	private:
 		void CreateInstance();
-		bool CheckValidationLayerSupport() const;
-		std::vector<const char*> GetRequiredExtensions() const;
-		static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
-			VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-			VkDebugUtilsMessageTypeFlagsEXT messageType,
-			const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-			void* pUserData);
 		void SetupDebugMessanger();
-		VkResult CreateDebugUtilsMessengerEXT(
-			VkInstance instance,
-			const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
-			const VkAllocationCallbacks* pAllocator,
-			VkDebugUtilsMessengerEXT* pDebugMessenger);
-		void DestroyDebugUtilsMessengerEXT(
-			VkInstance instance,
-			VkDebugUtilsMessengerEXT debugMessenger,
-			const VkAllocationCallbacks* pAllocator);
-		void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 
 		void CreateSurface(const NativeWindowHandle& handle);
 		void DestroySurface() const;
@@ -48,7 +31,7 @@ namespace FINALITY
 		void RecordCommandBuffers();
 
 		std::vector<VkFramebuffer> CreateFrameBuffers() const;
-		VkRenderPass CreateSimpleRenderPass();
+		VkRenderPass CreateSimpleRenderPass() const;
 		void DestroyFramebuffers();
 	public:
 		void Initialize(const NativeWindowHandle& handle) override;
