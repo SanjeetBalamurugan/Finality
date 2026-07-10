@@ -103,7 +103,8 @@ project "GLFW"
 		runtime "Debug"
 		symbols "on"
 		sanitize { "Address" }
-		flags { "NoRuntimeChecks", "NoIncrementalLink" }
+		runtimechecks "Off"
+		incrementallink "Off"
 
 	filter "configurations:Release"
 		runtime "Release"
