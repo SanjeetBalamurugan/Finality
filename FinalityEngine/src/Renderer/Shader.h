@@ -8,7 +8,7 @@
 
 namespace FINALITY
 {
-    class Shader
+    class FAPI Shader
     {
     public:
         virtual ~Shader() = default;
