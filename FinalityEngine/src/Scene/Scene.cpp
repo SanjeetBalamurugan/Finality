@@ -1,20 +1,23 @@
 #include "Scene.h"
 #include "Entity.h"
-
 #include "Components.h"
+#include "Renderer/Renderer.h"
 
 namespace FINALITY
 {
     void Scene::OnUpdate(float ts)
     {
-        auto view = m_EntityRegistry.view<ScriptStorage>();
+        auto scriptView = m_EntityRegistry.view<ScriptStorage>();
 
-        for (auto entityHandle : view)
+        std::vector entities(scriptView.begin(), scriptView.end());
+        for (entt::entity entityHandle : entities)
         {
-            auto& storage = view.get<ScriptStorage>(entityHandle);
-
-            for (auto& script : storage.Scripts)
+            if (!m_EntityRegistry.valid(entityHandle)) continue;
+            auto& storage = m_EntityRegistry.get<ScriptStorage>(entityHandle);
+            for (size_t i = 0; i < storage.Scripts.size(); ++i)
             {
+                auto& script = storage.Scripts[i];
+
                 if (!script.Instance)
                     continue;
 
@@ -27,6 +30,17 @@ namespace FINALITY
                 script.Instance->Update(ts);
             }
         }
+
+        Renderer::BeginScene();
+
+        auto renderView = m_EntityRegistry.view<MeshComponent>();
+        for (auto entityHandle : renderView)
+        {
+            Entity entity{ entityHandle, this };
+            Renderer::PushEntity(entity);
+        }
+
+        Renderer::EndScene();
     }
 
     void Scene::OnDestroy()
@@ -43,6 +57,11 @@ namespace FINALITY
                     script.Instance->OnDestroy();
             }
         }
+
+        if (Renderer::GetDevice())
+            Renderer::GetDevice()->WaitIdle();
+
+        m_EntityRegistry.clear();
     }
 
     Entity Scene::CreateEntity(const std::string& name)

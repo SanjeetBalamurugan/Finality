@@ -6,12 +6,15 @@
 #include "Core/Game.h"
 #include "Core/RenderCommand.h"
 #include "Core/Log.h"
+#include "Core/Mesh.h"
+#include "Core/Pipeline.h"
 
 // SCENE
 #include "Scene/Scene.h"
 #include "Scene/SceneManager.h"
 #include "Scene/ScriptableComponent.h"
 #include "Scene/Entity.h"
+#include "Scene/Components.h"
 
 // RENDERER
 #include "Renderer/Shader.h"

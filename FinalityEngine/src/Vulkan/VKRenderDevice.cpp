@@ -1,10 +1,10 @@
 #include "VKRenderDevice.h"
-
 #include <vector>
-
 #include <GLFW/glfw3.h>
 #include "VkHelpers.h"
 #include "VKDebug.h"
+#include "VKMesh.h"
+#include "VKPipeline.h"
 
 void FINALITY::VKRenderDevice::CreateInstance()
 {
@@ -25,11 +25,11 @@ void FINALITY::VKRenderDevice::CreateInstance()
 	VkInstanceCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	createInfo.pApplicationInfo = &m_AppInfo;
-	
+
 	auto extensions = VKDebug::GetRequiredExtensions();
 	createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
 	createInfo.ppEnabledExtensionNames = extensions.data();
-	
+
 	VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
 	if (m_EnableValidationLayers) {
 		createInfo.enabledLayerCount = static_cast<uint32_t>(m_ValidationLayers.size());
@@ -98,8 +98,6 @@ void FINALITY::VKRenderDevice::CreateDevice()
 	};
 
 	VkPhysicalDeviceFeatures deviceFeatures{};
-	//deviceFeatures.geometryShader = VK_TRUE; // TODO: Maybe in future, add error handling here, too lazy i am now
-	//deviceFeatures.tessellationShader = VK_TRUE; // TODO: Same Here
 
 	VkDeviceCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -116,59 +114,6 @@ void FINALITY::VKRenderDevice::CreateDevice()
 void FINALITY::VKRenderDevice::DestroyDevice()
 {
 	vkDestroyDevice(m_Device, nullptr);
-}
-
-void FINALITY::VKRenderDevice::CreateSwapChain()
-{
-	const VkSurfaceCapabilitiesKHR& SurfaceCaps = m_Devices.SelectedDevice().surfaceCapabilities;
-	uint32_t NumImages = ChooseNumImages(SurfaceCaps);
-
-	const std::vector<VkPresentModeKHR>& PresentModes = m_Devices.SelectedDevice().presentModes;
-	VkPresentModeKHR PresentMode = ChoosePresentMode(PresentModes);
-
-	VkSurfaceFormatKHR SurfaceFormat = ChooseSurfaceFormatAndColorSpace(m_Devices.SelectedDevice().surfaceFormats);
-	m_SurfaceFormats = SurfaceFormat;
-
-	VkSwapchainCreateInfoKHR SwapChainCreateInfo{};
-	SwapChainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-	SwapChainCreateInfo.pNext = nullptr;
-	SwapChainCreateInfo.flags = 0;
-	SwapChainCreateInfo.surface = m_Surface;
-	SwapChainCreateInfo.minImageCount = NumImages;
-	SwapChainCreateInfo.imageFormat = SurfaceFormat.format;
-	SwapChainCreateInfo.imageColorSpace = SurfaceFormat.colorSpace;
-	SwapChainCreateInfo.imageExtent = SurfaceCaps.currentExtent;
-	SwapChainCreateInfo.imageArrayLayers = 1;
-	SwapChainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-	SwapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	SwapChainCreateInfo.queueFamilyIndexCount = 1;
-	SwapChainCreateInfo.pQueueFamilyIndices = &m_QueueFamily;
-	SwapChainCreateInfo.preTransform = SurfaceCaps.currentTransform;
-	SwapChainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-	SwapChainCreateInfo.presentMode = PresentMode;
-
-	VkResult res = vkCreateSwapchainKHR(m_Device, &SwapChainCreateInfo, nullptr, &m_SwapChain);
-	CHECK_VK_RESULT(res, "vkCreateSwapchainKHR");
-
-	uint32_t NumSwapChainImages = 0;
-	res = vkGetSwapchainImagesKHR(m_Device, m_SwapChain, &NumSwapChainImages, nullptr);
-	CHECK_VK_RESULT(res, "vkGetSwapchainImagesKHR");
-	assert(NumImages == NumSwapChainImages);
-
-	m_Images.resize(NumSwapChainImages);
-	m_ImageViews.resize(NumSwapChainImages);
-
-	res = vkGetSwapchainImagesKHR(m_Device, m_SwapChain, &NumSwapChainImages, m_Images.data());
-	CHECK_VK_RESULT(res, "vkGetSwapchainImagesKHR");
-
-	int LayerCount = 1;
-	int MipLevels = 1;
-
-	for (size_t i = 0; i < NumSwapChainImages; i++)
-	{
-		m_ImageViews[i] = CreateImageView(m_Device, m_Images[i], SurfaceFormat.format,
-			VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D, LayerCount, MipLevels);
-	}
 }
 
 void FINALITY::VKRenderDevice::CreateCommandBuffers(uint32_t count)
@@ -218,109 +163,25 @@ void FINALITY::VKRenderDevice::RecordCommandBuffers()
 	VkRenderPassBeginInfo RenderPassBeginInfo{};
 	RenderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	RenderPassBeginInfo.pNext = nullptr;
-	RenderPassBeginInfo.renderPass = m_RenderPass;
+	RenderPassBeginInfo.renderPass = m_SwapChain->GetVKRenderPass();
 	RenderPassBeginInfo.renderArea.offset.x = 0;
 	RenderPassBeginInfo.renderArea.offset.y = 0;
-	RenderPassBeginInfo.renderArea.extent.width = m_Spec.width;
-	RenderPassBeginInfo.renderArea.extent.height = m_Spec.height;
+	RenderPassBeginInfo.renderArea.extent.width = m_SwapChain->GetWidth();
+	RenderPassBeginInfo.renderArea.extent.height = m_SwapChain->GetHeight();
 	RenderPassBeginInfo.clearValueCount = 1;
 	RenderPassBeginInfo.pClearValues = &ClearValue;
 
-	for (uint32_t i = 0; i < m_CMDBuffers.size(); i++) {
-		vkResetCommandBuffer(m_CMDBuffers[i], 0);
-		
-		this->BeginCommandBuffers(m_CMDBuffers[i], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+	vkResetCommandBuffer(m_CMDBuffers[m_ImageIndex], 0);
 
-		RenderPassBeginInfo.framebuffer = m_FrameBuffers[i];
-		vkCmdBeginRenderPass(m_CMDBuffers[i], &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+	this->BeginCommandBuffers(m_CMDBuffers[m_ImageIndex], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
-		vkCmdEndRenderPass(m_CMDBuffers[i]);
+	RenderPassBeginInfo.framebuffer = m_SwapChain->GetVKFramebuffer(m_ImageIndex);
+	vkCmdBeginRenderPass(m_CMDBuffers[m_ImageIndex], &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-		VkResult res = vkEndCommandBuffer(m_CMDBuffers[i]);
-		CHECK_VK_RESULT(res, "vkEndCommandBuffer error");
-	}
-}
+	vkCmdEndRenderPass(m_CMDBuffers[m_ImageIndex]);
 
-std::vector<VkFramebuffer> FINALITY::VKRenderDevice::CreateFrameBuffers() const
-{
-	std::vector<VkFramebuffer> FrameBuffers;
-	FrameBuffers.resize(m_Images.size());
-
-	for (uint32_t i = 0; i < m_Images.size(); i++) {
-		std::vector<VkImageView> Attachments;
-		Attachments.push_back(m_ImageViews[i]);
-
-		VkFramebufferCreateInfo fbCreateInfo{};
-		fbCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		fbCreateInfo.pNext = nullptr;
-		fbCreateInfo.renderPass = m_RenderPass;
-		fbCreateInfo.attachmentCount = (uint32_t)Attachments.size();
-		fbCreateInfo.pAttachments = Attachments.data();
-		fbCreateInfo.width = (uint32_t)m_Spec.width;
-		fbCreateInfo.height = (uint32_t)m_Spec.height;
-		fbCreateInfo.layers = 1;
-
-		VkResult res = vkCreateFramebuffer(m_Device, &fbCreateInfo, NULL, &FrameBuffers[i]);
-		CHECK_VK_RESULT(res, "vkCreateFramebuffer");
-	}
-	return FrameBuffers;
-}
-
-VkRenderPass FINALITY::VKRenderDevice::CreateSimpleRenderPass() const
-{
-	VkAttachmentDescription ColorAttachment{};
-	ColorAttachment.flags = 0;
-	ColorAttachment.format = m_SurfaceFormats.format;
-	ColorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-	ColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	ColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	ColorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	ColorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	ColorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	ColorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-	VkAttachmentReference ColorAttachRef{};
-	ColorAttachRef.attachment = 0;
-	ColorAttachRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-	VkSubpassDescription SubpassDesc{};
-	SubpassDesc.flags = 0;
-	SubpassDesc.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	SubpassDesc.inputAttachmentCount = 0;
-	SubpassDesc.pInputAttachments = nullptr;
-	SubpassDesc.colorAttachmentCount = 1;
-	SubpassDesc.pColorAttachments = &ColorAttachRef;
-	SubpassDesc.pResolveAttachments = nullptr;
-	SubpassDesc.pDepthStencilAttachment = nullptr;
-	SubpassDesc.preserveAttachmentCount = 0;
-	SubpassDesc.pPreserveAttachments = nullptr;
-
-	std::vector<VkAttachmentDescription> Attachments;
-	Attachments.push_back(ColorAttachment);
-
-	VkRenderPassCreateInfo RenderPassCreateInfo{};
-	RenderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	RenderPassCreateInfo.pNext = nullptr;
-	RenderPassCreateInfo.flags = 0;
-	RenderPassCreateInfo.attachmentCount = (uint32_t)Attachments.size();
-	RenderPassCreateInfo.pAttachments = Attachments.data();
-	RenderPassCreateInfo.subpassCount = 1;
-	RenderPassCreateInfo.pSubpasses = &SubpassDesc;
-	RenderPassCreateInfo.dependencyCount = 0;
-	RenderPassCreateInfo.pDependencies = nullptr;
-
-	VkRenderPass RenderPass;
-	VkResult res = vkCreateRenderPass(m_Device, &RenderPassCreateInfo, nullptr, &RenderPass);
-	CHECK_VK_RESULT(res, "vkCreateRenderPass");
-
-	return RenderPass;
-}
-
-void FINALITY::VKRenderDevice::DestroyFramebuffers()
-{
-	for (int i = 0; i < m_FrameBuffers.size(); i++) {
-		vkDestroyFramebuffer(m_Device, m_FrameBuffers[i], nullptr);
-	}
+	VkResult res = vkEndCommandBuffer(m_CMDBuffers[m_ImageIndex]);
+	CHECK_VK_RESULT(res, "vkEndCommandBuffer error");
 }
 
 void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
@@ -333,28 +194,98 @@ void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 	m_QueueFamily = m_Devices.SelectDevice(VK_QUEUE_GRAPHICS_BIT, true);
 
 	this->CreateDevice();
-	this->CreateSwapChain();
+
+	m_SwapChain = std::make_unique<VKSwapChain>(m_Device, m_Devices.SelectedDevice().device, m_Surface);
+	m_SwapChain->Initialize(handle, m_Spec);
+
 	this->CreateCommandBufferPool();
 
-	m_Queue.Initialize(m_Device, m_SwapChain, m_QueueFamily, 0);
-	m_RenderPass = this->CreateSimpleRenderPass();
-	m_FrameBuffers = this->CreateFrameBuffers();
-	this->CreateCommandBuffers(m_Images.size());
+	m_Queue.Initialize(m_Device, m_SwapChain->GetVKHandle(), m_QueueFamily, 0);
+	this->CreateCommandBuffers(m_SwapChain->GetImageCount());
 }
+
+void FINALITY::VKRenderDevice::SetWindowSpec(const WindowSpec& spec)
+{
+	m_Spec = spec;
+	if (m_SwapChain)
+	{
+		m_SwapChain->Recreate(m_Spec);
+		m_Queue.UpdateSwapChain(m_SwapChain->GetVKHandle());
+	}
+}
+
+void FINALITY::VKRenderDevice::DrawQueue(const std::vector<RenderPacket>& queue)
+{
+	VkCommandBuffer cmd = m_CMDBuffers[m_ImageIndex];
+
+	VkViewport viewport{
+		.x = 0.0f,
+		.y = 0.0f,
+		.width = static_cast<float>(m_SwapChain->GetWidth()),
+		.height = static_cast<float>(m_SwapChain->GetHeight()),
+		.minDepth = 0.0f,
+		.maxDepth = 1.0f
+	};
+	vkCmdSetViewport(cmd, 0, 1, &viewport);
+
+	VkRect2D scissor{
+		.offset = { 0, 0 },
+		.extent = { m_SwapChain->GetWidth(), m_SwapChain->GetHeight() }
+	};
+	vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+	VKPipeline* activePipeline = nullptr;
+
+	for (const auto& packet : queue)
+	{
+		if (!packet.MeshData || !packet.PipelineInstance) continue;
+
+		auto* vkPipeline = static_cast<VKPipeline*>(packet.PipelineInstance.get());
+		auto* vkMesh = static_cast<VKMesh*>(packet.MeshData.get());
+
+		if (vkPipeline != activePipeline)
+		{
+			activePipeline = vkPipeline;
+			activePipeline->Bind(cmd);
+		}
+
+		vkMesh->Bind(cmd);
+
+		if (vkMesh->HasIndices())
+		{
+			vkCmdDrawIndexed(cmd, vkMesh->GetIndexCount(), 1, 0, 0, 0);
+		}
+		else
+		{
+			vkCmdDraw(cmd, vkMesh->GetVertexCount(), 1, 0, 0);
+		}
+	}
+}
+
+std::shared_ptr<FINALITY::Mesh> FINALITY::VKRenderDevice::CreateMesh(const std::vector<Vertex>& vertices)
+{
+	return std::make_shared<VKMesh>(m_Device, m_Devices.SelectedDevice().device, vertices);
+}
+
+std::shared_ptr<FINALITY::Mesh> FINALITY::VKRenderDevice::CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices)
+{
+	return std::make_shared<VKMesh>(m_Device, m_Devices.SelectedDevice().device, vertices, indices);
+}
+
+std::shared_ptr<FINALITY::Pipeline> FINALITY::VKRenderDevice::CreatePipeline(const PipelineConfig& config)
+{
+	return std::make_shared<VKPipeline>(m_Device, m_SwapChain->GetVKRenderPass(), config);
+}
+
 
 void FINALITY::VKRenderDevice::Shutdown()
 {
-	m_Queue.ShutDown();
-	this->DestroyFramebuffers();
-	vkDestroyRenderPass(m_Device, m_RenderPass, nullptr);
+	m_Queue.WaitIdle();
+
 	if (m_CMDBufPool) vkDestroyCommandPool(m_Device, m_CMDBufPool, nullptr);
 
-	for (uint32_t i = 0; i < m_ImageViews.size(); i++)
-	{
-		vkDestroyImageView(m_Device, m_ImageViews[i], nullptr);
-	}
-
-	vkDestroySwapchainKHR(m_Device, m_SwapChain, nullptr);
+	m_Queue.ShutDown();
+	m_SwapChain->Shutdown();
 
 	DestroyDevice();
 
@@ -369,21 +300,52 @@ void FINALITY::VKRenderDevice::Shutdown()
 void FINALITY::VKRenderDevice::BeginFrame()
 {
 	m_ImageIndex = m_Queue.AcquireNextImage();
+
+	if (m_ImageIndex == UINT32_MAX)
+	{
+		m_SwapChain->Recreate(m_Spec);
+		m_Queue.UpdateSwapChain(m_SwapChain->GetVKHandle());
+		m_ImageIndex = m_Queue.AcquireNextImage();
+	}
+
+	BeginCommandBuffers(m_CMDBuffers[m_ImageIndex], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+	std::vector<VkClearValue> clearValues(2);
+	clearValues[0].color = m_ClearColor;
+	clearValues[1].depthStencil = { 1.0f, 0 };
+
+	VkRenderPassBeginInfo RenderPassBeginInfo{};
+	RenderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	RenderPassBeginInfo.pNext = nullptr;
+	RenderPassBeginInfo.renderPass = m_SwapChain->GetVKRenderPass();
+	RenderPassBeginInfo.framebuffer = m_SwapChain->GetVKFramebuffer(m_ImageIndex);
+	RenderPassBeginInfo.renderArea.offset = { 0, 0 };
+	RenderPassBeginInfo.renderArea.extent.width = m_SwapChain->GetWidth();
+	RenderPassBeginInfo.renderArea.extent.height = m_SwapChain->GetHeight();
+
+	RenderPassBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+	RenderPassBeginInfo.pClearValues = clearValues.data();
+
+
+	vkCmdBeginRenderPass(m_CMDBuffers[m_ImageIndex], &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 }
 
 void FINALITY::VKRenderDevice::EndFrame()
 {
-	this->RecordCommandBuffers();
+	vkCmdEndRenderPass(m_CMDBuffers[m_ImageIndex]);
+	VkResult res = vkEndCommandBuffer(m_CMDBuffers[m_ImageIndex]);
+	CHECK_VK_RESULT(res, "vkEndCommandBuffer execution layer trace");
+
 	m_Queue.SubmitASync(m_CMDBuffers[m_ImageIndex]);
 }
 
 void FINALITY::VKRenderDevice::PresentFrame()
 {
 	m_Queue.Present(m_ImageIndex);
-	m_Queue.WaitIdle(); // Temp fix for now
 }
+
 
 void FINALITY::VKRenderDevice::Clear(float r, float g, float b, float a)
 {
-	m_ClearColor = { r, g, b, a };
+	m_ClearColor = { .float32 = { r, g, b, a } };
 }

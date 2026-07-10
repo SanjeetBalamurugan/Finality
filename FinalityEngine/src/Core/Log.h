@@ -6,6 +6,8 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <memory>
 
+template class FAPI std::shared_ptr<spdlog::logger>;
+
 namespace FINALITY
 {
 	class FAPI Logger

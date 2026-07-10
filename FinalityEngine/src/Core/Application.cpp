@@ -14,6 +14,7 @@
 #include "Log.h"
 #include <Scene/SceneManager.h>
 #include "RenderCommand.h"
+#include <Renderer/Renderer.h>
 
 FINALITY::RendererAPI FINALITY::Application::s_CurrentAPI = RendererAPI::NONE;
 
@@ -60,6 +61,8 @@ void FINALITY::Application::Initialize(const RendererAPI& api, const WindowSpec&
 	m_RenderDevice->Initialize(m_Window->GetNativeHandles());
 	FINALITY::RenderCommand::Init(m_RenderDevice.get());
 
+	FINALITY::Renderer::Initialize(m_RenderDevice.get());
+
 	m_CurrentGame->Init();
 	SceneManager::GetInstance().Initialize();
 
@@ -97,9 +100,20 @@ void FINALITY::Application::Update()
 void FINALITY::Application::Shutdown()
 {
 	SceneManager::GetInstance().Shutdown();
+	FINALITY::Renderer::Shutdown();
 
 	if (m_CurrentGame) m_CurrentGame->Destroy();
-	if (m_Window) m_Window->Shutdown();
-	if (m_RenderDevice) m_RenderDevice->Shutdown();
+	if (m_Window)
+	{
+		m_Window->Shutdown();
+		m_Window.reset();
+	}
+	
+	if (m_RenderDevice)
+	{
+		m_RenderDevice->Shutdown();
+		m_RenderDevice.reset();
+	}
+
 	if (!m_Running) glfwTerminate();
 }

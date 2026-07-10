@@ -21,6 +21,7 @@ namespace FINALITY
 		entt::registry m_EntityRegistry;
 
 		friend class Entity;
+		friend class ScriptableComponent;
 	};
 
 	class FAPI EmptyScene : public Scene

@@ -2,7 +2,7 @@
 
 #include <memory>
 #include <vector>
-
+#include <entt.hpp>
 #include <Core/Core.h>
 
 namespace FINALITY
@@ -47,25 +47,25 @@ namespace FINALITY
     public:
         virtual ~ScriptableComponent() = default;
 
-        Entity& GetEntity();
-        const Entity& GetEntity() const;
-
+        Entity GetEntity();
+        const Entity GetEntity() const;
 
     protected:
         template<typename T>
-        T& GetComponent();
-
-        template<typename T>
         bool HasComponent() const;
 
+        template<typename T>
+        T& GetComponent();
+
+    protected:
+        entt::entity m_EntityHandle{ entt::null };
+        Scene* m_CurrentScene = nullptr;
 
     private:
         virtual void Awake() {}
         virtual void Start() {}
         virtual void Update(float dt) {}
         virtual void OnDestroy() {}
-
-        Entity* m_Entity = nullptr;
 
         friend class Scene;
         friend class Entity;

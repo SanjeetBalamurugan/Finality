@@ -3,14 +3,13 @@
 
 namespace FINALITY
 {
-    Entity& ScriptableComponent::GetEntity()
+    Entity ScriptableComponent::GetEntity()
     {
-        return *m_Entity;
+        return Entity{ m_EntityHandle, m_CurrentScene };
     }
 
-
-    const Entity& ScriptableComponent::GetEntity() const
+    const Entity ScriptableComponent::GetEntity() const
     {
-        return *m_Entity;
+        return Entity{ m_EntityHandle, m_CurrentScene };
     }
 }

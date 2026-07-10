@@ -1,5 +1,6 @@
 #pragma once
 #include "VKCore.h"
+#include <vector>
 
 namespace FINALITY
 {
@@ -10,6 +11,8 @@ namespace FINALITY
 	public:
 		void Initialize(VkDevice device, VkSwapchainKHR swapchain, uint32_t queueFamily, uint32_t queueIndex);
 		void ShutDown();
+
+		void UpdateSwapChain(VkSwapchainKHR newSwapchain) { m_SwapChain = newSwapchain; }
 
 		uint32_t AcquireNextImage();
 
@@ -24,7 +27,11 @@ namespace FINALITY
 		VkSwapchainKHR m_SwapChain = nullptr;
 		VkQueue m_Queue = nullptr;
 
-		VkSemaphore m_RenderCompleteSem;
-		VkSemaphore m_PresentCompleteSem;
+		static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
+		size_t m_CurrentFrame = 0;
+
+		std::vector<VkSemaphore> m_ImageAvailableSemaphores;
+		std::vector<VkSemaphore> m_RenderFinishedSemaphores;
+		std::vector<VkFence> m_InFlightFences;
 	};
 }

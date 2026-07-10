@@ -16,7 +16,9 @@ namespace FINALITY
         auto& storage = GetComponent<ScriptStorage>();
 
         auto script = std::make_unique<T>(std::forward<Args>(args)...);
-        script->m_Entity = this;
+
+        script->m_EntityHandle = m_EntityHandle;
+        script->m_CurrentScene = m_CurrentScene;
 
         T* ptr = script.get();
 

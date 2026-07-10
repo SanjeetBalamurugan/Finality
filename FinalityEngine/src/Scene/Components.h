@@ -2,6 +2,8 @@
 #include <string>
 
 #include <glm/glm.hpp>
+#include <Core/Mesh.h>
+#include <Core/Pipeline.h>
 
 namespace FINALITY
 {
@@ -30,5 +32,27 @@ namespace FINALITY
 			: Position(pos), Rotation(rot) {};
 		TransformComponent(const glm::vec3& pos)
 			: Position(pos) {};
+	};
+
+	struct MaterialComponent
+	{
+		std::shared_ptr<Pipeline> PipelineInstance;
+
+		MaterialComponent() = default;
+		MaterialComponent(const MaterialComponent&) = default;
+		MaterialComponent(const std::shared_ptr<Pipeline>& pipeline)
+			: PipelineInstance(pipeline) {
+		};
+	};
+
+	struct MeshComponent
+	{
+		std::shared_ptr<Mesh> MeshData;
+
+		MeshComponent() = default;
+		MeshComponent(const MeshComponent&) = default;
+		MeshComponent(const std::shared_ptr<Mesh>& meshData)
+			: MeshData(meshData) {
+		};
 	};
 }
