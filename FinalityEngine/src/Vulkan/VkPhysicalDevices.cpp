@@ -1,4 +1,5 @@
 #include "VkPhysicalDevices.h"
+#include <string>
 
 void FINALITY::VkPhysicalDevices::Initialize(const VkInstance& instance, const VkSurfaceKHR& surface)
 {
@@ -12,7 +13,7 @@ void FINALITY::VkPhysicalDevices::Initialize(const VkInstance& instance, const V
 
 	std::vector<VkPhysicalDevice> vkDevices;
 	vkDevices.resize(numDevices);
-	
+
 	res = vkEnumeratePhysicalDevices(instance, &numDevices, vkDevices.data());
 	CHECK_VK_RESULT(res, "vkEnumeratePhysicalDevices error");
 
@@ -77,22 +78,54 @@ void FINALITY::VkPhysicalDevices::Initialize(const VkInstance& instance, const V
 
 uint32_t FINALITY::VkPhysicalDevices::SelectDevice(VkQueueFlags requiredQueueTypes, bool supportsPresent)
 {
-	for (uint32_t i = 0; i < m_Devices.size(); i++) {
+	int highestScore = -1;
+	int bestDeviceIndex = -1;
+	int bestQueueFamilyIndex = -1;
 
-		for (uint32_t j = 0; j < m_Devices[i].qFamilyProps.size(); j++) {
+	for (uint32_t i = 0; i < m_Devices.size(); i++)
+	{
+		for (uint32_t j = 0; j < m_Devices[i].qFamilyProps.size(); j++)
+		{
 			const VkQueueFamilyProperties& QFamilyProp = m_Devices[i].qFamilyProps[j];
 
-			if ((QFamilyProp.queueFlags & requiredQueueTypes) && ((bool)m_Devices[i].qSupportsPresent[j] == supportsPresent)) {
-				m_DevIndex = i;
-				int QueueFamily = j;
-				FI_CORE_INFO("Using Device {} and queue family {}", m_DevIndex, QueueFamily);
-				return QueueFamily;
+			if ((QFamilyProp.queueFlags & requiredQueueTypes) == requiredQueueTypes && ((bool)m_Devices[i].qSupportsPresent[j] == supportsPresent))
+			{
+				int score = 0;
+				std::string name(m_Devices[i].properties.deviceName);
+
+				if (name.find("Intel") != std::string::npos && m_Devices[i].properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
+				{
+					score = 1;
+				}
+				else if (m_Devices[i].properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+				{
+					score += 10000;
+				}
+				else if (m_Devices[i].properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
+				{
+					score += 1000;
+				}
+
+				score += m_Devices[i].properties.limits.maxImageDimension2D;
+
+				if (score > highestScore)
+				{
+					highestScore = score;
+					bestDeviceIndex = i;
+					bestQueueFamilyIndex = j;
+				}
 			}
 		}
 	}
 
-	FI_CORE_ERROR("Required queue type {} and supports present {} not found\n", requiredQueueTypes, supportsPresent);
+	if (bestDeviceIndex != -1)
+	{
+		m_DevIndex = bestDeviceIndex;
+		FI_CORE_INFO("Using Device {} and queue family {}", m_DevIndex, bestQueueFamilyIndex);
+		return bestQueueFamilyIndex;
+	}
 
+	FI_CORE_ERROR("Required queue type {} and supports present {} not found\n", requiredQueueTypes, supportsPresent);
 	return 0;
 }
 

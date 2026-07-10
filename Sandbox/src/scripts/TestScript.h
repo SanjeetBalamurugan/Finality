@@ -49,17 +49,34 @@ namespace FINALITY
 
             m_RotationAngle += 1.0f * dt;
 
+            float width = 1000.0f;
+            float height = 600.0f;
+            float aspectRatio = width / height;
+
+            glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.01f, 100.0f);
+            glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.5f));
+
             glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), m_RotationAngle, glm::vec3(1.0f, 0.0f, 0.0f));
             glm::mat4 rotationY = glm::rotate(glm::mat4(1.0f), m_RotationAngle * 0.5f, glm::vec3(0.0f, 1.0f, 0.0f));
-            glm::mat4 finalRotation = rotationX * rotationY;
+            glm::mat4 model = rotationX * rotationY;
+
+            glm::mat4 mvp = projection * view * model;
 
             std::vector<Vertex> animatedVertices = baseCubeVertices;
 
             for (auto& vertex : animatedVertices)
             {
-                glm::vec4 rotatedPos = finalRotation * glm::vec4(vertex.Position, 1.0f);
-                vertex.Position = glm::vec3(rotatedPos.x, rotatedPos.y, rotatedPos.z);
+                glm::vec4 projectedPos = mvp * glm::vec4(vertex.Position, 1.0f);
+                if (projectedPos.w != 0.0f)
+                {
+                    vertex.Position = glm::vec3(
+                        projectedPos.x / projectedPos.w,
+                        projectedPos.y / projectedPos.w,
+                        projectedPos.z / projectedPos.w
+                    );
+                }
             }
+
             if (HasComponent<MeshComponent>())
             {
                 auto& meshComp = GetComponent<MeshComponent>();

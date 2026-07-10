@@ -7,7 +7,7 @@ namespace FINALITY
 	class VKQueue
 	{
 	private:
-		void CreateSemaphores();
+		void CreateSemaphores(uint32_t swapchainImageCount);
 	public:
 		void Initialize(VkDevice device, VkSwapchainKHR swapchain, uint32_t queueFamily, uint32_t queueIndex);
 		void ShutDown();
@@ -17,7 +17,7 @@ namespace FINALITY
 		uint32_t AcquireNextImage();
 
 		void SubmitSync(VkCommandBuffer cmdBuf);
-		void SubmitASync(VkCommandBuffer cmdBuf);
+		void SubmitASync(VkCommandBuffer cmdBuf, uint32_t imageIndex);
 
 		void Present(uint32_t imageIndex);
 		void WaitIdle();
@@ -26,9 +26,6 @@ namespace FINALITY
 		VkDevice m_Device = nullptr;
 		VkSwapchainKHR m_SwapChain = nullptr;
 		VkQueue m_Queue = nullptr;
-
-		static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
-		size_t m_CurrentFrame = 0;
 
 		std::vector<VkSemaphore> m_ImageAvailableSemaphores;
 		std::vector<VkSemaphore> m_RenderFinishedSemaphores;

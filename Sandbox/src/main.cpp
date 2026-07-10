@@ -1,6 +1,7 @@
 #include <iostream>
 #include <Finality.h>
 #include <scenes/SplashScreen.h>
+#include <scenes/MainScene.h>
 
 class SandboxGame : public FINALITY::Game
 {

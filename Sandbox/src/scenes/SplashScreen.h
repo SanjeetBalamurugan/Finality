@@ -9,6 +9,7 @@ public:
     void OnInit() override {}
 
     void OnUpdate(float ts) override {
+        FINALITY::Scene::OnUpdate(ts);
         FINALITY::RenderCommand::SetClearColor(0.0f, 0.0f, 0.2f, 1.0f);
 
         m_ElapsedTime += ts;
@@ -19,7 +20,9 @@ public:
         }
     }
 
-    void OnDestroy() override {}
+    void OnDestroy() override {
+        FINALITY::Scene::OnDestroy();
+    }
 
 private:
     float m_ElapsedTime = 0.0f;

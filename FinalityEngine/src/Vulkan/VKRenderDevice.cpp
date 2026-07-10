@@ -155,35 +155,6 @@ void FINALITY::VKRenderDevice::BeginCommandBuffers(VkCommandBuffer cmdBuf, uint3
 	CHECK_VK_RESULT(res, "vkBeginCommandBuffer error");
 }
 
-void FINALITY::VKRenderDevice::RecordCommandBuffers()
-{
-	VkClearValue ClearValue{};
-	ClearValue.color = m_ClearColor;
-
-	VkRenderPassBeginInfo RenderPassBeginInfo{};
-	RenderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	RenderPassBeginInfo.pNext = nullptr;
-	RenderPassBeginInfo.renderPass = m_SwapChain->GetVKRenderPass();
-	RenderPassBeginInfo.renderArea.offset.x = 0;
-	RenderPassBeginInfo.renderArea.offset.y = 0;
-	RenderPassBeginInfo.renderArea.extent.width = m_SwapChain->GetWidth();
-	RenderPassBeginInfo.renderArea.extent.height = m_SwapChain->GetHeight();
-	RenderPassBeginInfo.clearValueCount = 1;
-	RenderPassBeginInfo.pClearValues = &ClearValue;
-
-	vkResetCommandBuffer(m_CMDBuffers[m_ImageIndex], 0);
-
-	this->BeginCommandBuffers(m_CMDBuffers[m_ImageIndex], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-
-	RenderPassBeginInfo.framebuffer = m_SwapChain->GetVKFramebuffer(m_ImageIndex);
-	vkCmdBeginRenderPass(m_CMDBuffers[m_ImageIndex], &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-	vkCmdEndRenderPass(m_CMDBuffers[m_ImageIndex]);
-
-	VkResult res = vkEndCommandBuffer(m_CMDBuffers[m_ImageIndex]);
-	CHECK_VK_RESULT(res, "vkEndCommandBuffer error");
-}
-
 void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 {
 	this->CreateInstance();
@@ -220,9 +191,9 @@ void FINALITY::VKRenderDevice::DrawQueue(const std::vector<RenderPacket>& queue)
 
 	VkViewport viewport{
 		.x = 0.0f,
-		.y = 0.0f,
+		.y = static_cast<float>(m_SwapChain->GetHeight()),
 		.width = static_cast<float>(m_SwapChain->GetWidth()),
-		.height = static_cast<float>(m_SwapChain->GetHeight()),
+		.height = -static_cast<float>(m_SwapChain->GetHeight()),
 		.minDepth = 0.0f,
 		.maxDepth = 1.0f
 	};
@@ -277,7 +248,6 @@ std::shared_ptr<FINALITY::Pipeline> FINALITY::VKRenderDevice::CreatePipeline(con
 	return std::make_shared<VKPipeline>(m_Device, m_SwapChain->GetVKRenderPass(), config);
 }
 
-
 void FINALITY::VKRenderDevice::Shutdown()
 {
 	m_Queue.WaitIdle();
@@ -326,7 +296,6 @@ void FINALITY::VKRenderDevice::BeginFrame()
 	RenderPassBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 	RenderPassBeginInfo.pClearValues = clearValues.data();
 
-
 	vkCmdBeginRenderPass(m_CMDBuffers[m_ImageIndex], &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 }
 
@@ -334,16 +303,15 @@ void FINALITY::VKRenderDevice::EndFrame()
 {
 	vkCmdEndRenderPass(m_CMDBuffers[m_ImageIndex]);
 	VkResult res = vkEndCommandBuffer(m_CMDBuffers[m_ImageIndex]);
-	CHECK_VK_RESULT(res, "vkEndCommandBuffer execution layer trace");
+	CHECK_VK_RESULT(res, "vkEndCommandBuffer error");
 
-	m_Queue.SubmitASync(m_CMDBuffers[m_ImageIndex]);
+	m_Queue.SubmitASync(m_CMDBuffers[m_ImageIndex], m_ImageIndex);
 }
 
 void FINALITY::VKRenderDevice::PresentFrame()
 {
 	m_Queue.Present(m_ImageIndex);
 }
-
 
 void FINALITY::VKRenderDevice::Clear(float r, float g, float b, float a)
 {

@@ -1,8 +1,7 @@
 #pragma once
 #include <Finality.h>
 #include "scripts/TestScript.h"
-#include <Core/Mesh.h>
-#include "Renderer/Renderer.h"
+#include <scripts/KeyPrintScript.h>
 
 class MainScene : public FINALITY::Scene
 {
@@ -11,6 +10,7 @@ public:
     {
         auto entity = CreateEntity("Rotating Cube");
         entity.AddScript<FINALITY::TestScript>();
+        entity.AddScript<FINALITY::KeyPrintScript>();
 
         // 8 Corners of a 3D Cube with distinct face colors
         std::vector<FINALITY::Vertex> vertices = {

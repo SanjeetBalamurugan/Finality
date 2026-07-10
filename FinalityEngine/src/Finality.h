@@ -18,6 +18,11 @@
 
 // RENDERER
 #include "Renderer/Shader.h"
+#include "Renderer/Renderer.h"
+
+// EVENTS
+#include "Events/Input.h"
+#include "Events/KeyCodes.h"
 
 #define FI_CLIENT_ERROR(...)       ::FINALITY::Logger::GetClientLogger()->error(__VA_ARGS__)
 #define FI_CLIENT_WARN(...)        ::FINALITY::Logger::GetClientLogger()->warn(__VA_ARGS__)

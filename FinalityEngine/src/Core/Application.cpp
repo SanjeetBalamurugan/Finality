@@ -15,6 +15,7 @@
 #include <Scene/SceneManager.h>
 #include "RenderCommand.h"
 #include <Renderer/Renderer.h>
+#include <Events/Input.h>
 
 FINALITY::RendererAPI FINALITY::Application::s_CurrentAPI = RendererAPI::NONE;
 
@@ -92,6 +93,8 @@ void FINALITY::Application::Update()
 
 		m_RenderDevice->EndFrame();
 		m_RenderDevice->PresentFrame();
+
+		Input::ClearFrameStates();
 	}
 
 	m_Running = false;
