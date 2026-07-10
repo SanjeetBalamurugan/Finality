@@ -20,7 +20,7 @@ FINALITY::VKShader::~VKShader()
 
 void FINALITY::VKShader::Load(const std::string& filePath)
 {
-	std::filesystem::path path(filePath); // expecting file like "./test.vert" and import "./test.vert.vk.spv"
+	std::filesystem::path path(filePath); // expecting file like "./test.vert" and import "./test.vert.spv"
 	path += ".spv"; // Expected the Compiled binary file name to be in this format
 
 	std::ifstream file(path, std::ios::ate | std::ios::binary);
