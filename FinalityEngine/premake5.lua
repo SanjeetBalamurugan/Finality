@@ -14,7 +14,8 @@ project "FinalityEngine"
         "src",
         "../vendor/glfw/include/",
         "../vendor/spdlog/include/",
-        "../vendor/glm"
+        "../vendor/glm",
+        "../vendor/entt/include"
     }
 
     defines {
