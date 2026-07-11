@@ -5,6 +5,8 @@
 #include "VKDebug.h"
 #include "VKMesh.h"
 #include "VKPipeline.h"
+#include <glm/ext/matrix_transform.hpp>
+#include <Renderer/Renderer.h>
 
 void FINALITY::VKRenderDevice::CreateInstance()
 {
@@ -173,6 +175,69 @@ void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 
 	m_Queue.Initialize(m_Device, m_SwapChain->GetVKHandle(), m_QueueFamily, 0);
 	this->CreateCommandBuffers(m_SwapChain->GetImageCount());
+
+	uint32_t imageCount = m_SwapChain->GetImageCount();
+
+	VkDescriptorSetLayoutBinding uboLayoutBinding{};
+	uboLayoutBinding.binding = 0;
+	uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	uboLayoutBinding.descriptorCount = 1;
+	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	uboLayoutBinding.pImmutableSamplers = nullptr;
+
+	VkDescriptorSetLayoutCreateInfo layoutInfo{};
+	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	layoutInfo.bindingCount = 1;
+	layoutInfo.pBindings = &uboLayoutBinding;
+
+	VkResult res = vkCreateDescriptorSetLayout(m_Device, &layoutInfo, nullptr, &m_GlobalDescriptorSetLayout);
+	CHECK_VK_RESULT(res, "vkCreateDescriptorSetLayout");
+
+	m_GlobalUBO.Initialize(m_Device, m_Devices.SelectedDevice().device, sizeof(GlobalUniformBufferObject), imageCount);
+
+	VkDescriptorPoolSize poolSize{};
+	poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	poolSize.descriptorCount = imageCount;
+
+	VkDescriptorPoolCreateInfo poolInfo{};
+	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	poolInfo.poolSizeCount = 1;
+	poolInfo.pPoolSizes = &poolSize;
+	poolInfo.maxSets = imageCount;
+
+	res = vkCreateDescriptorPool(m_Device, &poolInfo, nullptr, &m_GlobalDescriptorPool);
+	CHECK_VK_RESULT(res, "vkCreateDescriptorPool");
+
+	std::vector<VkDescriptorSetLayout> layouts(imageCount, m_GlobalDescriptorSetLayout);
+	VkDescriptorSetAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.descriptorPool = m_GlobalDescriptorPool;
+	allocInfo.descriptorSetCount = imageCount;
+	allocInfo.pSetLayouts = layouts.data();
+
+	m_GlobalDescriptorSets.resize(imageCount);
+	res = vkAllocateDescriptorSets(m_Device, &allocInfo, m_GlobalDescriptorSets.data());
+	CHECK_VK_RESULT(res, "vkAllocateDescriptorSets");
+
+	for (uint32_t i = 0; i < imageCount; i++)
+	{
+		VkDescriptorBufferInfo bufferInfo{};
+		bufferInfo.buffer = m_GlobalUBO.GetBuffer(i);
+		bufferInfo.offset = 0;
+		bufferInfo.range = sizeof(GlobalUniformBufferObject);
+
+		VkWriteDescriptorSet descriptorWrite{};
+		descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrite.dstSet = m_GlobalDescriptorSets[i];
+		descriptorWrite.dstBinding = 0;
+		descriptorWrite.dstArrayElement = 0;
+		descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrite.descriptorCount = 1;
+		descriptorWrite.pBufferInfo = &bufferInfo;
+
+		vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
+	}
+
 }
 
 void FINALITY::VKRenderDevice::SetWindowSpec(const WindowSpec& spec)
@@ -218,7 +283,33 @@ void FINALITY::VKRenderDevice::DrawQueue(const std::vector<RenderPacket>& queue)
 		{
 			activePipeline = vkPipeline;
 			activePipeline->Bind(cmd);
+
+			vkCmdBindDescriptorSets(
+				cmd,
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				vkPipeline->GetVKLayout(),
+				0, 1,
+				&m_GlobalDescriptorSets[m_ImageIndex],
+				0, nullptr
+			);
 		}
+
+		uint8_t pushBuffer[128] = { 0 };
+		std::memcpy(pushBuffer, &packet.Transform, sizeof(glm::mat4));
+
+		if (!packet.CustomPushData.empty())
+		{
+			std::memcpy(pushBuffer + 64, packet.CustomPushData.data() + 64, 64);
+		}
+
+		vkCmdPushConstants(
+			cmd,
+			vkPipeline->GetVKLayout(),
+			VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+			0,
+			128,
+			pushBuffer
+		);
 
 		vkMesh->Bind(cmd);
 
@@ -233,6 +324,7 @@ void FINALITY::VKRenderDevice::DrawQueue(const std::vector<RenderPacket>& queue)
 	}
 }
 
+
 std::shared_ptr<FINALITY::Mesh> FINALITY::VKRenderDevice::CreateMesh(const std::vector<Vertex>& vertices)
 {
 	return std::make_shared<VKMesh>(m_Device, m_Devices.SelectedDevice().device, vertices);
@@ -245,12 +337,16 @@ std::shared_ptr<FINALITY::Mesh> FINALITY::VKRenderDevice::CreateMesh(const std::
 
 std::shared_ptr<FINALITY::Pipeline> FINALITY::VKRenderDevice::CreatePipeline(const PipelineConfig& config)
 {
-	return std::make_shared<VKPipeline>(m_Device, m_SwapChain->GetVKRenderPass(), config);
+	return std::make_shared<VKPipeline>(m_Device, m_SwapChain->GetVKRenderPass(), config, m_GlobalDescriptorSetLayout);
 }
 
 void FINALITY::VKRenderDevice::Shutdown()
 {
 	m_Queue.WaitIdle();
+
+	if (m_GlobalDescriptorPool) vkDestroyDescriptorPool(m_Device, m_GlobalDescriptorPool, nullptr);
+	if (m_GlobalDescriptorSetLayout) vkDestroyDescriptorSetLayout(m_Device, m_GlobalDescriptorSetLayout, nullptr);
+	m_GlobalUBO.Shutdown();
 
 	if (m_CMDBufPool) vkDestroyCommandPool(m_Device, m_CMDBufPool, nullptr);
 
@@ -276,6 +372,15 @@ void FINALITY::VKRenderDevice::BeginFrame()
 		m_SwapChain->Recreate(m_Spec);
 		m_Queue.UpdateSwapChain(m_SwapChain->GetVKHandle());
 		m_ImageIndex = m_Queue.AcquireNextImage();
+	}
+
+	if (Renderer::GetActiveCamera())
+	{
+		GlobalUniformBufferObject ubo{};
+		ubo.View = Renderer::GetActiveCamera()->GetViewMatrix();
+		ubo.Projection = Renderer::GetActiveCamera()->GetProjection();
+
+		m_GlobalUBO.Update(m_ImageIndex, &ubo);
 	}
 
 	BeginCommandBuffers(m_CMDBuffers[m_ImageIndex], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);

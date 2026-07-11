@@ -14,6 +14,7 @@ namespace FINALITY
     {
         s_RenderQueue.clear();
         s_Device = nullptr;
+        s_ActiveCamera = nullptr;
     }
 
     void Renderer::BeginScene()
@@ -30,20 +31,22 @@ namespace FINALITY
 
         RenderPacket packet{};
         packet.MeshData = entity.GetComponent<MeshComponent>().MeshData;
-        packet.PipelineInstance = entity.GetComponent<MaterialComponent>().PipelineInstance;
+
+        const auto& mat = entity.GetComponent<MaterialComponent>();
+        if (mat.MaterialInstance)
+        {
+            packet.PipelineInstance = mat.MaterialInstance->GetPipeline();
+            packet.CustomPushData = mat.MaterialInstance->GetRawDataBuffer();
+        }
 
         if (entity.HasComponent<TransformComponent>())
         {
             const auto& transform = entity.GetComponent<TransformComponent>();
-            packet.Position = transform.Position;
-            packet.Rotation = transform.Rotation;
-            packet.Scale = transform.Scale;
+            packet.Transform = transform.GetTransformMatrix();
         }
         else
         {
-            packet.Position = glm::vec3(0.0f);
-            packet.Rotation = glm::vec3(0.0f);
-            packet.Scale = glm::vec3(1.0f);
+            packet.Transform = glm::mat4(1.0f);
         }
 
         s_RenderQueue.push_back(packet);

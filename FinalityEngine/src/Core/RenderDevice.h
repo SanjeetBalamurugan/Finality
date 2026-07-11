@@ -16,9 +16,9 @@ namespace FINALITY
 	{
 		std::shared_ptr<Mesh> MeshData;
 		std::shared_ptr<Pipeline> PipelineInstance;
-		glm::vec3 Position;
-		glm::vec3 Rotation;
-		glm::vec3 Scale;
+		glm::mat4 Transform{ 1.0f };
+
+		std::vector<uint8_t> CustomPushData;
 	};
 
 	class FAPI RenderDevice

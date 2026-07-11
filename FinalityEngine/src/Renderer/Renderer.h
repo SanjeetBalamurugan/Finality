@@ -5,6 +5,7 @@
 #include "Scene/Entity.h"
 #include "Scene/Components.h"
 #include <vector>
+#include "Camera.h"
 
 namespace FINALITY
 {
@@ -25,8 +26,12 @@ namespace FINALITY
 
         static void PushEntity(Entity entity);
         static RenderDevice* GetDevice() { return s_Device; }
+
+        static void SetActiveCamera(Camera* camera) { s_ActiveCamera = camera; }
+        static Camera* GetActiveCamera() { return s_ActiveCamera; }
     private:
         static RenderDevice* s_Device;
         static std::vector<RenderPacket> s_RenderQueue;
+        static inline Camera* s_ActiveCamera = nullptr;
     };
 }

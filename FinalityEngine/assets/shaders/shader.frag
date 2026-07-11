@@ -5,6 +5,14 @@ layout(location = 1) in vec2 fragTexCoord;
 
 layout(location = 0) out vec4 outColor;
 
+layout(push_constant) uniform UserMaterialData {
+    layout(offset = 64) float time;
+} material;
+
 void main() {
-    outColor = vec4(fragColor, 1.0);
+    // Generate a pulsing sine wave effect over time
+    float pulse = sin(material.time * 2.0) * 0.5 + 0.5;
+    
+    // Mix the vertex colors with the runtime uniform wave
+    outColor = vec4(fragColor * pulse, 1.0);
 }

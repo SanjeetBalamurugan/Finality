@@ -4,6 +4,7 @@
 
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
+#include <Events/Mouse.h>
 
 void FINALITY::GLFWWindowImpl::Initialize(const WindowSpec& specification)
 {
@@ -36,6 +37,21 @@ void FINALITY::GLFWWindowImpl::Initialize(const WindowSpec& specification)
 			}
 		}
 		});
+
+	glfwSetCursorPosCallback(m_Window, [](GLFWwindow* window, double xpos, double ypos) {
+		FINALITY::Mouse::RecordMousePosition(static_cast<float>(xpos), static_cast<float>(ypos));
+		});
+
+	glfwSetMouseButtonCallback(m_Window, [](GLFWwindow* window, int button, int action, int mods) {
+		if (button >= 0 && button < 8) {
+			if (action == GLFW_PRESS) {
+				FINALITY::Mouse::RecordButtonPress(static_cast<MouseCode>(button));
+			}
+			else if (action == GLFW_RELEASE) {
+				FINALITY::Mouse::RecordButtonRelease(static_cast<MouseCode>(button));
+			}
+		}
+		});
 }
 
 void FINALITY::GLFWWindowImpl::Update()
@@ -51,4 +67,26 @@ void FINALITY::GLFWWindowImpl::Shutdown()
 bool FINALITY::GLFWWindowImpl::ShouldClose() const
 {
 	return glfwWindowShouldClose(m_Window);
+}
+
+void FINALITY::GLFWWindowImpl::SetCursorMode(bool hiddenAndLocked)
+{
+	if (!m_Window) return;
+
+	if (hiddenAndLocked)
+	{
+		glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	}
+	else
+	{
+		glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+	}
+}
+
+void FINALITY::GLFWWindowImpl::SetWindowTitle(const std::string& title)
+{
+	if (m_Window)
+	{
+		glfwSetWindowTitle(m_Window, title.c_str());
+	}
 }

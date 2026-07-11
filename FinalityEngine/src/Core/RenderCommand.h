@@ -16,6 +16,9 @@ namespace FINALITY
             s_RenderDevice = device;
         }
 
+        static void SetWindowTitle(const std::string& title);
+        static void SetCursorMode(bool hiddenAndLocked);
+
     private:
         static RenderDevice* s_RenderDevice;
     };

@@ -31,6 +31,18 @@ namespace FINALITY
             }
         }
 
+        auto cameraView = m_EntityRegistry.view<CameraComponent, TransformComponent>();
+        for (auto entityHandle : cameraView)
+        {
+            auto& cam = cameraView.get<CameraComponent>(entityHandle);
+            auto& transform = cameraView.get<TransformComponent>(entityHandle);
+
+            if (cam.IsPrimary)
+            {
+                Renderer::SetActiveCamera(cam.CameraInstance.get());
+            }
+        }
+
         Renderer::BeginScene();
 
         auto renderView = m_EntityRegistry.view<MeshComponent>();

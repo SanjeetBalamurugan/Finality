@@ -21,6 +21,7 @@
 #include "Renderer/Renderer.h"
 
 // EVENTS
+#include "Events/Mouse.h"
 #include "Events/Input.h"
 #include "Events/KeyCodes.h"
 

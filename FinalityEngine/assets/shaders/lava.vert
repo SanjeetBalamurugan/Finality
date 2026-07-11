@@ -18,7 +18,6 @@ layout(push_constant) uniform LocalObjectData {
 
 void main() {
     gl_Position = global.proj * global.view * local.model * vec4(inPosition, 1.0);
-    
     fragColor = inColor;
     fragTexCoord = inTexCoord;
 }

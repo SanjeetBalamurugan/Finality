@@ -12,8 +12,19 @@ public:
         FINALITY::SceneManager::GetInstance().SetScene(std::move(next));
         FINALITY::SceneManager::GetInstance().ChangeScene();
     };
-    void Update(float ts) override {};
+    void Update(float ts) override 
+    {
+        if (FINALITY::Input::IsKeyDown(FINALITY::Key::Escape))
+        {
+            m_Hidden = !m_Hidden;
+            FINALITY::RenderCommand::SetCursorMode(m_Hidden);
+            FI_CLIENT_INFO("Changed Cursor Mode");
+        }
+    };
     void Destroy() override {};
+
+private:
+    bool m_Hidden = false;
 };
 
 int main(int argc, char const *argv[])

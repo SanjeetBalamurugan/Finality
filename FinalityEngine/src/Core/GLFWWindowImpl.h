@@ -18,6 +18,10 @@ namespace FINALITY
 		uint32_t GetHeight() const override { return m_Specification.height; }
 		WindowSpec GetSpecifications() const override { return m_Specification; }
 		NativeWindowHandle GetNativeHandles() const override { return m_NativeHandle; }
+
+		void SetCursorMode(bool hiddenAndLocked) override;
+		void SetWindowTitle(const std::string& title) override;
+
 	private:
 		GLFWwindow* m_Window = nullptr;
 		WindowSpec m_Specification;

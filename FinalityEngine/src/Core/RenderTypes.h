@@ -1,4 +1,5 @@
 #pragma once
+#include <glm/glm.hpp>
 
 namespace FINALITY
 {
@@ -7,5 +8,11 @@ namespace FINALITY
 		VULKAN,
 
 		NONE
+	};
+
+	struct GlobalUniformBufferObject
+	{
+		glm::mat4 View;
+		glm::mat4 Projection;
 	};
 }

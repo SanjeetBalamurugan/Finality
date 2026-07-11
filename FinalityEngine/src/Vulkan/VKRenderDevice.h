@@ -9,6 +9,7 @@
 #include "VkPhysicalDevices.h"
 #include "VkQueue.h"
 #include "VKSwapChain.h"
+#include "VKUniformBuffer.h"
 
 namespace FINALITY
 {
@@ -48,6 +49,9 @@ namespace FINALITY
 		std::shared_ptr<Mesh> CreateMesh(const std::vector<Vertex>& vertices) override;
 		std::shared_ptr<Mesh> CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices) override;
 		std::shared_ptr<Pipeline> CreatePipeline(const PipelineConfig& config) override;
+
+		VkDescriptorSetLayout GetGlobalDescriptorSetLayout() const { return m_GlobalDescriptorSetLayout; }
+		VkDescriptorSet GetGlobalDescriptorSet(uint32_t index) const { return m_GlobalDescriptorSets[index]; }
 	private:
 		WindowSpec m_Spec;
 		const std::vector<const char*> m_ValidationLayers = {
@@ -73,5 +77,11 @@ namespace FINALITY
 		uint32_t m_ImageIndex = 0;
 
 		VkClearColorValue m_ClearColor;
+
+		VkDescriptorSetLayout m_GlobalDescriptorSetLayout = VK_NULL_HANDLE;
+		VkDescriptorPool m_GlobalDescriptorPool = VK_NULL_HANDLE;
+		std::vector<VkDescriptorSet> m_GlobalDescriptorSets;
+
+		VKUniformBuffer m_GlobalUBO;
 	};
 }

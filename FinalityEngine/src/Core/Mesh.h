@@ -15,6 +15,16 @@ namespace FINALITY
 		glm::vec2 TexCoord;
 	};
 
+	struct MeshPushConstants
+	{
+		glm::mat4 MVP;
+
+		float CustomFloat0 = 0.0f;
+		float CustomFloat1 = 0.0f;
+		float Time = 0.0f;
+		float Padding = 0.0f;
+	};
+
 	class FAPI Mesh
 	{
 	public:

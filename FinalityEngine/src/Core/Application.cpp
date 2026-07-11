@@ -16,11 +16,13 @@
 #include "RenderCommand.h"
 #include <Renderer/Renderer.h>
 #include <Events/Input.h>
+#include <Events/Mouse.h>
 
 FINALITY::RendererAPI FINALITY::Application::s_CurrentAPI = RendererAPI::NONE;
 
 void FINALITY::Application::Initialize(const RendererAPI& api, const WindowSpec& spec, std::unique_ptr<Game> game)
 {
+	s_Instance = this;
 	Logger::Init();
 
 	FI_CORE_INFO("FINALITY ENGINE");
@@ -95,6 +97,7 @@ void FINALITY::Application::Update()
 		m_RenderDevice->PresentFrame();
 
 		Input::ClearFrameStates();
+		Mouse::ClearFrameStates();
 	}
 
 	m_Running = false;

@@ -17,6 +17,8 @@ namespace FINALITY
 		void Shutdown();
 
 		static RendererAPI GetActiveAPI() { return s_CurrentAPI; }
+		static Application& Get() { return *s_Instance; }
+		Window& GetWindow() { return *m_Window; }
 
 	private:
 		static RendererAPI s_CurrentAPI;
@@ -25,5 +27,6 @@ namespace FINALITY
 		std::unique_ptr<Game> m_CurrentGame;
 
 		bool m_Running = false;
+		static inline Application* s_Instance = nullptr;
 	};
 }
