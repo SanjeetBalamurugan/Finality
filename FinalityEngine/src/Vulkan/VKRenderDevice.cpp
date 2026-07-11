@@ -8,6 +8,7 @@
 #include <glm/ext/matrix_transform.hpp>
 #include <Renderer/Renderer.h>
 #include "VKTexture.h"
+#include "VKFramebuffer.h"
 
 void FINALITY::VKRenderDevice::CreateInstance()
 {
@@ -176,6 +177,13 @@ void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 
 	m_Queue.Initialize(m_Device, m_SwapChain->GetVKHandle(), m_QueueFamily, 0);
 	this->CreateCommandBuffers(m_SwapChain->GetImageCount());
+
+	FramebufferSpecification fbSpec{};
+	fbSpec.Width = m_SwapChain->GetWidth();
+	fbSpec.Height = m_SwapChain->GetHeight();
+	fbSpec.IsSwapChainTarget = false;
+
+	m_PostProcessingFramebuffer = Framebuffer::Create(fbSpec);
 
 	m_FrameDeletionQueues.resize(m_SwapChain->GetImageCount());
 	m_MaterialDescriptorAllocator.Initialize(m_Device);
@@ -404,12 +412,14 @@ std::shared_ptr<FINALITY::Mesh> FINALITY::VKRenderDevice::CreateMesh(const std::
 
 std::shared_ptr<FINALITY::Pipeline> FINALITY::VKRenderDevice::CreatePipeline(const PipelineConfig& config)
 {
-	return std::make_shared<VKPipeline>(m_Device, m_SwapChain->GetVKRenderPass(), config, m_GlobalDescriptorSetLayout, m_MaterialDescriptorSetLayout);
+	return std::make_shared<VKPipeline>(m_Device, GetActiveRenderPass(), config, m_GlobalDescriptorSetLayout, m_MaterialDescriptorSetLayout);
 }
 
 void FINALITY::VKRenderDevice::Shutdown()
 {
 	m_Queue.WaitIdle();
+
+	m_PostProcessingFramebuffer.reset();
 
 	m_MaterialDescriptorAllocator.Shutdown();
 
@@ -439,6 +449,7 @@ void FINALITY::VKRenderDevice::Shutdown()
 	vkDestroyInstance(m_Instance, nullptr);
 }
 
+
 void FINALITY::VKRenderDevice::BeginFrame()
 {
 	m_ImageIndex = m_Queue.AcquireNextImage();
@@ -467,29 +478,109 @@ void FINALITY::VKRenderDevice::BeginFrame()
 	clearValues[0].color = m_ClearColor;
 	clearValues[1].depthStencil = { 1.0f, 0 };
 
+	auto* vkFB = static_cast<VKFramebuffer*>(m_PostProcessingFramebuffer.get());
+
 	VkRenderPassBeginInfo RenderPassBeginInfo{};
 	RenderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	RenderPassBeginInfo.pNext = nullptr;
-	RenderPassBeginInfo.renderPass = m_SwapChain->GetVKRenderPass();
-	RenderPassBeginInfo.framebuffer = m_SwapChain->GetVKFramebuffer(m_ImageIndex);
+	RenderPassBeginInfo.renderPass = vkFB->GetVKRenderPass();
+	RenderPassBeginInfo.framebuffer = vkFB->GetVKFramebuffer();
 	RenderPassBeginInfo.renderArea.offset = { 0, 0 };
-	RenderPassBeginInfo.renderArea.extent.width = m_SwapChain->GetWidth();
-	RenderPassBeginInfo.renderArea.extent.height = m_SwapChain->GetHeight();
-
+	RenderPassBeginInfo.renderArea.extent.width = m_PostProcessingFramebuffer->GetSpecification().Width;
+	RenderPassBeginInfo.renderArea.extent.height = m_PostProcessingFramebuffer->GetSpecification().Height;
 	RenderPassBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 	RenderPassBeginInfo.pClearValues = clearValues.data();
 
 	vkCmdBeginRenderPass(m_CMDBuffers[m_ImageIndex], &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 }
 
-
 void FINALITY::VKRenderDevice::EndFrame()
 {
-	vkCmdEndRenderPass(m_CMDBuffers[m_ImageIndex]);
-	VkResult res = vkEndCommandBuffer(m_CMDBuffers[m_ImageIndex]);
+	VkCommandBuffer cmd = m_CMDBuffers[m_ImageIndex];
+
+	vkCmdEndRenderPass(cmd);
+
+	auto* vkFB = static_cast<VKFramebuffer*>(m_PostProcessingFramebuffer.get());
+
+	VkImageMemoryBarrier fbBarrier{};
+	fbBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	fbBarrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	fbBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+	fbBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	fbBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	fbBarrier.image = vkFB->GetVKColorImage();
+	fbBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	fbBarrier.subresourceRange.baseMipLevel = 0;
+	fbBarrier.subresourceRange.levelCount = 1;
+	fbBarrier.subresourceRange.baseArrayLayer = 0;
+	fbBarrier.subresourceRange.layerCount = 1;
+	fbBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	fbBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+	VkImageMemoryBarrier scBarrier{};
+	scBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	scBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	scBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	scBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	scBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	scBarrier.image = m_SwapChain->GetVKImage(m_ImageIndex);
+	scBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	scBarrier.subresourceRange.baseMipLevel = 0;
+	scBarrier.subresourceRange.levelCount = 1;
+	scBarrier.subresourceRange.baseArrayLayer = 0;
+	scBarrier.subresourceRange.layerCount = 1;
+	scBarrier.srcAccessMask = 0;
+	scBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &fbBarrier);
+	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &scBarrier);
+
+	VkImageBlit blitRegion{};
+	blitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	blitRegion.srcSubresource.mipLevel = 0;
+	blitRegion.srcSubresource.baseArrayLayer = 0;
+	blitRegion.srcSubresource.layerCount = 1;
+	blitRegion.srcOffsets[0] = { 0, 0, 0 };
+	blitRegion.srcOffsets[1] = { static_cast<int32_t>(m_PostProcessingFramebuffer->GetSpecification().Width), static_cast<int32_t>(m_PostProcessingFramebuffer->GetSpecification().Height), 1 };
+
+	blitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	blitRegion.dstSubresource.mipLevel = 0;
+	blitRegion.dstSubresource.baseArrayLayer = 0;
+	blitRegion.dstSubresource.layerCount = 1;
+	blitRegion.dstOffsets[0] = { 0, 0, 0 };
+	blitRegion.dstOffsets[1] = { static_cast<int32_t>(m_SwapChain->GetWidth()), static_cast<int32_t>(m_SwapChain->GetHeight()), 1 };
+
+	vkCmdBlitImage(
+		cmd,
+		vkFB->GetVKColorImage(),
+		VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		m_SwapChain->GetVKImage(m_ImageIndex),
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		1, &blitRegion,
+		VK_FILTER_LINEAR
+	);
+
+	VkImageMemoryBarrier presentBarrier{};
+	presentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	presentBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	presentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	presentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	presentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	presentBarrier.image = m_SwapChain->GetVKImage(m_ImageIndex);
+	presentBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	presentBarrier.subresourceRange.baseMipLevel = 0;
+	presentBarrier.subresourceRange.levelCount = 1;
+	presentBarrier.subresourceRange.baseArrayLayer = 0;
+	presentBarrier.subresourceRange.layerCount = 1;
+	presentBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	presentBarrier.dstAccessMask = 0;
+
+	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &presentBarrier);
+
+	VkResult res = vkEndCommandBuffer(cmd);
 	CHECK_VK_RESULT(res, "vkEndCommandBuffer error");
 
-	m_Queue.SubmitASync(m_CMDBuffers[m_ImageIndex], m_ImageIndex);
+	m_Queue.SubmitASync(cmd, m_ImageIndex);
 }
 
 void FINALITY::VKRenderDevice::PresentFrame()

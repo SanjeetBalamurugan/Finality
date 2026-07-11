@@ -61,7 +61,7 @@ namespace FINALITY
         }
     }
 
-    void VKSwapChain::CreateSwapChain(const WindowSpec& spec)
+    void FINALITY::VKSwapChain::CreateSwapChain(const WindowSpec& spec)
     {
         VkSurfaceCapabilitiesKHR capabilities;
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_PhysicalDevice, m_Surface, &capabilities);
@@ -93,7 +93,7 @@ namespace FINALITY
         createInfo.imageColorSpace = m_SurfaceFormat.colorSpace;
         createInfo.imageExtent = m_Extent;
         createInfo.imageArrayLayers = 1;
-        createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         createInfo.preTransform = capabilities.currentTransform;
         createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
@@ -110,7 +110,7 @@ namespace FINALITY
         vkGetSwapchainImagesKHR(m_LogicalDevice, m_SwapChain, &imageCount, m_Images.data());
     }
 
-    void VKSwapChain::CreateImageViews()
+    void FINALITY::VKSwapChain::CreateImageViews()
     {
         m_ImageViews.resize(m_Images.size());
         for (size_t i = 0; i < m_Images.size(); i++)
@@ -136,7 +136,8 @@ namespace FINALITY
         }
     }
 
-    void VKSwapChain::CreateSimpleRenderPass()
+
+    void FINALITY::VKSwapChain::CreateSimpleRenderPass()
     {
         VkAttachmentDescription colorAttachment{};
         colorAttachment.format = m_SurfaceFormat.format;
@@ -175,10 +176,11 @@ namespace FINALITY
         VkSubpassDependency dependency{};
         dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
         dependency.dstSubpass = 0;
-        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        dependency.srcAccessMask = 0;
-        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        dependency.srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
         std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
         VkRenderPassCreateInfo renderPassInfo{};
@@ -193,7 +195,6 @@ namespace FINALITY
         if (vkCreateRenderPass(m_LogicalDevice, &renderPassInfo, nullptr, &m_RenderPass) != VK_SUCCESS) {
             throw std::runtime_error("Failed to create simple Render Pass!");
         }
-
     }
 
     void VKSwapChain::CreateFrameBuffers()

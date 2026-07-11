@@ -14,6 +14,9 @@
 #include <Renderer/Material.h>
 #include "VKDeletionQueue.h"
 #include "VKDescriptorAllocator.h"
+#include <Core/Framebuffer.h>
+
+#include "VKFramebuffer.h"
 
 namespace FINALITY
 {
@@ -32,7 +35,6 @@ namespace FINALITY
 		void CreateCommandBuffers(uint32_t count);
 		void CreateCommandBufferPool();
 		void BeginCommandBuffers(VkCommandBuffer cmdBuf, uint32_t usageFlags);
-		void RecordCommandBuffers();
 
 	public:
 		void Initialize(const NativeWindowHandle& handle) override;
@@ -66,6 +68,11 @@ namespace FINALITY
 		void SubmitResourceToGarbageCollection(std::function<void()>&& cleanupOperation)
 		{
 			m_FrameDeletionQueues[m_ImageIndex].Push(std::move(cleanupOperation));
+		}
+
+		VkRenderPass GetActiveRenderPass() const
+		{
+			return static_cast<VKFramebuffer*>(m_PostProcessingFramebuffer.get())->GetVKRenderPass();
 		}
 
 	private:
@@ -105,5 +112,6 @@ namespace FINALITY
 		std::unordered_map<const Material*, VkDescriptorSet> m_MaterialDescriptorCache;
 
 		std::vector<VKDeletionQueue> m_FrameDeletionQueues;
+		std::shared_ptr<Framebuffer> m_PostProcessingFramebuffer = nullptr;
 	};
 }

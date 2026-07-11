@@ -12,7 +12,7 @@ public:
     void OnInit() override
     {
         auto cameraEntity = CreateEntity("Main Camera");
-        auto& camComp = cameraEntity.AddComponent<FINALITY::CameraComponent>(45.0f, 1000.0f / 600.0f, 0.01f, 100.0f);
+        auto& camComp = cameraEntity.AddComponent<FINALITY::CameraComponent>(45.0f, 1280.0f / 720.0f, 0.01f, 100.0f);
 
         auto& cameraTransform = cameraEntity.GetComponent<FINALITY::TransformComponent>();
         cameraTransform.Position = glm::vec3(0.0f, 1.5f, 5.0f);

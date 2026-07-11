@@ -30,7 +30,7 @@ private:
 int main(int argc, char const *argv[])
 {
     FINALITY::RendererAPI api = FINALITY::RendererAPI::VULKAN;
-    FINALITY::WindowSpec spec = { .title = "Hello", .width = 1000, .height = 600, .isFullscreen = false };
+    FINALITY::WindowSpec spec = { .title = "Hello", .width = 1280, .height = 720, .isFullscreen = false };
     FINALITY::Application app;
     
     std::unique_ptr<SandboxGame> game = std::make_unique<SandboxGame>();

@@ -29,6 +29,9 @@ namespace FINALITY
         VkFramebuffer GetVKFramebuffer(uint32_t index) const { return m_FrameBuffers[index]; }
         VkFormat GetVKFormat() const { return m_SurfaceFormat.format; }
 
+        VkImage GetVKImage(uint32_t index) const { return m_Images[index]; }
+
+
     private:
         void CreateSwapChain(const WindowSpec& spec);
         void CreateImageViews();
