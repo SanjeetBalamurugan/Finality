@@ -190,6 +190,9 @@ namespace FINALITY
                 bufferCopyRegion.imageExtent.depth = 1;
                 bufferCopyRegion.bufferOffset = bufferOffset;
 
+                bufferCopyRegion.bufferRowLength = 0;
+                bufferCopyRegion.bufferImageHeight = 0;
+
                 bufferCopyRegions.push_back(bufferCopyRegion);
                 bufferOffset += gliTex.size(level);
             }

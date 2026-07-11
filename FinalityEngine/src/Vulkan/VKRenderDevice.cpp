@@ -177,6 +177,9 @@ void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 	m_Queue.Initialize(m_Device, m_SwapChain->GetVKHandle(), m_QueueFamily, 0);
 	this->CreateCommandBuffers(m_SwapChain->GetImageCount());
 
+	m_FrameDeletionQueues.resize(m_SwapChain->GetImageCount());
+	m_MaterialDescriptorAllocator.Initialize(m_Device);
+
 	uint32_t imageCount = m_SwapChain->GetImageCount();
 
 	VkDescriptorSetLayoutBinding uboLayoutBinding{};
@@ -253,21 +256,8 @@ void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 
 	res = vkCreateDescriptorSetLayout(m_Device, &materialLayoutInfo, nullptr, &m_MaterialDescriptorSetLayout);
 	CHECK_VK_RESULT(res, "vkCreateDescriptorSetLayout for Material");
-
-	VkDescriptorPoolSize materialPoolSizes[1];
-	materialPoolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	materialPoolSizes[0].descriptorCount = 128;
-
-	VkDescriptorPoolCreateInfo materialPoolInfo{};
-	materialPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	materialPoolInfo.poolSizeCount = 1;
-	materialPoolInfo.pPoolSizes = materialPoolSizes;
-	materialPoolInfo.maxSets = 128;
-
-	res = vkCreateDescriptorPool(m_Device, &materialPoolInfo, nullptr, &m_MaterialDescriptorPool);
-	CHECK_VK_RESULT(res, "vkCreateDescriptorPool for Material");
-
 }
+
 
 void FINALITY::VKRenderDevice::SetWindowSpec(const WindowSpec& spec)
 {
@@ -331,15 +321,7 @@ void FINALITY::VKRenderDevice::DrawQueue(const std::vector<RenderPacket>& queue)
 
 			if (it == m_MaterialDescriptorCache.end())
 			{
-				VkDescriptorSetAllocateInfo allocInfo{};
-				allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-				allocInfo.descriptorPool = m_MaterialDescriptorPool;
-				allocInfo.descriptorSetCount = 1;
-				allocInfo.pSetLayouts = &m_MaterialDescriptorSetLayout;
-
-				VkResult res = vkAllocateDescriptorSets(m_Device, &allocInfo, &materialSet);
-				CHECK_VK_RESULT(res, "vkAllocateDescriptorSets for Material");
-
+				materialSet = m_MaterialDescriptorAllocator.Allocate(m_MaterialDescriptorSetLayout);
 				m_MaterialDescriptorCache[static_cast<const Material*>(cacheKey)] = materialSet;
 
 				auto texIt = packet.Textures.begin();
@@ -409,6 +391,7 @@ void FINALITY::VKRenderDevice::DrawQueue(const std::vector<RenderPacket>& queue)
 	}
 }
 
+
 std::shared_ptr<FINALITY::Mesh> FINALITY::VKRenderDevice::CreateMesh(const std::vector<Vertex>& vertices)
 {
 	return std::make_shared<VKMesh>(m_Device, m_Devices.SelectedDevice().device, vertices);
@@ -428,7 +411,13 @@ void FINALITY::VKRenderDevice::Shutdown()
 {
 	m_Queue.WaitIdle();
 
-	if (m_MaterialDescriptorPool) vkDestroyDescriptorPool(m_Device, m_MaterialDescriptorPool, nullptr);
+	m_MaterialDescriptorAllocator.Shutdown();
+
+	for (auto& queue : m_FrameDeletionQueues)
+	{
+		queue.Flush();
+	}
+
 	if (m_MaterialDescriptorSetLayout) vkDestroyDescriptorSetLayout(m_Device, m_MaterialDescriptorSetLayout, nullptr);
 
 	if (m_GlobalDescriptorPool) vkDestroyDescriptorPool(m_Device, m_GlobalDescriptorPool, nullptr);
@@ -461,6 +450,8 @@ void FINALITY::VKRenderDevice::BeginFrame()
 		m_ImageIndex = m_Queue.AcquireNextImage();
 	}
 
+	m_FrameDeletionQueues[m_ImageIndex].Flush();
+
 	if (Renderer::GetActiveCamera())
 	{
 		GlobalUniformBufferObject ubo{};
@@ -490,6 +481,7 @@ void FINALITY::VKRenderDevice::BeginFrame()
 
 	vkCmdBeginRenderPass(m_CMDBuffers[m_ImageIndex], &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 }
+
 
 void FINALITY::VKRenderDevice::EndFrame()
 {

@@ -25,6 +25,12 @@
 #include "Events/Input.h"
 #include "Events/KeyCodes.h"
 
+// ASSETS
+#include "Assets/AssetManager.h"
+
+// UTILS
+#include "Utils/UUID.h"
+
 #define FI_CLIENT_ERROR(...)       ::FINALITY::Logger::GetClientLogger()->error(__VA_ARGS__)
 #define FI_CLIENT_WARN(...)        ::FINALITY::Logger::GetClientLogger()->warn(__VA_ARGS__)
 #define FI_CLIENT_INFO(...)        ::FINALITY::Logger::GetClientLogger()->info(__VA_ARGS__)

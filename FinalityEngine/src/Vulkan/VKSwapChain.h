@@ -39,6 +39,7 @@ namespace FINALITY
         VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
         VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
         VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, const WindowSpec& spec);
+        void CreateDepthResources(VkPhysicalDevice physicalDevice);
 
     private:
         VkDevice m_LogicalDevice = nullptr;
@@ -52,6 +53,11 @@ namespace FINALITY
 
         std::vector<VkImage> m_Images;
         std::vector<VkImageView> m_ImageViews;
+        
+        VkImage m_DepthImage = VK_NULL_HANDLE;
+        VkDeviceMemory m_DepthImageMemory = VK_NULL_HANDLE;
+        VkImageView m_DepthImageView = VK_NULL_HANDLE;
+
         std::vector<VkFramebuffer> m_FrameBuffers;
         VkRenderPass m_RenderPass = nullptr;
     };

@@ -4,7 +4,7 @@
 #include <Vulkan/VKRenderDevice.h>
 #include <Vulkan/VKShader.h>
 
-std::unique_ptr<FINALITY::Shader> FINALITY::Shader::Create(RenderDevice* device, const std::string& filePath)
+std::unique_ptr<FINALITY::Shader> FINALITY::Shader::Create(const std::string& filePath, RenderDevice* device)
 {
     switch (FINALITY::Application::GetActiveAPI())
     {

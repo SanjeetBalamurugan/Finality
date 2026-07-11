@@ -5,7 +5,7 @@
 
 namespace FINALITY
 {
-    VKPipeline::VKPipeline(VkDevice device, VkRenderPass renderPass, const PipelineConfig& config, VkDescriptorSetLayout globalLayout, VkDescriptorSetLayout materialLayout)
+    FINALITY::VKPipeline::VKPipeline(VkDevice device, VkRenderPass renderPass, const PipelineConfig& config, VkDescriptorSetLayout globalLayout, VkDescriptorSetLayout materialLayout)
         : m_Device(device)
     {
         auto vertShader = static_cast<VKShader*>(config.VertexShader.get());
@@ -77,7 +77,7 @@ namespace FINALITY
         rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
         rasterizer.lineWidth = 1.0f;
         rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-        rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+        rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
         rasterizer.depthBiasEnable = VK_FALSE;
 
         VkPipelineMultisampleStateCreateInfo multisampling{};
@@ -155,6 +155,7 @@ namespace FINALITY
             throw std::runtime_error("Failed to create graphics pipeline!");
         }
     }
+
 
     VKPipeline::~VKPipeline()
     {

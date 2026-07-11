@@ -17,6 +17,7 @@
 #include <Renderer/Renderer.h>
 #include <Events/Input.h>
 #include <Events/Mouse.h>
+#include <Assets/AssetManager.h>
 
 #define GLM_FORCE_PURE  
 #define GLM_ENABLE_EXPERIMENTAL
@@ -70,6 +71,8 @@ void FINALITY::Application::Initialize(const RendererAPI& api, const WindowSpec&
 	FINALITY::Renderer::Initialize(m_RenderDevice.get());
 
 	m_CurrentGame->Init();
+
+	FINALITY::AssetManager::Initialize();
 	SceneManager::GetInstance().Initialize();
 
 	m_Running = true;
@@ -109,6 +112,7 @@ void FINALITY::Application::Update()
 void FINALITY::Application::Shutdown()
 {
 	SceneManager::GetInstance().Shutdown();
+	FINALITY::AssetManager::Shutdown();
 	FINALITY::Renderer::Shutdown();
 
 	if (m_CurrentGame) m_CurrentGame->Destroy();

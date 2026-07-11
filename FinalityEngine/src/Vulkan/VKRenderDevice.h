@@ -12,6 +12,8 @@
 #include "VKUniformBuffer.h"
 
 #include <Renderer/Material.h>
+#include "VKDeletionQueue.h"
+#include "VKDescriptorAllocator.h"
 
 namespace FINALITY
 {
@@ -61,6 +63,11 @@ namespace FINALITY
 
 		VkDescriptorSetLayout GetMaterialDescriptorSetLayout() const { return m_MaterialDescriptorSetLayout; }
 
+		void SubmitResourceToGarbageCollection(std::function<void()>&& cleanupOperation)
+		{
+			m_FrameDeletionQueues[m_ImageIndex].Push(std::move(cleanupOperation));
+		}
+
 	private:
 		WindowSpec m_Spec;
 		const std::vector<const char*> m_ValidationLayers = {
@@ -94,7 +101,9 @@ namespace FINALITY
 		VKUniformBuffer m_GlobalUBO;
 
 		VkDescriptorSetLayout m_MaterialDescriptorSetLayout = VK_NULL_HANDLE;
-		VkDescriptorPool m_MaterialDescriptorPool = VK_NULL_HANDLE;
+		VKDescriptorAllocator m_MaterialDescriptorAllocator;
 		std::unordered_map<const Material*, VkDescriptorSet> m_MaterialDescriptorCache;
+
+		std::vector<VKDeletionQueue> m_FrameDeletionQueues;
 	};
 }
