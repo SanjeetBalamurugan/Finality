@@ -11,9 +11,8 @@ void main() {
     vec2 uv = fragTexCoord * 2.0 - 1.0;
 
     float distance = length(uv);
-    
-    float vignette = smoothstep(0.5, 1.5, distance);
-    vignette = 1.0 - vignette * 0.4;
+    float vignette = smoothstep(0.3, 1.1, distance);
+    vignette = 1.0 - vignette * 0.85;
 
     outColor = vec4(sceneColor.rgb * vignette, sceneColor.a);
 }

@@ -178,13 +178,6 @@ void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 	m_Queue.Initialize(m_Device, m_SwapChain->GetVKHandle(), m_QueueFamily, 0);
 	this->CreateCommandBuffers(m_SwapChain->GetImageCount());
 
-	FramebufferSpecification fbSpec{};
-	fbSpec.Width = m_SwapChain->GetWidth();
-	fbSpec.Height = m_SwapChain->GetHeight();
-	fbSpec.IsSwapChainTarget = false;
-
-	m_PostProcessingFramebuffer = Framebuffer::Create(fbSpec);
-
 	m_FrameDeletionQueues.resize(m_SwapChain->GetImageCount());
 	m_MaterialDescriptorAllocator.Initialize(m_Device);
 
@@ -264,7 +257,66 @@ void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 
 	res = vkCreateDescriptorSetLayout(m_Device, &materialLayoutInfo, nullptr, &m_MaterialDescriptorSetLayout);
 	CHECK_VK_RESULT(res, "vkCreateDescriptorSetLayout for Material");
+
+	FramebufferSpecification fbSpec{};
+	fbSpec.Width = m_SwapChain->GetWidth();
+	fbSpec.Height = m_SwapChain->GetHeight();
+	fbSpec.IsSwapChainTarget = false;
+
+	m_PostProcessingFramebuffer = Framebuffer::Create(fbSpec);
+
+	VkDescriptorSetLayoutBinding samplerBinding{};
+	samplerBinding.binding = 0;
+	samplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	samplerBinding.descriptorCount = 1;
+	samplerBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	VkDescriptorSetLayoutCreateInfo ppLayoutInfo{};
+	ppLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	ppLayoutInfo.bindingCount = 1;
+	ppLayoutInfo.pBindings = &samplerBinding;
+	vkCreateDescriptorSetLayout(m_Device, &ppLayoutInfo, nullptr, &m_PostProcessDescriptorSetLayout);
+
+	VkDescriptorPoolSize ppPoolSize{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 };
+	VkDescriptorPoolCreateInfo ppPoolInfo{};
+	ppPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	ppPoolInfo.poolSizeCount = 1;
+	ppPoolInfo.pPoolSizes = &ppPoolSize;
+	ppPoolInfo.maxSets = 1;
+	vkCreateDescriptorPool(m_Device, &ppPoolInfo, nullptr, &m_PostProcessDescriptorPool);
+
+	VkDescriptorSetAllocateInfo ppAllocInfo{};
+	ppAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	ppAllocInfo.descriptorPool = m_PostProcessDescriptorPool;
+	ppAllocInfo.descriptorSetCount = 1;
+	ppAllocInfo.pSetLayouts = &m_PostProcessDescriptorSetLayout;
+	vkAllocateDescriptorSets(m_Device, &ppAllocInfo, &m_PostProcessDescriptorSet);
+
+	auto* vkFB = static_cast<VKFramebuffer*>(m_PostProcessingFramebuffer.get());
+	VkDescriptorImageInfo imageInfo{};
+	imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	imageInfo.imageView = (VkImageView)vkFB->GetColorAttachmentRendererID();
+
+	VkSamplerCreateInfo samplerCreateInfo{};
+	samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	samplerCreateInfo.magFilter = VK_FILTER_LINEAR;
+	samplerCreateInfo.minFilter = VK_FILTER_LINEAR;
+	samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+
+	vkCreateSampler(m_Device, &samplerCreateInfo, nullptr, &m_PostProcessSampler);
+	imageInfo.sampler = m_PostProcessSampler;
+
+	VkWriteDescriptorSet descriptorWrite{};
+	descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrite.dstSet = m_PostProcessDescriptorSet;
+	descriptorWrite.dstBinding = 0;
+	descriptorWrite.descriptorCount = 1;
+	descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	descriptorWrite.pImageInfo = &imageInfo;
+	vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
 }
+
 
 
 void FINALITY::VKRenderDevice::SetWindowSpec(const WindowSpec& spec)
@@ -419,7 +471,18 @@ void FINALITY::VKRenderDevice::Shutdown()
 {
 	m_Queue.WaitIdle();
 
+	m_PostProcessPipeline.reset();
 	m_PostProcessingFramebuffer.reset();
+
+	if (m_PostProcessDescriptorPool) {
+		vkDestroyDescriptorPool(m_Device, m_PostProcessDescriptorPool, nullptr);
+		m_PostProcessDescriptorPool = VK_NULL_HANDLE;
+	}
+	if (m_PostProcessSampler) vkDestroySampler(m_Device, m_PostProcessSampler, nullptr);
+	if (m_PostProcessDescriptorSetLayout) {
+		vkDestroyDescriptorSetLayout(m_Device, m_PostProcessDescriptorSetLayout, nullptr);
+		m_PostProcessDescriptorSetLayout = VK_NULL_HANDLE;
+	}
 
 	m_MaterialDescriptorAllocator.Shutdown();
 
@@ -502,86 +565,147 @@ void FINALITY::VKRenderDevice::EndFrame()
 
 	auto* vkFB = static_cast<VKFramebuffer*>(m_PostProcessingFramebuffer.get());
 
-	VkImageMemoryBarrier fbBarrier{};
-	fbBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	fbBarrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	fbBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-	fbBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	fbBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	fbBarrier.image = vkFB->GetVKColorImage();
-	fbBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	fbBarrier.subresourceRange.baseMipLevel = 0;
-	fbBarrier.subresourceRange.levelCount = 1;
-	fbBarrier.subresourceRange.baseArrayLayer = 0;
-	fbBarrier.subresourceRange.layerCount = 1;
-	fbBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-	fbBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+	if (m_PostProcessPipeline)
+	{
+		VkImageMemoryBarrier scBarrier{};
+		scBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		scBarrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		scBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		scBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		scBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		scBarrier.image = m_SwapChain->GetVKImage(m_ImageIndex);
+		scBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		scBarrier.subresourceRange.baseMipLevel = 0;
+		scBarrier.subresourceRange.levelCount = 1;
+		scBarrier.subresourceRange.baseArrayLayer = 0;
+		scBarrier.subresourceRange.layerCount = 1;
+		scBarrier.srcAccessMask = 0;
+		scBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
-	VkImageMemoryBarrier scBarrier{};
-	scBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	scBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	scBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	scBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	scBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	scBarrier.image = m_SwapChain->GetVKImage(m_ImageIndex);
-	scBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	scBarrier.subresourceRange.baseMipLevel = 0;
-	scBarrier.subresourceRange.levelCount = 1;
-	scBarrier.subresourceRange.baseArrayLayer = 0;
-	scBarrier.subresourceRange.layerCount = 1;
-	scBarrier.srcAccessMask = 0;
-	scBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &scBarrier);
 
-	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &fbBarrier);
-	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &scBarrier);
+		std::vector<VkClearValue> screenClearValues(2);
+		screenClearValues[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
+		screenClearValues[1].depthStencil = { 1.0f, 0 };
 
-	VkImageBlit blitRegion{};
-	blitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	blitRegion.srcSubresource.mipLevel = 0;
-	blitRegion.srcSubresource.baseArrayLayer = 0;
-	blitRegion.srcSubresource.layerCount = 1;
-	blitRegion.srcOffsets[0] = { 0, 0, 0 };
-	blitRegion.srcOffsets[1] = { static_cast<int32_t>(m_PostProcessingFramebuffer->GetSpecification().Width), static_cast<int32_t>(m_PostProcessingFramebuffer->GetSpecification().Height), 1 };
+		VkRenderPassBeginInfo swapchainPassInfo{};
+		swapchainPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		swapchainPassInfo.renderPass = m_SwapChain->GetVKRenderPass();
+		swapchainPassInfo.framebuffer = m_SwapChain->GetVKFramebuffer(m_ImageIndex);
+		swapchainPassInfo.renderArea.offset = { 0, 0 };
+		swapchainPassInfo.renderArea.extent.width = m_SwapChain->GetWidth();
+		swapchainPassInfo.renderArea.extent.height = m_SwapChain->GetHeight();
+		swapchainPassInfo.clearValueCount = static_cast<uint32_t>(screenClearValues.size());
+		swapchainPassInfo.pClearValues = screenClearValues.data();
 
-	blitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	blitRegion.dstSubresource.mipLevel = 0;
-	blitRegion.dstSubresource.baseArrayLayer = 0;
-	blitRegion.dstSubresource.layerCount = 1;
-	blitRegion.dstOffsets[0] = { 0, 0, 0 };
-	blitRegion.dstOffsets[1] = { static_cast<int32_t>(m_SwapChain->GetWidth()), static_cast<int32_t>(m_SwapChain->GetHeight()), 1 };
+		vkCmdBeginRenderPass(cmd, &swapchainPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-	vkCmdBlitImage(
-		cmd,
-		vkFB->GetVKColorImage(),
-		VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-		m_SwapChain->GetVKImage(m_ImageIndex),
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		1, &blitRegion,
-		VK_FILTER_LINEAR
-	);
+		auto* vkPipeline = static_cast<VKPipeline*>(m_PostProcessPipeline.get());
+		vkPipeline->Bind(cmd);
 
-	VkImageMemoryBarrier presentBarrier{};
-	presentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	presentBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	presentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-	presentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	presentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	presentBarrier.image = m_SwapChain->GetVKImage(m_ImageIndex);
-	presentBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	presentBarrier.subresourceRange.baseMipLevel = 0;
-	presentBarrier.subresourceRange.levelCount = 1;
-	presentBarrier.subresourceRange.baseArrayLayer = 0;
-	presentBarrier.subresourceRange.layerCount = 1;
-	presentBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-	presentBarrier.dstAccessMask = 0;
+		vkCmdBindDescriptorSets(
+			cmd,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			vkPipeline->GetVKLayout(),
+			0, 1,
+			&m_PostProcessDescriptorSet,
+			0, nullptr
+		);
 
-	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &presentBarrier);
+		VkViewport viewport{ 0.0f, 0.0f, static_cast<float>(m_SwapChain->GetWidth()), static_cast<float>(m_SwapChain->GetHeight()), 0.0f, 1.0f };
+		vkCmdSetViewport(cmd, 0, 1, &viewport);
+
+		VkRect2D scissor{ {0, 0}, {m_SwapChain->GetWidth(), m_SwapChain->GetHeight()} };
+		vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+		vkCmdDraw(cmd, 3, 1, 0, 0);
+		vkCmdEndRenderPass(cmd);
+	}
+	else
+	{
+		VkImageMemoryBarrier fbBarrier{};
+		fbBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		fbBarrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		fbBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		fbBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		fbBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		fbBarrier.image = vkFB->GetVKColorImage();
+		fbBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		fbBarrier.subresourceRange.baseMipLevel = 0;
+		fbBarrier.subresourceRange.levelCount = 1;
+		fbBarrier.subresourceRange.baseArrayLayer = 0;
+		fbBarrier.subresourceRange.layerCount = 1;
+		fbBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		fbBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+		VkImageMemoryBarrier scBarrier{};
+		scBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		scBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		scBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		scBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		scBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		scBarrier.image = m_SwapChain->GetVKImage(m_ImageIndex);
+		scBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		scBarrier.subresourceRange.baseMipLevel = 0;
+		scBarrier.subresourceRange.levelCount = 1;
+		scBarrier.subresourceRange.baseArrayLayer = 0;
+		scBarrier.subresourceRange.layerCount = 1;
+		scBarrier.srcAccessMask = 0;
+		scBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &fbBarrier);
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &scBarrier);
+
+		VkImageBlit blitRegion{};
+		blitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		blitRegion.srcSubresource.mipLevel = 0;
+		blitRegion.srcSubresource.baseArrayLayer = 0;
+		blitRegion.srcSubresource.layerCount = 1;
+		blitRegion.srcOffsets[0] = { 0, 0, 0 };
+		blitRegion.srcOffsets[1] = { static_cast<int32_t>(m_PostProcessingFramebuffer->GetSpecification().Width), static_cast<int32_t>(m_PostProcessingFramebuffer->GetSpecification().Height), 1 };
+
+		blitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		blitRegion.dstSubresource.mipLevel = 0;
+		blitRegion.dstSubresource.baseArrayLayer = 0;
+		blitRegion.dstSubresource.layerCount = 1;
+		blitRegion.dstOffsets[0] = { 0, 0, 0 };
+		blitRegion.dstOffsets[1] = { static_cast<int32_t>(m_SwapChain->GetWidth()), static_cast<int32_t>(m_SwapChain->GetHeight()), 1 };
+
+		vkCmdBlitImage(
+			cmd,
+			vkFB->GetVKColorImage(),
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			m_SwapChain->GetVKImage(m_ImageIndex),
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			1, &blitRegion,
+			VK_FILTER_LINEAR
+		);
+
+		VkImageMemoryBarrier presentBarrier{};
+		presentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		presentBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		presentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		presentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		presentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		presentBarrier.image = m_SwapChain->GetVKImage(m_ImageIndex);
+		presentBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		presentBarrier.subresourceRange.baseMipLevel = 0;
+		presentBarrier.subresourceRange.levelCount = 1;
+		presentBarrier.subresourceRange.baseArrayLayer = 0;
+		presentBarrier.subresourceRange.layerCount = 1;
+		presentBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		presentBarrier.dstAccessMask = 0;
+
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &presentBarrier);
+	}
 
 	VkResult res = vkEndCommandBuffer(cmd);
 	CHECK_VK_RESULT(res, "vkEndCommandBuffer error");
 
 	m_Queue.SubmitASync(cmd, m_ImageIndex);
 }
+
+
 
 void FINALITY::VKRenderDevice::PresentFrame()
 {

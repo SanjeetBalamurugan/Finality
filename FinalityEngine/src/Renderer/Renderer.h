@@ -7,6 +7,8 @@
 #include <vector>
 #include "Camera.h"
 
+#include <Core/Pipeline.h>
+
 namespace FINALITY
 {
     class FAPI Renderer
@@ -29,6 +31,9 @@ namespace FINALITY
 
         static void SetActiveCamera(Camera* camera) { s_ActiveCamera = camera; }
         static Camera* GetActiveCamera() { return s_ActiveCamera; }
+
+        static void SetPostProcessPipeline(std::shared_ptr<Pipeline> pipeline);
+        static std::shared_ptr<Pipeline> CreatePostProcessPipeline(const PipelineConfig& config);
     private:
         static RenderDevice* s_Device;
         static std::vector<RenderPacket> s_RenderQueue;

@@ -22,32 +22,26 @@ public:
         cameraEntity.AddScript<FINALITY::CameraMovementScript>();
 
         std::vector<FINALITY::Vertex> cubeVertices = {
-            // Front Face
             { { -0.3f, -0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
             { {  0.3f, -0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
             { {  0.3f,  0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
             { { -0.3f,  0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
-            // Back Face
             { {  0.3f, -0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
             { { -0.3f, -0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
             { { -0.3f,  0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
             { {  0.3f,  0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
-            // Top Face
             { { -0.3f,  0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
             { {  0.3f,  0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
             { {  0.3f,  0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
             { { -0.3f,  0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
-            // Bottom Face
             { { -0.3f, -0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
             { {  0.3f, -0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
             { {  0.3f, -0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
             { { -0.3f, -0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
-            // Right Face
             { {  0.3f, -0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
             { {  0.3f, -0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
             { {  0.3f,  0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
             { {  0.3f,  0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
-            // Left Face
             { { -0.3f, -0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
             { { -0.3f, -0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
             { { -0.3f,  0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
@@ -63,11 +57,9 @@ public:
             20, 21, 22, 22, 23, 20
         };
 
-
         std::shared_ptr<FINALITY::Mesh> cubeMesh = FINALITY::Mesh::Create(cubeVertices, cubeIndices);
         FINALITY::RenderDevice* device = FINALITY::Renderer::GetDevice();
 
-        // LOAD CUBE SHADERS VIA ASSET MANAGER
         auto vertexShader = FINALITY::AssetManager::CreateAsset<FINALITY::Shader>("../FinalityEngine/assets/shaders/shader.vert", device);
         auto fragmentShader = FINALITY::AssetManager::CreateAsset<FINALITY::Shader>("../FinalityEngine/assets/shaders/shader.frag", device);
 
@@ -126,7 +118,6 @@ public:
 
         std::shared_ptr<FINALITY::Mesh> planeMesh = FINALITY::Mesh::Create(planeVertices, planeIndices);
 
-        // LOAD LAVA SHADERS VIA ASSET MANAGER
         auto lavaVert = FINALITY::AssetManager::CreateAsset<FINALITY::Shader>("../FinalityEngine/assets/shaders/lava.vert", device);
         auto lavaFrag = FINALITY::AssetManager::CreateAsset<FINALITY::Shader>("../FinalityEngine/assets/shaders/lava.frag", device);
 
@@ -141,6 +132,17 @@ public:
         planeEntity.AddComponent<FINALITY::MeshComponent>(planeMesh);
         planeEntity.AddComponent<FINALITY::MaterialComponent>(lavaMaterial);
         planeEntity.AddScript<FINALITY::LavaScript>();
+
+        auto ppVert = FINALITY::AssetManager::CreateAsset<FINALITY::Shader>("../FinalityEngine/assets/shaders/postprocess.vert", device);
+        auto ppFrag = FINALITY::AssetManager::CreateAsset<FINALITY::Shader>("../FinalityEngine/assets/shaders/postprocess.frag", device);
+
+        FINALITY::PipelineConfig ppConfig;
+        ppConfig.VertexShader = std::move(ppVert);
+        ppConfig.FragmentShader = std::move(ppFrag);
+        ppConfig.EnableBlending = false;
+
+        std::shared_ptr<FINALITY::Pipeline> postProcessPipeline = FINALITY::Renderer::CreatePostProcessPipeline(ppConfig);
+        FINALITY::Renderer::SetPostProcessPipeline(postProcessPipeline);
     }
 
     void OnUpdate(float ts) override

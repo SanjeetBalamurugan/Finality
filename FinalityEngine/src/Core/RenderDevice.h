@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 
 #include "Texture.h"
+#include "RenderTypes.h"
 
 namespace FINALITY
 {
@@ -42,6 +43,7 @@ namespace FINALITY
 		virtual void SetWindowSpec(const WindowSpec& spec) = 0;
 
 		virtual void DrawQueue(const std::vector<RenderPacket>& queue) = 0;
+		virtual RendererAPI GetActiveApi() const = 0;
 
 		virtual std::shared_ptr<Mesh> CreateMesh(const std::vector<Vertex>& vertices) = 0;
 		virtual std::shared_ptr<Mesh> CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices) = 0;

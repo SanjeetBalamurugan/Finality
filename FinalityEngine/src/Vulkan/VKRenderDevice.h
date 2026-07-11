@@ -16,6 +16,7 @@
 #include "VKDescriptorAllocator.h"
 #include <Core/Framebuffer.h>
 
+#include <Core/RenderTypes.h>
 #include "VKFramebuffer.h"
 
 namespace FINALITY
@@ -50,6 +51,8 @@ namespace FINALITY
 		void SetWindowSpec(const WindowSpec& spec) override;
 		VkDevice GetActiveDevice() const { return m_Device; }
 
+		RendererAPI GetActiveApi() const override { return RendererAPI::VULKAN; }
+
 		void DrawQueue(const std::vector<RenderPacket>& queue) override;
 
 		std::shared_ptr<Mesh> CreateMesh(const std::vector<Vertex>& vertices) override;
@@ -74,6 +77,10 @@ namespace FINALITY
 		{
 			return static_cast<VKFramebuffer*>(m_PostProcessingFramebuffer.get())->GetVKRenderPass();
 		}
+
+		void SetPostProcessPipeline(std::shared_ptr<Pipeline> pipeline) { m_PostProcessPipeline = pipeline; }
+		VkDescriptorSetLayout GetPostProcessDescriptorSetLayout() { return m_PostProcessDescriptorSetLayout; }
+		VKSwapChain* GetSwapChain() { return m_SwapChain.get(); }
 
 	private:
 		WindowSpec m_Spec;
@@ -113,5 +120,11 @@ namespace FINALITY
 
 		std::vector<VKDeletionQueue> m_FrameDeletionQueues;
 		std::shared_ptr<Framebuffer> m_PostProcessingFramebuffer = nullptr;
+
+		VkDescriptorSetLayout m_PostProcessDescriptorSetLayout = VK_NULL_HANDLE;
+		VkDescriptorPool m_PostProcessDescriptorPool = VK_NULL_HANDLE;
+		VkDescriptorSet m_PostProcessDescriptorSet = VK_NULL_HANDLE;
+		std::shared_ptr<Pipeline> m_PostProcessPipeline = nullptr;
+		VkSampler m_PostProcessSampler = VK_NULL_HANDLE;
 	};
 }

@@ -1,4 +1,6 @@
 #include "Renderer.h"
+#include <Vulkan/VKRenderDevice.h>
+#include <Vulkan/VKPipeline.h>
 
 namespace FINALITY
 {
@@ -59,5 +61,65 @@ namespace FINALITY
         if (!s_Device) return;
 
         s_Device->DrawQueue(s_RenderQueue);
+    }
+
+    void Renderer::SetPostProcessPipeline(std::shared_ptr<Pipeline> pipeline)
+    {
+        switch (s_Device->GetActiveApi())
+        {
+        case RendererAPI::NONE:
+        {
+            throw std::runtime_error("Renderer API is currently set to None!");
+            break;
+        }
+        case RendererAPI::VULKAN:
+        {
+            auto* vkDevice = static_cast<VKRenderDevice*>(GetDevice());
+            if (!vkDevice)
+            {
+                throw std::runtime_error("Vulkan Render Device is invalid during post-process setup!");
+            }
+
+            vkDevice->SetPostProcessPipeline(pipeline);
+            break;
+        }
+        default:
+        {
+            throw std::runtime_error("Unknown or unsupported graphics API configuration layer!");
+            break;
+        }
+        }
+    }
+
+    std::shared_ptr<Pipeline> Renderer::CreatePostProcessPipeline(const PipelineConfig& config)
+    {
+        switch (s_Device->GetActiveApi())
+        {
+        case RendererAPI::NONE:
+        {
+            throw std::runtime_error("Renderer API is None during post-process pipeline compilation!");
+            return nullptr;
+        }
+        case RendererAPI::VULKAN:
+        {
+            auto* vkDevice = static_cast<VKRenderDevice*>(GetDevice());
+            if (!vkDevice)
+            {
+                throw std::runtime_error("Vulkan Render Device is invalid during post-process pipeline compilation!");
+            }
+
+            return std::make_shared<VKPipeline>(
+                vkDevice->GetActiveDevice(),
+                vkDevice->GetSwapChain()->GetVKRenderPass(),
+                config,
+                vkDevice->GetPostProcessDescriptorSetLayout()
+            );
+        }
+        default:
+        {
+            throw std::runtime_error("Unknown or unsupported graphics API configuration layer!");
+            return nullptr;
+        }
+        }
     }
 }
