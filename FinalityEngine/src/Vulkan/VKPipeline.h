@@ -11,7 +11,8 @@ namespace FINALITY
     class VKPipeline : public Pipeline
     {
     public:
-        VKPipeline(VkDevice device, VkRenderPass renderPass, const PipelineConfig& config, VkDescriptorSetLayout globalLayout);
+        VKPipeline(VkDevice device, VkRenderPass renderPass, const PipelineConfig& config,
+            VkDescriptorSetLayout globalLayout, VkDescriptorSetLayout materialLayout);
         ~VKPipeline() override;
 
         VKPipeline(const VKPipeline&) = delete;

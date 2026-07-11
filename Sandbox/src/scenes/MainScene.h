@@ -3,7 +3,7 @@
 #include "scripts/TestScript.h"
 #include <scripts/KeyPrintScript.h>
 #include <scripts/CameraMovementScript.h>
-#include "scripts/LavaScript.h" // Include our new lava script header
+#include "scripts/LavaScript.h"
 
 class MainScene : public FINALITY::Scene
 {
@@ -20,24 +20,15 @@ public:
         FINALITY::Renderer::SetActiveCamera(camComp.CameraInstance.get());
         cameraEntity.AddScript<FINALITY::CameraMovementScript>();
 
-        auto entity = CreateEntity("Rotating Cube");
-        auto& cubeTransform = entity.GetComponent<FINALITY::TransformComponent>();
-        cubeTransform.Position = glm::vec3(0.0f, 0.5f, 0.0f);
-        cubeTransform.Rotation = glm::vec3(0.0f);
-        cubeTransform.Scale = glm::vec3(1.0f);
-
-        entity.AddScript<FINALITY::TestScript>();
-        entity.AddScript<FINALITY::KeyPrintScript>();
-
         std::vector<FINALITY::Vertex> cubeVertices = {
-            { { -0.3f, -0.3f, -0.3f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f } },
-            { {  0.3f, -0.3f, -0.3f }, { 0.1f, 1.0f, 0.0f }, { 1.0f, 0.0f } },
-            { {  0.3f,  0.3f, -0.3f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.1f } },
-            { { -0.3f,  0.3f, -0.3f }, { 1.0f, 1.0f, 0.0f }, { 0.0f, 1.0f } },
-            { { -0.3f, -0.3f,  0.3f }, { 0.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
-            { {  0.3f, -0.3f,  0.3f }, { 1.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } },
+            { { -0.3f, -0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
+            { {  0.3f, -0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
+            { {  0.3f,  0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
+            { { -0.3f,  0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
+            { { -0.3f, -0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
+            { {  0.3f, -0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
             { {  0.3f,  0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.1f } },
-            { { -0.3f,  0.3f,  0.3f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f } }
+            { { -0.3f,  0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } }
         };
 
         std::vector<uint32_t> cubeIndices = {
@@ -61,20 +52,41 @@ public:
         cubeConfig.EnableBlending = false;
 
         std::shared_ptr<FINALITY::Pipeline> materialPipeline = FINALITY::Pipeline::Create(cubeConfig);
-        auto customMaterial = std::make_shared<FINALITY::Material>(materialPipeline);
 
-        entity.AddComponent<FINALITY::MeshComponent>(cubeMesh);
-        entity.AddComponent<FINALITY::MaterialComponent>(customMaterial);
+        auto cube1Entity = CreateEntity("PNG Textured Cube");
+        auto& cube1Transform = cube1Entity.GetComponent<FINALITY::TransformComponent>();
+        cube1Transform.Position = glm::vec3(-1.0f, 0.5f, 0.0f);
+        cube1Transform.Rotation = glm::vec3(0.0f);
+        cube1Transform.Scale = glm::vec3(1.0f);
 
+        auto pngMaterial = std::make_shared<FINALITY::Material>(materialPipeline);
+        auto pngTexture = FINALITY::Texture::Create("../FinalityEngine/assets/textures/test.png");
+        pngMaterial->SetTexture("textureSampler", pngTexture);
+
+        cube1Entity.AddComponent<FINALITY::MeshComponent>(cubeMesh);
+        cube1Entity.AddComponent<FINALITY::MaterialComponent>(pngMaterial);
+        cube1Entity.AddScript<FINALITY::TestScript>();
+        cube1Entity.AddScript<FINALITY::KeyPrintScript>();
+
+        auto cube2Entity = CreateEntity("KTX Textured Cube");
+        auto& cube2Transform = cube2Entity.GetComponent<FINALITY::TransformComponent>();
+        cube2Transform.Position = glm::vec3(1.0f, 0.5f, 0.0f);
+        cube2Transform.Rotation = glm::vec3(0.0f);
+        cube2Transform.Scale = glm::vec3(1.0f);
+
+        auto ktxMaterial = std::make_shared<FINALITY::Material>(materialPipeline);
+        auto ktxTexture = FINALITY::Texture::Create("../FinalityEngine/assets/textures/metal.dds");
+        ktxMaterial->SetTexture("textureSampler", ktxTexture);
+
+        cube2Entity.AddComponent<FINALITY::MeshComponent>(cubeMesh);
+        cube2Entity.AddComponent<FINALITY::MaterialComponent>(ktxMaterial);
+        cube2Entity.AddScript<FINALITY::TestScript>();
 
         auto planeEntity = CreateEntity("Lava Ground Plane");
-
         auto& planeTransform = planeEntity.GetComponent<FINALITY::TransformComponent>();
         planeTransform.Position = glm::vec3(0.0f, -0.5f, 0.0f);
         planeTransform.Rotation = glm::vec3(0.0f);
         planeTransform.Scale = glm::vec3(1.0f);
-
-        planeEntity.AddScript<FINALITY::LavaScript>();
 
         std::vector<FINALITY::Vertex> planeVertices = {
             { { -5.0f, 0.0f, -5.0f }, { 0.5f, 0.5f, 0.5f }, { 0.0f, 0.0f } },
@@ -102,6 +114,7 @@ public:
 
         planeEntity.AddComponent<FINALITY::MeshComponent>(planeMesh);
         planeEntity.AddComponent<FINALITY::MaterialComponent>(lavaMaterial);
+        planeEntity.AddScript<FINALITY::LavaScript>();
     }
 
     void OnUpdate(float ts) override

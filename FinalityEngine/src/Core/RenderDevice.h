@@ -5,6 +5,8 @@
 #include <memory>
 #include <glm/glm.hpp>
 
+#include "Texture.h"
+
 namespace FINALITY
 {
 	class Mesh;
@@ -19,6 +21,7 @@ namespace FINALITY
 		glm::mat4 Transform{ 1.0f };
 
 		std::vector<uint8_t> CustomPushData;
+		std::unordered_map<std::string, std::shared_ptr<Texture>> Textures;
 	};
 
 	class FAPI RenderDevice

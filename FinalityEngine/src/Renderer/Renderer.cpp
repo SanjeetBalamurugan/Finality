@@ -37,6 +37,8 @@ namespace FINALITY
         {
             packet.PipelineInstance = mat.MaterialInstance->GetPipeline();
             packet.CustomPushData = mat.MaterialInstance->GetRawDataBuffer();
+
+            packet.Textures = mat.MaterialInstance->GetTextures();
         }
 
         if (entity.HasComponent<TransformComponent>())

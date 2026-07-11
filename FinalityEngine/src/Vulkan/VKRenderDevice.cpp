@@ -7,6 +7,7 @@
 #include "VKPipeline.h"
 #include <glm/ext/matrix_transform.hpp>
 #include <Renderer/Renderer.h>
+#include "VKTexture.h"
 
 void FINALITY::VKRenderDevice::CreateInstance()
 {
@@ -238,6 +239,34 @@ void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 		vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
 	}
 
+	VkDescriptorSetLayoutBinding samplerLayoutBinding{};
+	samplerLayoutBinding.binding = 0;
+	samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	samplerLayoutBinding.descriptorCount = 1;
+	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	samplerLayoutBinding.pImmutableSamplers = nullptr;
+
+	VkDescriptorSetLayoutCreateInfo materialLayoutInfo{};
+	materialLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	materialLayoutInfo.bindingCount = 1;
+	materialLayoutInfo.pBindings = &samplerLayoutBinding;
+
+	res = vkCreateDescriptorSetLayout(m_Device, &materialLayoutInfo, nullptr, &m_MaterialDescriptorSetLayout);
+	CHECK_VK_RESULT(res, "vkCreateDescriptorSetLayout for Material");
+
+	VkDescriptorPoolSize materialPoolSizes[1];
+	materialPoolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	materialPoolSizes[0].descriptorCount = 128;
+
+	VkDescriptorPoolCreateInfo materialPoolInfo{};
+	materialPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	materialPoolInfo.poolSizeCount = 1;
+	materialPoolInfo.pPoolSizes = materialPoolSizes;
+	materialPoolInfo.maxSets = 128;
+
+	res = vkCreateDescriptorPool(m_Device, &materialPoolInfo, nullptr, &m_MaterialDescriptorPool);
+	CHECK_VK_RESULT(res, "vkCreateDescriptorPool for Material");
+
 }
 
 void FINALITY::VKRenderDevice::SetWindowSpec(const WindowSpec& spec)
@@ -294,6 +323,62 @@ void FINALITY::VKRenderDevice::DrawQueue(const std::vector<RenderPacket>& queue)
 			);
 		}
 
+		if (!packet.Textures.empty())
+		{
+			const void* cacheKey = &packet.Textures;
+			auto it = m_MaterialDescriptorCache.find(static_cast<const Material*>(cacheKey));
+			VkDescriptorSet materialSet = VK_NULL_HANDLE;
+
+			if (it == m_MaterialDescriptorCache.end())
+			{
+				VkDescriptorSetAllocateInfo allocInfo{};
+				allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+				allocInfo.descriptorPool = m_MaterialDescriptorPool;
+				allocInfo.descriptorSetCount = 1;
+				allocInfo.pSetLayouts = &m_MaterialDescriptorSetLayout;
+
+				VkResult res = vkAllocateDescriptorSets(m_Device, &allocInfo, &materialSet);
+				CHECK_VK_RESULT(res, "vkAllocateDescriptorSets for Material");
+
+				m_MaterialDescriptorCache[static_cast<const Material*>(cacheKey)] = materialSet;
+
+				auto texIt = packet.Textures.begin();
+				auto* vkTex = static_cast<VKTexture*>(texIt->second.get());
+
+				if (vkTex)
+				{
+					VkDescriptorImageInfo imageInfo{};
+					imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+					imageInfo.imageView = vkTex->GetImageView();
+					imageInfo.sampler = vkTex->GetSampler();
+
+					VkWriteDescriptorSet descriptorWrite{};
+					descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+					descriptorWrite.dstSet = materialSet;
+					descriptorWrite.dstBinding = 0;
+					descriptorWrite.dstArrayElement = 0;
+					descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+					descriptorWrite.descriptorCount = 1;
+					descriptorWrite.pImageInfo = &imageInfo;
+
+					vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
+				}
+			}
+			else
+			{
+				materialSet = it->second;
+			}
+
+			vkCmdBindDescriptorSets(
+				cmd,
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				vkPipeline->GetVKLayout(),
+				1, 1,
+				&materialSet,
+				0, nullptr
+			);
+		}
+
 		uint8_t pushBuffer[128] = { 0 };
 		std::memcpy(pushBuffer, &packet.Transform, sizeof(glm::mat4));
 
@@ -324,7 +409,6 @@ void FINALITY::VKRenderDevice::DrawQueue(const std::vector<RenderPacket>& queue)
 	}
 }
 
-
 std::shared_ptr<FINALITY::Mesh> FINALITY::VKRenderDevice::CreateMesh(const std::vector<Vertex>& vertices)
 {
 	return std::make_shared<VKMesh>(m_Device, m_Devices.SelectedDevice().device, vertices);
@@ -337,12 +421,15 @@ std::shared_ptr<FINALITY::Mesh> FINALITY::VKRenderDevice::CreateMesh(const std::
 
 std::shared_ptr<FINALITY::Pipeline> FINALITY::VKRenderDevice::CreatePipeline(const PipelineConfig& config)
 {
-	return std::make_shared<VKPipeline>(m_Device, m_SwapChain->GetVKRenderPass(), config, m_GlobalDescriptorSetLayout);
+	return std::make_shared<VKPipeline>(m_Device, m_SwapChain->GetVKRenderPass(), config, m_GlobalDescriptorSetLayout, m_MaterialDescriptorSetLayout);
 }
 
 void FINALITY::VKRenderDevice::Shutdown()
 {
 	m_Queue.WaitIdle();
+
+	if (m_MaterialDescriptorPool) vkDestroyDescriptorPool(m_Device, m_MaterialDescriptorPool, nullptr);
+	if (m_MaterialDescriptorSetLayout) vkDestroyDescriptorSetLayout(m_Device, m_MaterialDescriptorSetLayout, nullptr);
 
 	if (m_GlobalDescriptorPool) vkDestroyDescriptorPool(m_Device, m_GlobalDescriptorPool, nullptr);
 	if (m_GlobalDescriptorSetLayout) vkDestroyDescriptorSetLayout(m_Device, m_GlobalDescriptorSetLayout, nullptr);

@@ -26,6 +26,7 @@ workspace "Finality"
     group "Dependencies"
         include "Scripts/premake_glfw.lua" -- GLFW
         include "Scripts/premake_vk.lua" -- VULKAN
+        include "vendor/stb" -- STB
     group ""
             
     -- Projects

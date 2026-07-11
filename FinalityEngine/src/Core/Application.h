@@ -18,10 +18,13 @@ namespace FINALITY
 
 		static RendererAPI GetActiveAPI() { return s_CurrentAPI; }
 		static Application& Get() { return *s_Instance; }
+		
+		RenderDevice& GetDevice() { return *m_RenderDevice; }
 		Window& GetWindow() { return *m_Window; }
 
 	private:
 		static RendererAPI s_CurrentAPI;
+
 		std::unique_ptr<Window> m_Window;
 		std::unique_ptr<RenderDevice> m_RenderDevice;
 		std::unique_ptr<Game> m_CurrentGame;

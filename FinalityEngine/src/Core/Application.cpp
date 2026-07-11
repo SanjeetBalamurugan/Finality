@@ -18,6 +18,9 @@
 #include <Events/Input.h>
 #include <Events/Mouse.h>
 
+#define GLM_FORCE_PURE  
+#define GLM_ENABLE_EXPERIMENTAL
+
 FINALITY::RendererAPI FINALITY::Application::s_CurrentAPI = RendererAPI::NONE;
 
 void FINALITY::Application::Initialize(const RendererAPI& api, const WindowSpec& spec, std::unique_ptr<Game> game)

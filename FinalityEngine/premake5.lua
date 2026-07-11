@@ -16,15 +16,20 @@ project "FinalityEngine"
         "../vendor/glfw/include/",
         "../vendor/spdlog/include/",
         "../vendor/glm",
-        "../vendor/entt/include"
-    }
-
-    defines {
-        "FINALITY_BUILD_DLL"
+        "../vendor/entt/include",
+        "../vendor/stb/include",
+        "../vendor/gli"
     }
 
     links {
-        "GLFW"
+        "GLFW",
+        "stb"
+    }
+
+    defines {
+        "FINALITY_BUILD_DLL",
+        "GLM_FORCE_PURE",
+        "GLM_FORCE_UNRESTRICTED_FLOAT"
     }
 
     dependson
@@ -57,3 +62,5 @@ project "FinalityEngine"
             "_WINDLL"
         }
         defines { "GLFW_INCLUDE_NONE" }
+
+        buildoptions { "/Zc:__cplusplus" }

@@ -6,6 +6,9 @@
 #include <cstring>
 #include <glm/glm.hpp>
 #include <Core/Pipeline.h>
+#include <Core/Texture.h>
+
+#include <Core/Core.h>
 
 namespace FINALITY
 {
@@ -15,7 +18,7 @@ namespace FINALITY
         uint32_t Size;
     };
 
-    class Material
+    class FAPI Material
     {
     public:
         Material(std::shared_ptr<Pipeline> pipeline)
@@ -49,12 +52,25 @@ namespace FINALITY
             }
         }
 
+        void SetTexture(const std::string& name, std::shared_ptr<Texture> texture)
+        {
+            m_Textures[name] = texture;
+            m_MaterialDirty = true;
+        }
+
+        bool IsDirty() const { return m_MaterialDirty; }
+        void ClearDirtyFlag() { m_MaterialDirty = false; }
+
         const std::vector<uint8_t>& GetRawDataBuffer() const { return m_DataBuffer; }
         std::shared_ptr<Pipeline> GetPipeline() const { return m_Pipeline; }
+        std::unordered_map<std::string, std::shared_ptr<Texture>>& GetTextures() { return m_Textures; }
 
     private:
         std::shared_ptr<Pipeline> m_Pipeline;
         std::vector<uint8_t> m_DataBuffer;
         std::unordered_map<std::string, UniformMember> m_Uniforms;
+
+        std::unordered_map<std::string, std::shared_ptr<Texture>> m_Textures;
+        bool m_MaterialDirty = false;
     };
 }

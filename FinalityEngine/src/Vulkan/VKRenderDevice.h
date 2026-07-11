@@ -11,6 +11,8 @@
 #include "VKSwapChain.h"
 #include "VKUniformBuffer.h"
 
+#include <Renderer/Material.h>
+
 namespace FINALITY
 {
 	class VKRenderDevice : public RenderDevice
@@ -52,6 +54,13 @@ namespace FINALITY
 
 		VkDescriptorSetLayout GetGlobalDescriptorSetLayout() const { return m_GlobalDescriptorSetLayout; }
 		VkDescriptorSet GetGlobalDescriptorSet(uint32_t index) const { return m_GlobalDescriptorSets[index]; }
+
+		VkPhysicalDevice GetActivePhysicalDevice() { return m_Devices.SelectedDevice().device; }
+		VkCommandPool GetCommandPool() { return m_CMDBufPool; }
+		VkQueue GetGraphicsQueue() { return m_Queue.GetQueue(); }
+
+		VkDescriptorSetLayout GetMaterialDescriptorSetLayout() const { return m_MaterialDescriptorSetLayout; }
+
 	private:
 		WindowSpec m_Spec;
 		const std::vector<const char*> m_ValidationLayers = {
@@ -83,5 +92,9 @@ namespace FINALITY
 		std::vector<VkDescriptorSet> m_GlobalDescriptorSets;
 
 		VKUniformBuffer m_GlobalUBO;
+
+		VkDescriptorSetLayout m_MaterialDescriptorSetLayout = VK_NULL_HANDLE;
+		VkDescriptorPool m_MaterialDescriptorPool = VK_NULL_HANDLE;
+		std::unordered_map<const Material*, VkDescriptorSet> m_MaterialDescriptorCache;
 	};
 }

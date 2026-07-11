@@ -5,7 +5,7 @@
 
 namespace FINALITY
 {
-    VKPipeline::VKPipeline(VkDevice device, VkRenderPass renderPass, const PipelineConfig& config, VkDescriptorSetLayout globalLayout)
+    VKPipeline::VKPipeline(VkDevice device, VkRenderPass renderPass, const PipelineConfig& config, VkDescriptorSetLayout globalLayout, VkDescriptorSetLayout materialLayout)
         : m_Device(device)
     {
         auto vertShader = static_cast<VKShader*>(config.VertexShader.get());
@@ -112,11 +112,11 @@ namespace FINALITY
         pushConstantRange.offset = 0;
         pushConstantRange.size = 128;
 
-        VkDescriptorSetLayout layouts[] = { globalLayout };
+        VkDescriptorSetLayout layouts[] = { globalLayout, materialLayout };
 
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = 1;
+        pipelineLayoutInfo.setLayoutCount = 2;
         pipelineLayoutInfo.pSetLayouts = layouts;
         pipelineLayoutInfo.pushConstantRangeCount = 1;
         pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;

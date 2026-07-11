@@ -22,6 +22,8 @@ namespace FINALITY
 		void Present(uint32_t imageIndex);
 		void WaitIdle();
 
+		VkQueue GetQueue() { return m_Queue; }
+
 	private:
 		VkDevice m_Device = nullptr;
 		VkSwapchainKHR m_SwapChain = nullptr;
