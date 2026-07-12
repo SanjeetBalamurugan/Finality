@@ -60,8 +60,8 @@ public:
         std::shared_ptr<FINALITY::Mesh> cubeMesh = FINALITY::Mesh::Create(cubeVertices, cubeIndices);
         FINALITY::RenderDevice* device = FINALITY::Renderer::GetDevice();
 
-        auto vertexShader = FINALITY::AssetManager::CreateAsset<FINALITY::Shader>("../FinalityEngine/assets/shaders/shader.vert", device);
-        auto fragmentShader = FINALITY::AssetManager::CreateAsset<FINALITY::Shader>("../FinalityEngine/assets/shaders/shader.frag", device);
+        auto vertexShader = FINALITY::AssetManager::CreateAsset<FINALITY::Shader>("assets/shaders/shader.vert", device);
+        auto fragmentShader = FINALITY::AssetManager::CreateAsset<FINALITY::Shader>("assets/shaders/shader.frag", device);
 
         FINALITY::PipelineConfig cubeConfig;
         cubeConfig.VertexShader = std::move(vertexShader);
@@ -77,7 +77,7 @@ public:
         cube1Transform.Scale = glm::vec3(1.0f);
 
         auto pngMaterial = std::make_shared<FINALITY::Material>(materialPipeline);
-        auto pngTexture = FINALITY::AssetManager::CreateAsset<FINALITY::Texture>("../FinalityEngine/assets/textures/test.png");
+        auto pngTexture = FINALITY::AssetManager::CreateAsset<FINALITY::Texture>("assets/textures/test.png");
         pngMaterial->SetTexture("textureSampler", pngTexture);
 
         cube1Entity.AddComponent<FINALITY::MeshComponent>(cubeMesh);
@@ -92,7 +92,7 @@ public:
         cube2Transform.Scale = glm::vec3(1.0f);
 
         auto ktxMaterial = std::make_shared<FINALITY::Material>(materialPipeline);
-        auto ktxTexture = FINALITY::AssetManager::CreateAsset<FINALITY::Texture>("../FinalityEngine/assets/textures/metal.dds");
+        auto ktxTexture = FINALITY::AssetManager::CreateAsset<FINALITY::Texture>("assets/textures/metal.dds");
         ktxMaterial->SetTexture("textureSampler", ktxTexture);
 
         cube2Entity.AddComponent<FINALITY::MeshComponent>(cubeMesh);
@@ -118,8 +118,8 @@ public:
 
         std::shared_ptr<FINALITY::Mesh> planeMesh = FINALITY::Mesh::Create(planeVertices, planeIndices);
 
-        auto lavaVert = FINALITY::AssetManager::CreateAsset<FINALITY::Shader>("../FinalityEngine/assets/shaders/lava.vert", device);
-        auto lavaFrag = FINALITY::AssetManager::CreateAsset<FINALITY::Shader>("../FinalityEngine/assets/shaders/lava.frag", device);
+        auto lavaVert = FINALITY::AssetManager::CreateAsset<FINALITY::Shader>("assets/shaders/lava.vert", device);
+        auto lavaFrag = FINALITY::AssetManager::CreateAsset<FINALITY::Shader>("assets/shaders/lava.frag", device);
 
         FINALITY::PipelineConfig lavaConfig;
         lavaConfig.VertexShader = std::move(lavaVert);
@@ -133,8 +133,8 @@ public:
         planeEntity.AddComponent<FINALITY::MaterialComponent>(lavaMaterial);
         planeEntity.AddScript<FINALITY::LavaScript>();
 
-        auto ppVert = FINALITY::AssetManager::CreateAsset<FINALITY::Shader>("../FinalityEngine/assets/shaders/postprocess.vert", device);
-        auto ppFrag = FINALITY::AssetManager::CreateAsset<FINALITY::Shader>("../FinalityEngine/assets/shaders/postprocess.frag", device);
+        auto ppVert = FINALITY::AssetManager::CreateAsset<FINALITY::Shader>("assets/shaders/postprocess.vert", device);
+        auto ppFrag = FINALITY::AssetManager::CreateAsset<FINALITY::Shader>("assets/shaders/postprocess.frag", device);
 
         FINALITY::PipelineConfig ppConfig;
         ppConfig.VertexShader = std::move(ppVert);
