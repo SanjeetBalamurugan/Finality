@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <stdexcept>
+#include "VkHelpers.h"
 
 namespace FINALITY
 {
@@ -234,12 +235,7 @@ namespace FINALITY
 
     VkPresentModeKHR VKSwapChain::ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes)
     {
-        for (const auto& availablePresentMode : availablePresentModes) {
-            if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
-                return availablePresentMode;
-            }
-        }
-        return VK_PRESENT_MODE_FIFO_KHR;
+        return ChoosePresentMode(availablePresentModes);
     }
 
     VkExtent2D VKSwapChain::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, const WindowSpec& spec)

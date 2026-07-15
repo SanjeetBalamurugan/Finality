@@ -51,7 +51,7 @@ namespace FINALITY
 
         std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return std::tolower(c); });
 
-        if (ext == ".dds" || ext == ".ktx")
+        if (ext == ".dds" || ext == ".ktx" || ext == ".ktx2")
         {
             isCompressed = true;
             gliTex = gli::load(filePath);

@@ -38,10 +38,17 @@ static VkPresentModeKHR ChoosePresentMode(const std::vector<VkPresentModeKHR>& P
 	{
 		if (PresentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) // Using Mailbox mode
 		{
+			FI_CORE_INFO("USING MAILBOX MODE");
+			return PresentModes[i];
+		}
+		else if (PresentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)
+		{
+			FI_CORE_INFO("USING IMMEDIATE MODE");
 			return PresentModes[i];
 		}
 	}
 
+	FI_CORE_INFO("USING FIFO MODE");
 	return VK_PRESENT_MODE_FIFO_KHR;
 }
 
