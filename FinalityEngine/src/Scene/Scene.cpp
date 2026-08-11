@@ -5,8 +5,20 @@
 
 namespace FINALITY
 {
+    void Scene::OnInit()
+    {
+        Renderer::GetDevice()->BeginTextureBatch();
+        m_TexturesUploaded = false;
+    }
+
     void Scene::OnUpdate(float ts)
     {
+        if (!m_TexturesUploaded && Renderer::GetDevice()->IsUploadBatchActive())
+        {
+            Renderer::GetDevice()->EndAndSubmitTextureBatch();
+            m_TexturesUploaded = true;
+        }
+
         auto scriptView = m_EntityRegistry.view<ScriptStorage>();
 
         std::vector entities(scriptView.begin(), scriptView.end());

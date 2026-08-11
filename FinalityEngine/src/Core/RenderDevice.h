@@ -48,5 +48,9 @@ namespace FINALITY
 		virtual std::shared_ptr<Mesh> CreateMesh(const std::vector<Vertex>& vertices) = 0;
 		virtual std::shared_ptr<Mesh> CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices) = 0;
 		virtual std::shared_ptr<Pipeline> CreatePipeline(const PipelineConfig& config) = 0;
+
+		virtual void BeginTextureBatch() = 0;
+		virtual void EndAndSubmitTextureBatch() = 0;
+		virtual bool IsUploadBatchActive() const = 0;
 	};
 }

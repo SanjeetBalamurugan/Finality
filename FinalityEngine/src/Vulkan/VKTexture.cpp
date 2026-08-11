@@ -10,19 +10,18 @@
 #define GLM_STATIC_ASSERT(x, message) static_assert(x, message) 
 #endif
 
-
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 #include <gli/gli.hpp>
-
 #include <filesystem>
 
 namespace FINALITY
 {
-    VKTexture::VKTexture(VkDevice device, VkPhysicalDevice physicalDevice, VkCommandPool commandPool, VkQueue queue, const std::string& filePath)
+    VKTexture::VKTexture(VkDevice device, VkPhysicalDevice physicalDevice, VkCommandBuffer sharedCmd,
+        const std::string& filePath, VkBuffer& outStagingBuffer, VkDeviceMemory& outStagingMemory)
         : m_Device(device)
     {
-        CreateTextureImage(physicalDevice, commandPool, queue, filePath);
+        CreateTextureImage(physicalDevice, sharedCmd, filePath, outStagingBuffer, outStagingMemory);
         CreateTextureImageView();
         CreateTextureSampler();
     }
@@ -35,11 +34,10 @@ namespace FINALITY
         if (m_TextureImageMemory) vkFreeMemory(m_Device, m_TextureImageMemory, nullptr);
     }
 
-    void VKTexture::Bind(uint32_t slot) const
-    {
-    }
+    void VKTexture::Bind(uint32_t slot) const {}
 
-    void VKTexture::CreateTextureImage(VkPhysicalDevice physicalDevice, VkCommandPool commandPool, VkQueue queue, const std::string& filePath)
+    void VKTexture::CreateTextureImage(VkPhysicalDevice physicalDevice, VkCommandBuffer sharedCmd,
+        const std::string& filePath, VkBuffer& outStagingBuffer, VkDeviceMemory& outStagingMemory)
     {
         VkDeviceSize imageSize = 0;
         const void* pixelsToCopy = nullptr;
@@ -48,17 +46,13 @@ namespace FINALITY
 
         std::filesystem::path path(filePath);
         std::string ext = path.extension().string();
-
         std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return std::tolower(c); });
 
         if (ext == ".dds" || ext == ".ktx" || ext == ".ktx2")
         {
             isCompressed = true;
             gliTex = gli::load(filePath);
-            if (gliTex.empty())
-            {
-                throw std::runtime_error("Failed to load compressed texture via GLI: " + filePath);
-            }
+            if (gliTex.empty()) throw std::runtime_error("Failed to load compressed texture via GLI: " + filePath);
 
             m_Width = static_cast<uint32_t>(gliTex.extent().x);
             m_Height = static_cast<uint32_t>(gliTex.extent().y);
@@ -71,10 +65,7 @@ namespace FINALITY
         {
             int texWidth, texHeight, texChannels;
             stbi_uc* pixels = stbi_load(filePath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-            if (!pixels)
-            {
-                throw std::runtime_error("Failed to decode uncompressed texture via STB: " + filePath);
-            }
+            if (!pixels) throw std::runtime_error("Failed to decode uncompressed texture via STB: " + filePath);
 
             m_Width = static_cast<uint32_t>(texWidth);
             m_Height = static_cast<uint32_t>(texHeight);
@@ -84,22 +75,17 @@ namespace FINALITY
             m_Format = VK_FORMAT_R8G8B8A8_UNORM;
         }
 
-        VkBuffer stagingBuffer;
-        VkDeviceMemory stagingBufferMemory;
-
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         bufferInfo.size = imageSize;
         bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-        if (vkCreateBuffer(m_Device, &bufferInfo, nullptr, &stagingBuffer) != VK_SUCCESS)
-        {
+        if (vkCreateBuffer(m_Device, &bufferInfo, nullptr, &outStagingBuffer) != VK_SUCCESS)
             throw std::runtime_error("Failed to create staging buffer!");
-        }
 
         VkMemoryRequirements memReqs;
-        vkGetBufferMemoryRequirements(m_Device, stagingBuffer, &memReqs);
+        vkGetBufferMemoryRequirements(m_Device, outStagingBuffer, &memReqs);
 
         VkMemoryAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -107,22 +93,17 @@ namespace FINALITY
         allocInfo.memoryTypeIndex = FindMemoryType(physicalDevice, memReqs.memoryTypeBits,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-        if (vkAllocateMemory(m_Device, &allocInfo, nullptr, &stagingBufferMemory) != VK_SUCCESS)
-        {
+        if (vkAllocateMemory(m_Device, &allocInfo, nullptr, &outStagingMemory) != VK_SUCCESS)
             throw std::runtime_error("Failed to allocate staging buffer memory!");
-        }
 
-        vkBindBufferMemory(m_Device, stagingBuffer, stagingBufferMemory, 0);
+        vkBindBufferMemory(m_Device, outStagingBuffer, outStagingMemory, 0);
 
         void* data;
-        vkMapMemory(m_Device, stagingBufferMemory, 0, imageSize, 0, &data);
+        vkMapMemory(m_Device, outStagingMemory, 0, imageSize, 0, &data);
         std::memcpy(data, pixelsToCopy, imageSize);
-        vkUnmapMemory(m_Device, stagingBufferMemory);
+        vkUnmapMemory(m_Device, outStagingMemory);
 
-        if (!isCompressed)
-        {
-            stbi_image_free(const_cast<void*>(pixelsToCopy));
-        }
+        if (!isCompressed) stbi_image_free(const_cast<void*>(pixelsToCopy));
 
         VkImageCreateInfo imageInfo{};
         imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -140,86 +121,60 @@ namespace FINALITY
         imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 
         if (vkCreateImage(m_Device, &imageInfo, nullptr, &m_TextureImage) != VK_SUCCESS)
-        {
             throw std::runtime_error("Failed to create hardware texture image allocation!");
-        }
 
         vkGetImageMemoryRequirements(m_Device, m_TextureImage, &memReqs);
         allocInfo.allocationSize = memReqs.size;
         allocInfo.memoryTypeIndex = FindMemoryType(physicalDevice, memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
         if (vkAllocateMemory(m_Device, &allocInfo, nullptr, &m_TextureImageMemory) != VK_SUCCESS)
-        {
             throw std::runtime_error("Failed to allocate texture image memory!");
-        }
 
         vkBindImageMemory(m_Device, m_TextureImage, m_TextureImageMemory, 0);
 
-        TransitionImageLayout(commandPool, queue, m_TextureImage, m_Format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        TransitionImageLayout(sharedCmd, m_TextureImage, m_Format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        std::vector<VkBufferImageCopy> bufferCopyRegions;
 
         if (isCompressed)
         {
-            VkCommandBufferAllocateInfo allocInfoCmd{};
-            allocInfoCmd.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-            allocInfoCmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-            allocInfoCmd.commandPool = commandPool;
-            allocInfoCmd.commandBufferCount = 1;
-
-            VkCommandBuffer commandBuffer;
-            vkAllocateCommandBuffers(m_Device, &allocInfoCmd, &commandBuffer);
-
-            VkCommandBufferBeginInfo beginInfo{};
-            beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-            beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-            vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-            std::vector<VkBufferImageCopy> bufferCopyRegions;
             VkDeviceSize bufferOffset = 0;
-
             for (uint32_t level = 0; level < m_MipLevels; ++level)
             {
                 gli::texture::extent_type extent = gliTex.extent(level);
 
-                VkBufferImageCopy bufferCopyRegion = {};
-                bufferCopyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                bufferCopyRegion.imageSubresource.mipLevel = level;
-                bufferCopyRegion.imageSubresource.baseArrayLayer = 0;
-                bufferCopyRegion.imageSubresource.layerCount = 1;
-                bufferCopyRegion.imageExtent.width = static_cast<uint32_t>(extent.x);
-                bufferCopyRegion.imageExtent.height = static_cast<uint32_t>(extent.y);
-                bufferCopyRegion.imageExtent.depth = 1;
-                bufferCopyRegion.bufferOffset = bufferOffset;
+                VkBufferImageCopy region = {};
+                region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                region.imageSubresource.mipLevel = level;
+                region.imageSubresource.baseArrayLayer = 0;
+                region.imageSubresource.layerCount = 1;
+                region.imageExtent.width = static_cast<uint32_t>(extent.x);
+                region.imageExtent.height = static_cast<uint32_t>(extent.y);
+                region.imageExtent.depth = 1;
+                region.bufferOffset = bufferOffset;
 
-                bufferCopyRegion.bufferRowLength = 0;
-                bufferCopyRegion.bufferImageHeight = 0;
-
-                bufferCopyRegions.push_back(bufferCopyRegion);
+                bufferCopyRegions.push_back(region);
                 bufferOffset += gliTex.size(level);
             }
-
-            vkCmdCopyBufferToImage(commandBuffer, stagingBuffer, m_TextureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                static_cast<uint32_t>(bufferCopyRegions.size()), bufferCopyRegions.data());
-
-            vkEndCommandBuffer(commandBuffer);
-
-            VkSubmitInfo submitInfo{};
-            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-            submitInfo.commandBufferCount = 1;
-            submitInfo.pCommandBuffers = &commandBuffer;
-
-            vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
-            vkQueueWaitIdle(queue);
-            vkFreeCommandBuffers(m_Device, commandPool, 1, &commandBuffer);
         }
         else
         {
-            CopyBufferToImage(commandPool, queue, stagingBuffer, m_TextureImage, m_Width, m_Height);
+            VkBufferImageCopy region = {};
+            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.imageSubresource.mipLevel = 0;
+            region.imageSubresource.baseArrayLayer = 0;
+            region.imageSubresource.layerCount = 1;
+            region.imageExtent.width = m_Width;
+            region.imageExtent.height = m_Height;
+            region.imageExtent.depth = 1;
+            region.bufferOffset = 0;
+
+            bufferCopyRegions.push_back(region);
         }
 
-        TransitionImageLayout(commandPool, queue, m_TextureImage, m_Format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        vkCmdCopyBufferToImage(sharedCmd, outStagingBuffer, m_TextureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            static_cast<uint32_t>(bufferCopyRegions.size()), bufferCopyRegions.data());
 
-        vkDestroyBuffer(m_Device, stagingBuffer, nullptr);
-        vkFreeMemory(m_Device, stagingBufferMemory, nullptr);
+        TransitionImageLayout(sharedCmd, m_TextureImage, m_Format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     }
 
     void VKTexture::CreateTextureImageView()
@@ -250,8 +205,8 @@ namespace FINALITY
         samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        samplerInfo.anisotropyEnable = VK_FALSE;
-        samplerInfo.maxAnisotropy = 1.0f;
+        samplerInfo.anisotropyEnable = VK_TRUE;
+        samplerInfo.maxAnisotropy = 16.0f;
         samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
         samplerInfo.unnormalizedCoordinates = VK_FALSE;
         samplerInfo.compareEnable = VK_FALSE;
@@ -267,22 +222,21 @@ namespace FINALITY
         }
     }
 
-    void VKTexture::TransitionImageLayout(VkCommandPool commandPool, VkQueue queue, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
+    uint32_t VKTexture::FindMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties)
     {
-        VkCommandBufferAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandPool = commandPool;
-        allocInfo.commandBufferCount = 1;
+        VkPhysicalDeviceMemoryProperties memProperties;
+        vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
 
-        VkCommandBuffer commandBuffer;
-        vkAllocateCommandBuffers(m_Device, &allocInfo, &commandBuffer);
+        for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+            if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) 
+                return i;
+        }
 
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        vkBeginCommandBuffer(commandBuffer, &beginInfo);
+        throw std::runtime_error("Failed to find suitable memory type!");
+    }
 
+    void VKTexture::TransitionImageLayout(VkCommandBuffer sharedCmd, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
+    {
         VkImageMemoryBarrier barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         barrier.oldLayout = oldLayout;
@@ -313,76 +267,13 @@ namespace FINALITY
             sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
             destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
         }
-        else
+        else 
         {
-            throw std::invalid_argument("Unsupported layout transition layout footprint pattern!");
+            throw std::invalid_argument("Unsupported pipeline layout transition configuration!"); 
         }
 
-        vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-        vkEndCommandBuffer(commandBuffer);
-
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &commandBuffer;
-
-        vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
-        vkQueueWaitIdle(queue);
-        vkFreeCommandBuffers(m_Device, commandPool, 1, &commandBuffer);
-    }
-
-    void VKTexture::CopyBufferToImage(VkCommandPool commandPool, VkQueue queue, VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
-    {
-        VkCommandBufferAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandPool = commandPool;
-        allocInfo.commandBufferCount = 1;
-
-        VkCommandBuffer commandBuffer;
-        vkAllocateCommandBuffers(m_Device, &allocInfo, &commandBuffer);
-
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-        VkBufferImageCopy region{};
-        region.bufferOffset = 0;
-        region.bufferRowLength = 0;
-        region.bufferImageHeight = 0;
-        region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        region.imageSubresource.mipLevel = 0;
-        region.imageSubresource.baseArrayLayer = 0;
-        region.imageSubresource.layerCount = 1;
-        region.imageOffset = { 0, 0, 0 };
-        region.imageExtent = { width, height, 1 };
-
-        vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-        vkEndCommandBuffer(commandBuffer);
-
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &commandBuffer;
-
-        vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
-        vkQueueWaitIdle(queue);
-        vkFreeCommandBuffers(m_Device, commandPool, 1, &commandBuffer);
-    }
-
-    uint32_t VKTexture::FindMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties)
-    {
-        VkPhysicalDeviceMemoryProperties memProperties;
-        vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
-
-        for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
-        {
-            if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
-            {
-                return i;
-            }
-        }
-        throw std::runtime_error("Failed to find suitable texture memory allocation block type!");
+        vkCmdPipelineBarrier(sharedCmd,
+            sourceStage, destinationStage,
+            0, 0, nullptr, 0, nullptr, 1, &barrier);
     }
 }

@@ -21,6 +21,13 @@
 
 namespace FINALITY
 {
+	struct TextureUploadBatchContext {
+		VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
+		std::vector<VkBuffer> stagingBuffers;
+		std::vector<VkDeviceMemory> stagingMemories;
+		bool isActive = false;
+	};
+
 	class VKRenderDevice : public RenderDevice
 	{
 	private:
@@ -58,6 +65,19 @@ namespace FINALITY
 		std::shared_ptr<Mesh> CreateMesh(const std::vector<Vertex>& vertices) override;
 		std::shared_ptr<Mesh> CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices) override;
 		std::shared_ptr<Pipeline> CreatePipeline(const PipelineConfig& config) override;
+
+		// Texture Batch
+		void BeginTextureBatch();
+		void EndAndSubmitTextureBatch();
+
+		bool IsUploadBatchActive() const { return m_ActiveUploadBatch.isActive; }
+		VkCommandBuffer GetActiveUploadCommandBuffer() { return m_ActiveUploadBatch.commandBuffer; }
+
+		void TrackStagingResource(VkBuffer buffer, VkDeviceMemory memory) {
+			m_ActiveUploadBatch.stagingBuffers.push_back(buffer);
+			m_ActiveUploadBatch.stagingMemories.push_back(memory);
+		}
+		//
 
 		VkDescriptorSetLayout GetGlobalDescriptorSetLayout() const { return m_GlobalDescriptorSetLayout; }
 		VkDescriptorSet GetGlobalDescriptorSet(uint32_t index) const { return m_GlobalDescriptorSets[index]; }
@@ -126,5 +146,7 @@ namespace FINALITY
 		VkDescriptorSet m_PostProcessDescriptorSet = VK_NULL_HANDLE;
 		std::shared_ptr<Pipeline> m_PostProcessPipeline = nullptr;
 		VkSampler m_PostProcessSampler = VK_NULL_HANDLE;
+
+		TextureUploadBatchContext m_ActiveUploadBatch;
 	};
 }

@@ -467,6 +467,54 @@ std::shared_ptr<FINALITY::Pipeline> FINALITY::VKRenderDevice::CreatePipeline(con
 	return std::make_shared<VKPipeline>(m_Device, GetActiveRenderPass(), config, m_GlobalDescriptorSetLayout, m_MaterialDescriptorSetLayout);
 }
 
+void FINALITY::VKRenderDevice::BeginTextureBatch()
+{
+	m_ActiveUploadBatch.isActive = true;
+
+	VkCommandBufferAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandPool = m_CMDBufPool;
+	allocInfo.commandBufferCount = 1;
+	vkAllocateCommandBuffers(m_Device, &allocInfo, &m_ActiveUploadBatch.commandBuffer);
+
+	VkCommandBufferBeginInfo beginInfo{};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	vkBeginCommandBuffer(m_ActiveUploadBatch.commandBuffer, &beginInfo);
+}
+
+void FINALITY::VKRenderDevice::EndAndSubmitTextureBatch()
+{
+	if (!m_ActiveUploadBatch.isActive) return;
+
+	vkEndCommandBuffer(m_ActiveUploadBatch.commandBuffer);
+
+	// Submit the monolithic batch once
+	VkSubmitInfo submitInfo{};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &m_ActiveUploadBatch.commandBuffer;
+
+	VkFenceCreateInfo fenceInfo{};
+	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	VkFence fence;
+	vkCreateFence(m_Device, &fenceInfo, nullptr, &fence);
+
+	vkQueueSubmit(m_Queue.GetQueue(), 1, &submitInfo, fence);
+	vkWaitForFences(m_Device, 1, &fence, VK_TRUE, UINT64_MAX);
+
+	for (size_t i = 0; i < m_ActiveUploadBatch.stagingBuffers.size(); ++i) {
+		vkDestroyBuffer(m_Device, m_ActiveUploadBatch.stagingBuffers[i], nullptr);
+		vkFreeMemory(m_Device, m_ActiveUploadBatch.stagingMemories[i], nullptr);
+	}
+
+	vkDestroyFence(m_Device, fence, nullptr);
+	vkFreeCommandBuffers(m_Device, m_CMDBufPool, 1, &m_ActiveUploadBatch.commandBuffer);
+
+	m_ActiveUploadBatch = TextureUploadBatchContext();
+}
+
 void FINALITY::VKRenderDevice::Shutdown()
 {
 	m_Queue.WaitIdle();

@@ -19,6 +19,7 @@ namespace FINALITY
 		Entity CreateEntity(const std::string& name = std::string());
 	private:
 		entt::registry m_EntityRegistry;
+		bool m_TexturesUploaded = false;
 
 		friend class Entity;
 		friend class ScriptableComponent;

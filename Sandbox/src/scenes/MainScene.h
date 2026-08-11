@@ -11,6 +11,8 @@ class MainScene : public FINALITY::Scene
 public:
     void OnInit() override
     {
+        FINALITY::Scene::OnInit();
+
         auto cameraEntity = CreateEntity("Main Camera");
         auto& camComp = cameraEntity.AddComponent<FINALITY::CameraComponent>(45.0f, 1280.0f / 720.0f, 0.01f, 100.0f);
 

@@ -1,13 +1,19 @@
 #pragma once
+#include <Core/Application.h>
+
 #include <Core/Texture.h>
 #include "VKCore.h"
+
+#include "VKRenderDevice.h"
 
 namespace FINALITY
 {
 	class VKTexture : public Texture
 	{
 	public:
-		VKTexture(VkDevice device, VkPhysicalDevice physicalDevice, VkCommandPool commandPool, VkQueue queue, const std::string& filePath);
+		// Updated constructor signature matching your decoupled, batched upload design
+		VKTexture(VkDevice device, VkPhysicalDevice physicalDevice, VkCommandBuffer sharedCmd,
+			const std::string& filePath, VkBuffer& outStagingBuffer, VkDeviceMemory& outStagingMemory);
 		virtual ~VKTexture();
 
 		uint32_t GetWidth() const override { return m_Width; }
@@ -20,13 +26,14 @@ namespace FINALITY
 		VkSampler GetSampler() const { return m_Sampler; }
 
 	private:
-		void CreateTextureImage(VkPhysicalDevice physicalDevice, VkCommandPool commandPool, VkQueue queue, const std::string& filePath);
+		void CreateTextureImage(VkPhysicalDevice physicalDevice, VkCommandBuffer sharedCmd,
+			const std::string& filePath, VkBuffer& outStagingBuffer, VkDeviceMemory& outStagingMemory);
 		void CreateTextureImageView();
 		void CreateTextureSampler();
 
 		uint32_t FindMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties);
-		void TransitionImageLayout(VkCommandPool commandPool, VkQueue queue, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
-		void CopyBufferToImage(VkCommandPool commandPool, VkQueue queue, VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+
+		void TransitionImageLayout(VkCommandBuffer sharedCmd, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 
 	private:
 		VkDevice m_Device = VK_NULL_HANDLE;

@@ -20,5 +20,6 @@ namespace FINALITY
         AssetType GetType() const override { return AssetType::Texture; }
 
         static std::shared_ptr<Texture> Create(const std::string& filePath);
+
     };
 }
