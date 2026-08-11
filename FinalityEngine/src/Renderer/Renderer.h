@@ -8,6 +8,7 @@
 #include "Camera.h"
 
 #include <Core/Pipeline.h>
+#include "Camera/Frustum.h"
 
 namespace FINALITY
 {
@@ -34,9 +35,23 @@ namespace FINALITY
 
         static void SetPostProcessPipeline(std::shared_ptr<Pipeline> pipeline);
         static std::shared_ptr<Pipeline> CreatePostProcessPipeline(const PipelineConfig& config);
+        
+        static uint32_t GetSubmittedCount() { return (uint32_t)s_RenderQueue.size(); }
+        static uint32_t GetCulledCount() { return s_CulledCount; }
+
     private:
         static RenderDevice* s_Device;
         static std::vector<RenderPacket> s_RenderQueue;
         static inline Camera* s_ActiveCamera = nullptr;
+
+        static Frustum s_CurrentFrustum;
+        static bool s_FrustumCullingEnabled;
+
+        static uint32_t s_CulledCount;
+
+    protected:
+        static bool TryGetCullingFrustum(const Frustum*& outFrustum);
+        static void SetFrustumCullingEnabled(bool enabled) { s_FrustumCullingEnabled = enabled; }
+        static bool IsFrustumCullingEnabled() { return s_FrustumCullingEnabled; }
     };
 }

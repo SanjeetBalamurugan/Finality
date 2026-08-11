@@ -102,6 +102,7 @@ void FINALITY::VKRenderDevice::CreateDevice()
 	};
 
 	VkPhysicalDeviceFeatures deviceFeatures{};
+	deviceFeatures.samplerAnisotropy = VK_TRUE;
 
 	VkDeviceCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -175,7 +176,7 @@ void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 
 	this->CreateCommandBufferPool();
 
-	m_Queue.Initialize(m_Device, m_SwapChain->GetVKHandle(), m_QueueFamily, 0);
+	m_Queue.Initialize(m_Device, m_SwapChain->GetVKHandle(), m_SwapChain->GetImageCount() , m_QueueFamily, 0);
 	this->CreateCommandBuffers(m_SwapChain->GetImageCount());
 
 	m_FrameDeletionQueues.resize(m_SwapChain->GetImageCount());
@@ -752,8 +753,6 @@ void FINALITY::VKRenderDevice::EndFrame()
 
 	m_Queue.SubmitASync(cmd, m_ImageIndex);
 }
-
-
 
 void FINALITY::VKRenderDevice::PresentFrame()
 {

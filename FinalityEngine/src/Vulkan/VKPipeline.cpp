@@ -5,7 +5,18 @@
 
 namespace FINALITY
 {
-    FINALITY::VKPipeline::VKPipeline(VkDevice device, VkRenderPass renderPass, const PipelineConfig& config, VkDescriptorSetLayout globalLayout, VkDescriptorSetLayout materialLayout)
+    static VkCullModeFlags ToVkCullMode(CullMode mode)
+    {
+        switch (mode)
+        {
+        case CullMode::None:  return VK_CULL_MODE_NONE;
+        case CullMode::Back:  return VK_CULL_MODE_BACK_BIT;
+        case CullMode::Front: return VK_CULL_MODE_FRONT_BIT;
+        }
+        return VK_CULL_MODE_BACK_BIT;
+    }
+
+    VKPipeline::VKPipeline(VkDevice device, VkRenderPass renderPass, const PipelineConfig& config, VkDescriptorSetLayout globalLayout, VkDescriptorSetLayout materialLayout)
         : m_Device(device)
     {
         auto vertShader = static_cast<VKShader*>(config.VertexShader.get());
@@ -76,7 +87,8 @@ namespace FINALITY
         rasterizer.rasterizerDiscardEnable = VK_FALSE;
         rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
         rasterizer.lineWidth = 1.0f;
-        rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+
+        rasterizer.cullMode = ToVkCullMode(config.Culling);
         rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
         rasterizer.depthBiasEnable = VK_FALSE;
 
@@ -205,7 +217,7 @@ namespace FINALITY
         rasterizer.rasterizerDiscardEnable = VK_FALSE;
         rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
         rasterizer.lineWidth = 1.0f;
-        rasterizer.cullMode = VK_CULL_MODE_NONE;
+        rasterizer.cullMode = ToVkCullMode(config.Culling);
         rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
         rasterizer.depthBiasEnable = VK_FALSE;
 
@@ -273,8 +285,6 @@ namespace FINALITY
             throw std::runtime_error("Failed to create post-process graphics pipeline!");
         }
     }
-
-
 
     VKPipeline::~VKPipeline()
     {

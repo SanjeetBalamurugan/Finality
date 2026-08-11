@@ -42,5 +42,14 @@ namespace FINALITY
 		virtual uint32_t GetVertexCount() const = 0;
 		virtual uint32_t GetIndexCount() const = 0;
 		virtual bool HasIndices() const = 0;
+
+		glm::vec3 GetBoundsCenter() const { return m_BoundsCenter; }
+		float GetBoundsRadius() const { return m_BoundsRadius; }
+
+	private:
+		glm::vec3 m_BoundsCenter = glm::vec3(0.0f);
+		float m_BoundsRadius = 0.0f;
+	protected:
+		void ComputeBounds(const std::vector<Vertex>& vertices);
 	};
 }

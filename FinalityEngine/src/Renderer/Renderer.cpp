@@ -7,6 +7,11 @@ namespace FINALITY
     RenderDevice* Renderer::s_Device = nullptr;
     std::vector<RenderPacket> Renderer::s_RenderQueue;
 
+    Frustum Renderer::s_CurrentFrustum;
+    bool Renderer::s_FrustumCullingEnabled = true;
+
+    uint32_t Renderer::s_CulledCount = 0;
+
     void Renderer::Initialize(RenderDevice* device)
     {
         s_Device = device;
@@ -22,6 +27,16 @@ namespace FINALITY
     void Renderer::BeginScene()
     {
         s_RenderQueue.clear();
+        s_CulledCount = 0;
+
+        if (s_ActiveCamera)
+        {
+            glm::mat4 projection = s_ActiveCamera->GetProjection();
+            glm::mat4 view = s_ActiveCamera->GetViewMatrix();
+            glm::mat4 viewProj = projection * view;
+
+            s_CurrentFrustum = Frustum::FromViewProjection(viewProj);
+        }
     }
 
     void Renderer::PushEntity(Entity entity)
@@ -31,27 +46,50 @@ namespace FINALITY
             return;
         }
 
+        const auto& meshComp = entity.GetComponent<MeshComponent>();
+        if (!meshComp.MeshData)
+        {
+            return;
+        }
+
+        glm::mat4 transform = glm::mat4(1.0f);
+        if (entity.HasComponent<TransformComponent>())
+        {
+            transform = entity.GetComponent<TransformComponent>().GetTransformMatrix();
+        }
+
+        const Frustum* cullingFrustum = nullptr;
+        if (TryGetCullingFrustum(cullingFrustum))
+        {
+            glm::vec3 worldCenter = glm::vec3(transform * glm::vec4(meshComp.MeshData->GetBoundsCenter(), 1.0f));
+
+            glm::vec3 scale;
+            scale.x = glm::length(glm::vec3(transform[0]));
+            scale.y = glm::length(glm::vec3(transform[1]));
+            scale.z = glm::length(glm::vec3(transform[2]));
+            float maxScale = std::max({ scale.x, scale.y, scale.z });
+
+            float worldRadius = meshComp.MeshData->GetBoundsRadius() * maxScale;
+
+            if (!cullingFrustum->IntersectsSphere(worldCenter, worldRadius))
+            {
+                s_CulledCount++;
+                return; // Outside the view frustum, skip entirely.
+            }
+        }
+
         RenderPacket packet{};
-        packet.MeshData = entity.GetComponent<MeshComponent>().MeshData;
+        packet.MeshData = meshComp.MeshData;
 
         const auto& mat = entity.GetComponent<MaterialComponent>();
         if (mat.MaterialInstance)
         {
             packet.PipelineInstance = mat.MaterialInstance->GetPipeline();
             packet.CustomPushData = mat.MaterialInstance->GetRawDataBuffer();
-
             packet.Textures = mat.MaterialInstance->GetTextures();
         }
 
-        if (entity.HasComponent<TransformComponent>())
-        {
-            const auto& transform = entity.GetComponent<TransformComponent>();
-            packet.Transform = transform.GetTransformMatrix();
-        }
-        else
-        {
-            packet.Transform = glm::mat4(1.0f);
-        }
+        packet.Transform = transform;
 
         s_RenderQueue.push_back(packet);
     }
@@ -121,5 +159,16 @@ namespace FINALITY
             return nullptr;
         }
         }
+    }
+    bool Renderer::TryGetCullingFrustum(const Frustum*& outFrustum)
+    {
+        if (!s_FrustumCullingEnabled || !s_ActiveCamera)
+        {
+            outFrustum = nullptr;
+            return false;
+        }
+
+        outFrustum = &s_CurrentFrustum;
+        return true;
     }
 }

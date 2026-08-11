@@ -14,7 +14,7 @@ namespace FINALITY
         VKMesh(const VKMesh&) = delete;
         VKMesh& operator=(const VKMesh&) = delete;
 
-        void Bind(VkCommandBuffer commandBuffer);
+        void Bind(VkCommandBuffer commandBuffer) const;
         void Destroy() override;
 
         void UpdateVertices(const std::vector<Vertex>& vertices) override;
@@ -28,7 +28,7 @@ namespace FINALITY
         void CreateIndexBuffer(const std::vector<uint32_t>& indices);
 
         void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
-        uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+        uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
 
     private:
         VkDevice m_Device = nullptr;

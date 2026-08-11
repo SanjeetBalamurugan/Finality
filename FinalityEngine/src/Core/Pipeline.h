@@ -7,11 +7,20 @@
 
 namespace FINALITY
 {
+    enum class CullMode
+    {
+        None,
+        Back,
+        Front
+    };
+    
     struct PipelineConfig
     {
         std::shared_ptr<Shader> VertexShader;
         std::shared_ptr<Shader> FragmentShader;
         bool EnableBlending = false;
+
+        CullMode Culling = CullMode::Back;
     };
 
     class FAPI Pipeline

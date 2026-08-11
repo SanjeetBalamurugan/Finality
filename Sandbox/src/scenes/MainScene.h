@@ -85,7 +85,16 @@ public:
         cube1Entity.AddComponent<FINALITY::MeshComponent>(cubeMesh);
         cube1Entity.AddComponent<FINALITY::MaterialComponent>(pngMaterial);
         cube1Entity.AddScript<FINALITY::TestScript>();
-        cube1Entity.AddScript<FINALITY::KeyPrintScript>();
+        //cube1Entity.AddScript<FINALITY::KeyPrintScript>();
+
+        auto cube3Entity = CreateEntity("PNG Textured Cube2");
+        auto& cube3Transform = cube3Entity.GetComponent<FINALITY::TransformComponent>();
+        cube3Transform.Position = glm::vec3(-2.0f, 0.5f, 0.0f);
+        cube3Transform.Rotation = glm::vec3(0.0f);
+        cube3Transform.Scale = glm::vec3(1.0f);
+
+        cube3Entity.AddComponent<FINALITY::MeshComponent>(cubeMesh);
+        cube3Entity.AddComponent<FINALITY::MaterialComponent>(pngMaterial);
 
         auto cube2Entity = CreateEntity("KTX Textured Cube");
         auto& cube2Transform = cube2Entity.GetComponent<FINALITY::TransformComponent>();

@@ -8,6 +8,7 @@ namespace FINALITY
         : m_Device(device), m_PhysicalDevice(physicalDevice), m_VertexCount(static_cast<uint32_t>(vertices.size())), m_HasIndices(false)
     {
         CreateVertexBuffer(vertices);
+        ComputeBounds(vertices);
     }
 
     VKMesh::VKMesh(VkDevice device, VkPhysicalDevice physicalDevice, const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices)
@@ -15,6 +16,7 @@ namespace FINALITY
     {
         CreateVertexBuffer(vertices);
         CreateIndexBuffer(indices);
+        ComputeBounds(vertices);
     }
 
     VKMesh::~VKMesh()
@@ -22,7 +24,7 @@ namespace FINALITY
         Destroy();
     }
 
-    void VKMesh::Bind(VkCommandBuffer commandBuffer)
+    void VKMesh::Bind(VkCommandBuffer commandBuffer) const
     {
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexBuffer, offsets);
@@ -63,6 +65,8 @@ namespace FINALITY
         vkMapMemory(m_Device, m_VertexBufferMemory, 0, bufferSize, 0, &data);
         std::memcpy(data, vertices.data(), (size_t)bufferSize);
         vkUnmapMemory(m_Device, m_VertexBufferMemory);
+
+        ComputeBounds(vertices);
     }
 
     void VKMesh::CreateVertexBuffer(const std::vector<Vertex>& vertices)
@@ -128,7 +132,7 @@ namespace FINALITY
         vkBindBufferMemory(m_Device, buffer, bufferMemory, 0);
     }
 
-    uint32_t VKMesh::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
+    uint32_t VKMesh::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const
     {
         VkPhysicalDeviceMemoryProperties memProperties;
         vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &memProperties);
