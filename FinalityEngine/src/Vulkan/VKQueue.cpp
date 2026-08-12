@@ -75,26 +75,30 @@ namespace FINALITY
         return imageIndex;
     }
 
-    void VKQueue::SubmitASync(VkCommandBuffer cmdBuf, uint32_t imageIndex)
+    void VKQueue::SubmitASync(VkCommandBuffer cmdBuf, uint32_t imageIndex, bool isFirst, bool isLast)
     {
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
         VkSemaphore waitSemaphores[] = { m_ImageAvailableSemaphores[m_CurrentFrame] };
         VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-        submitInfo.waitSemaphoreCount = 1;
-        submitInfo.pWaitSemaphores = waitSemaphores;
-        submitInfo.pWaitDstStageMask = waitStages;
+
+        if (isFirst) {
+            submitInfo.waitSemaphoreCount = 1;
+            submitInfo.pWaitSemaphores = waitSemaphores;
+            submitInfo.pWaitDstStageMask = waitStages;
+        }
 
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &cmdBuf;
 
-        // Signal semaphore is indexed by IMAGE, not frame — present waits on it per-image.
         VkSemaphore signalSemaphores[] = { m_RenderFinishedSemaphores[imageIndex] };
-        submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = signalSemaphores;
+        if (isLast) {
+            submitInfo.signalSemaphoreCount = 1;
+            submitInfo.pSignalSemaphores = signalSemaphores;
+        }
 
-        VkResult res = vkQueueSubmit(m_Queue, 1, &submitInfo, m_InFlightFences[m_CurrentFrame]);
+        VkResult res = vkQueueSubmit(m_Queue, 1, &submitInfo, isLast ? m_InFlightFences[m_CurrentFrame] : VK_NULL_HANDLE);
         CHECK_VK_RESULT(res, "vkQueueSubmit frame execution failure");
     }
 

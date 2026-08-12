@@ -31,6 +31,9 @@
 // UTILS
 #include "Utils/UUID.h"
 
+// UI
+#include "ImGUI/ImGUIPanel.h"
+
 #define FI_CLIENT_ERROR(...)       ::FINALITY::Logger::GetClientLogger()->error(__VA_ARGS__)
 #define FI_CLIENT_WARN(...)        ::FINALITY::Logger::GetClientLogger()->warn(__VA_ARGS__)
 #define FI_CLIENT_INFO(...)        ::FINALITY::Logger::GetClientLogger()->info(__VA_ARGS__)

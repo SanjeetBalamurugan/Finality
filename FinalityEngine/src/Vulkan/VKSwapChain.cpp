@@ -311,8 +311,77 @@ namespace FINALITY
         viewInfo.subresourceRange.baseArrayLayer = 0;
         viewInfo.subresourceRange.layerCount = 1;
 
-        if (vkCreateImageView(m_LogicalDevice, &viewInfo, nullptr, &m_DepthImageView) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create depth image view wrapper handle!");
+        VkResult res = vkCreateImageView(m_LogicalDevice, &viewInfo, nullptr, &m_DepthImageView);
+        CHECK_VK_RESULT(res, "vkCreateImageView: Failed to create depth image view wrapper handle!");
+
+        uint32_t queueFamilyIndex = 0;
+        {
+            uint32_t queueFamilyCount = 0;
+            vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
+            std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+            vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
+            for (uint32_t i = 0; i < queueFamilyCount; i++) {
+                if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+                    queueFamilyIndex = i;
+                    break;
+                }
+            }
         }
+
+        VkCommandPoolCreateInfo poolInfo{};
+        poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+        poolInfo.queueFamilyIndex = queueFamilyIndex;
+
+        VkCommandPool tempPool = VK_NULL_HANDLE;
+        vkCreateCommandPool(m_LogicalDevice, &poolInfo, nullptr, &tempPool);
+
+        VkCommandBufferAllocateInfo cmdAllocInfo{};
+        cmdAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        cmdAllocInfo.commandPool = tempPool;
+        cmdAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        cmdAllocInfo.commandBufferCount = 1;
+
+        VkCommandBuffer cmd = VK_NULL_HANDLE;
+        vkAllocateCommandBuffers(m_LogicalDevice, &cmdAllocInfo, &cmd);
+
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        vkBeginCommandBuffer(cmd, &beginInfo);
+
+        ImageMemBarrier(cmd, m_DepthImage, depthFormat,
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1, 1, 0);
+
+        vkEndCommandBuffer(cmd);
+
+        VkQueue queue = VK_NULL_HANDLE;
+        vkGetDeviceQueue(m_LogicalDevice, queueFamilyIndex, 0, &queue);
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &cmd;
+
+        vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
+        vkQueueWaitIdle(queue);
+
+        vkFreeCommandBuffers(m_LogicalDevice, tempPool, 1, &cmd);
+        vkDestroyCommandPool(m_LogicalDevice, tempPool, nullptr);
+    }
+
+    const VkImageView& VKSwapChain::GetImageView(int idx) const
+    {
+        if (idx >= m_ImageViews.size()) {
+            FI_CORE_ERROR("Invalid depth view index %d\n", idx);
+            exit(1);
+        }
+
+        return m_ImageViews[idx];
+    }
+    const VkImageView& VKSwapChain::GetDepthView() const
+    {
+        return m_DepthImageView;
     }
 }

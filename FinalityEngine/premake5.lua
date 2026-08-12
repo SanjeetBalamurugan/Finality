@@ -14,6 +14,7 @@ project "FinalityEngine"
     includedirs {
         "src",
         "../vendor/glfw/include/",
+        "../vendor/imgui",
         "../vendor/spdlog/include/",
         "../vendor/glm",
         "../vendor/entt/include",
@@ -23,7 +24,8 @@ project "FinalityEngine"
 
     links {
         "GLFW",
-        "stb"
+        "stb",
+        "ImGui"
     }
 
     defines {

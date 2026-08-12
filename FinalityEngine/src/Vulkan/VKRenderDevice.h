@@ -55,6 +55,7 @@ namespace FINALITY
 		void CreateInstanceBuffers(VkDeviceSize initialSize = 1024 * 1024 * 16); // 16 MB per frame
 		void DestroyInstanceBuffers();
 
+		void RecordCommandBuffersInternal(bool TransitionToPresent, std::vector<VkCommandBuffer>& CmdBufs);
 		void UploadToDynamicInstanceBuffer(
 			const void* data,
 			VkDeviceSize dataSize,
@@ -72,14 +73,19 @@ namespace FINALITY
 		void PresentFrame() override;
 
 		void WaitIdle() override { vkDeviceWaitIdle(m_Device); }
+		void CreateCommandBuffers(uint32_t count, VkCommandBuffer* cmdBufs) const;
+		void FreeCommandBuffers(uint32_t count, VkCommandBuffer* cmdBufs);
 
 		void Clear(float r, float g, float b, float a) override;
 		void SetWindowSpec(const WindowSpec& spec) override;
+		WindowSpec GetWindowSpec() override { return m_Spec; }
 		VkDevice GetActiveDevice() const { return m_Device; }
 
 		RendererAPI GetActiveApi() const override { return RendererAPI::VULKAN; }
 
 		void DrawQueue(const std::vector<RenderPacket>& queue) override;
+		void BeginDynamicRendering(VkCommandBuffer CmdBuf, int ImageIndex,
+			VkClearValue* pClearColor, VkClearValue* pDepthValue);
 
 		std::shared_ptr<Mesh> CreateMesh(const std::vector<Vertex>& vertices) override;
 		std::shared_ptr<Mesh> CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices) override;
@@ -120,6 +126,16 @@ namespace FINALITY
 		void SetPostProcessPipeline(std::shared_ptr<Pipeline> pipeline) { m_PostProcessPipeline = pipeline; }
 		VkDescriptorSetLayout GetPostProcessDescriptorSetLayout() { return m_PostProcessDescriptorSetLayout; }
 		VKSwapChain* GetSwapChain() { return m_SwapChain.get(); }
+
+		VkApplicationInfo GetAppInfo() const { return m_AppInfo; }
+		VkInstance GetInstance() const { return m_Instance; }
+		uint32_t GetQueueFamily() const { return m_QueueFamily; }
+		VkSurfaceCapabilitiesKHR GetSurfaceCaps() const { return m_Devices.SelectedDevice().surfaceCapabilities; }
+		uint32_t GetNumImages() const { return m_SwapChain->GetImageCount(); }
+		VkFormat GetDepthFormat() const { return VK_FORMAT_D32_SFLOAT; }
+		VkFormat GetSwapChainFormat() const { return m_SwapChain->GetVKFormat(); }
+
+		VkImage GetImages(int image) const { return m_SwapChain->GetVKImage(image); }
 
 	private:
 		WindowSpec m_Spec;
@@ -169,5 +185,7 @@ namespace FINALITY
 		TextureUploadBatchContext m_ActiveUploadBatch;
 
 		std::vector<FrameInstanceBuffer> m_InstanceBuffers;
+
+		friend class VKImGUIRenderer;
 	};
 }

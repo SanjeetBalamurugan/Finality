@@ -161,6 +161,69 @@ public:
     {
         FINALITY::Scene::OnUpdate(ts);
         FINALITY::RenderCommand::SetClearColor(0.05f, 0.02f, 0.02f, 1.0f);
+
+        {
+            FINALITY::ImGUIPanel panel("Panel1");
+            panel.Text("Basic Text & Styling");
+            panel.Separator();
+            panel.TextColored({ 0.2f, 1.0f, 0.2f, 1.0f }, "This is colored text.");
+
+            static bool enableFeature = true;
+            panel.Checkbox("Enable Advanced Settings", &enableFeature);
+
+            static int radioValue = 0;
+            panel.RadioButton("Option A", &radioValue, 0); 
+            panel.SameLine();
+            panel.RadioButton("Option B", &radioValue, 1);
+
+            static float sliderFloat = 0.5f;
+            panel.SliderFloat("Float Slider", &sliderFloat, 0.0f, 1.0f, "Value: %.3f");
+
+            static int sliderInt = 10;
+            panel.DragInt("Drag Int", &sliderInt, 1, 0, 100);
+
+            static int currentItem = 0;
+            const char* items[] = { "Item 1", "Item 2", "Item 3" };
+            panel.Combo("Dropdown Combo", &currentItem, items, 3);
+
+            static float col[4] = { 0.4f, 0.7f, 0.0f, 1.0f };
+            panel.ColorEdit4("Color Picker", col);
+
+            if (panel.Button("Action Button")) {
+                // Button clicked logic
+            }
+        }
+
+        {
+            FINALITY::ImGUIPanel panel("Tabs & Graphs Panel");
+
+            if (panel.BeginTabBar("TestTabBar")) {
+                if (panel.BeginTabItem("Plot Tab")) {
+                    panel.Text("Real-time data visualization simulation:");
+                    static float values[90] = { 0 };
+                    static int values_offset = 0;
+                    static float refresh_time = 0.0f;
+
+                    // Simulate frame data updates
+                    values[values_offset] = cosf((float)values_offset * 0.1f) * 2.0f + 3.0f;
+                    values_offset = (values_offset + 1) % 90;
+
+                    // Pass glm::vec2 instead of ImVec2 for the size
+                    panel.PlotLines("Waveform", values, 90, values_offset, "Sine-like", 0.0f, 6.0f, glm::vec2(0.0f, 80.0f));
+                    panel.EndTabItem();
+                }
+
+                if (panel.BeginTabItem("Collapsing Tree Tab")) {
+                    if (panel.TreeNode("Parent Node")) {
+                        panel.Text("Child node leaf contents.");
+                        panel.TreePop();
+                    }
+                    panel.EndTabItem();
+                }
+                panel.EndTabBar();
+            }
+
+        }
     }
 
     void OnDestroy() override

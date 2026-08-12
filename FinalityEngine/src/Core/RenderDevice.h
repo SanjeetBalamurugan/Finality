@@ -48,6 +48,7 @@ namespace FINALITY
 		virtual void Clear(float r, float g, float b, float a) = 0;
 
 		virtual void SetWindowSpec(const WindowSpec& spec) = 0;
+		virtual WindowSpec GetWindowSpec() = 0;
 
 		virtual void DrawQueue(const std::vector<RenderPacket>& queue) = 0;
 		virtual RendererAPI GetActiveApi() const = 0;

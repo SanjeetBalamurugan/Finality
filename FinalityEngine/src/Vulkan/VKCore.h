@@ -2,6 +2,8 @@
 #include <Core/Log.h>
 #include <Vulkan/vulkan.h>
 
+#include <backends/imgui_impl_vulkan.h>
+
 #include <stdio.h>
 
 #define CHECK_VK_RESULT(res, msg) \

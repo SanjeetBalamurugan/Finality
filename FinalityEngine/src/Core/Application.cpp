@@ -19,10 +19,15 @@
 #include <Events/Mouse.h>
 #include <Assets/AssetManager.h>
 
+#include <ImGUI/ImGUIRenderer.h>
+
 #define GLM_FORCE_PURE  
 #define GLM_ENABLE_EXPERIMENTAL
 
 FINALITY::RendererAPI FINALITY::Application::s_CurrentAPI = RendererAPI::NONE;
+
+FINALITY::Application::Application() = default;
+FINALITY::Application::~Application() = default;
 
 void FINALITY::Application::Initialize(const RendererAPI& api, const WindowSpec& spec, std::unique_ptr<Game> game)
 {
@@ -70,6 +75,9 @@ void FINALITY::Application::Initialize(const RendererAPI& api, const WindowSpec&
 
 	FINALITY::Renderer::Initialize(m_RenderDevice.get());
 
+	m_ImGUIRenderer = ImGUIRenderer::Create(m_RenderDevice.get());
+	m_ImGUIRenderer->Initialize();
+
 	m_CurrentGame->Init();
 
 	FINALITY::AssetManager::Initialize();
@@ -95,10 +103,14 @@ void FINALITY::Application::Update()
 
 		m_RenderDevice->BeginFrame();
 
+		m_ImGUIRenderer->Update();
+		ImGui::NewFrame();
+
 		// Frame logic like draw calls here
 		m_CurrentGame->Update(deltaTime);
 		SceneManager::GetInstance().Update(deltaTime);
 
+		ImGui::Render();
 		m_RenderDevice->EndFrame();
 		m_RenderDevice->PresentFrame();
 
@@ -115,6 +127,8 @@ void FINALITY::Application::Shutdown()
 	FINALITY::AssetManager::Shutdown();
 	FINALITY::Renderer::Shutdown();
 
+	m_ImGUIRenderer->Destroy();
+
 	if (m_CurrentGame) m_CurrentGame->Destroy();
 	if (m_Window)
 	{
@@ -129,4 +143,9 @@ void FINALITY::Application::Shutdown()
 	}
 
 	if (!m_Running) glfwTerminate();
+}
+
+FINALITY::ImGUIRenderer* FINALITY::Application::GetImGUIRenderer()
+{
+	return m_ImGUIRenderer.get();
 }

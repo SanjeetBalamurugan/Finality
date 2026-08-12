@@ -17,7 +17,7 @@ namespace FINALITY
 		uint32_t AcquireNextImage();
 
 		void SubmitSync(VkCommandBuffer cmdBuf);
-		void SubmitASync(VkCommandBuffer cmdBuf, uint32_t imageIndex);
+		void SubmitASync(VkCommandBuffer cmdBuf, uint32_t imageIndex, bool isFirst, bool isLast);
 
 		void Present(uint32_t imageIndex);
 		void WaitIdle();

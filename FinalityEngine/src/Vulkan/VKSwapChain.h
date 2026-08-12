@@ -30,7 +30,8 @@ namespace FINALITY
         VkFormat GetVKFormat() const { return m_SurfaceFormat.format; }
 
         VkImage GetVKImage(uint32_t index) const { return m_Images[index]; }
-
+        const VkImageView& GetImageView(int idx) const;
+        const VkImageView& GetDepthView() const;
 
     private:
         void CreateSwapChain(const WindowSpec& spec);

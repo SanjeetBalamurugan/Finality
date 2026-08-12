@@ -10,6 +10,7 @@
 #include "VKTexture.h"
 #include "VKFramebuffer.h"
 #include <numeric>
+#include "VKImGUI/VKImGUIRenderer.h"
 
 void FINALITY::VKRenderDevice::CreateInstance()
 {
@@ -25,7 +26,7 @@ void FINALITY::VKRenderDevice::CreateInstance()
 	m_AppInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 	m_AppInfo.pEngineName = "FinalityEngine";
 	m_AppInfo.engineVersion = VK_MAKE_VERSION(ENGINE_VERSION_MAJOR, ENGINE_VERSION_MINOR, ENGINE_VERSION_PATCH);
-	m_AppInfo.apiVersion = VK_API_VERSION_1_0;
+	m_AppInfo.apiVersion = VK_API_VERSION_1_2;
 
 	VkInstanceCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -99,14 +100,20 @@ void FINALITY::VKRenderDevice::CreateDevice()
 
 	std::vector<const char*> DevExts = {
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-		VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME
+		VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
+		VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME
 	};
 
 	VkPhysicalDeviceFeatures deviceFeatures{};
 	deviceFeatures.samplerAnisotropy = VK_TRUE;
 
+	VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeature{};
+	dynamicRenderingFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
+	dynamicRenderingFeature.dynamicRendering = VK_TRUE;
+
 	VkDeviceCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	createInfo.pNext = &dynamicRenderingFeature;
 	createInfo.pQueueCreateInfos = &qInfo;
 	createInfo.queueCreateInfoCount = 1;
 	createInfo.pEnabledFeatures = &deviceFeatures;
@@ -450,6 +457,13 @@ void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 	vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
 
 	this->CreateInstanceBuffers();
+
+	pfnCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)vkGetDeviceProcAddr(m_Device, "vkCmdBeginRenderingKHR");
+	pfnCmdEndRenderingKHR = (PFN_vkCmdEndRenderingKHR)vkGetDeviceProcAddr(m_Device, "vkCmdEndRenderingKHR");
+
+	if (!pfnCmdBeginRenderingKHR || !pfnCmdEndRenderingKHR) {
+		FI_CORE_ERROR("Failed to load VK_KHR_dynamic_rendering function pointers!");
+	}
 }
 
 void FINALITY::VKRenderDevice::SetWindowSpec(const WindowSpec& spec)
@@ -460,6 +474,25 @@ void FINALITY::VKRenderDevice::SetWindowSpec(const WindowSpec& spec)
 		m_SwapChain->Recreate(m_Spec);
 		m_Queue.UpdateSwapChain(m_SwapChain->GetVKHandle());
 	}
+}
+
+void FINALITY::VKRenderDevice::CreateCommandBuffers(uint32_t count, VkCommandBuffer* cmdBufs) const
+{
+	VkCommandBufferAllocateInfo cmdBufAllocInfo{};
+	cmdBufAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	cmdBufAllocInfo.pNext = NULL;
+	cmdBufAllocInfo.commandPool = m_CMDBufPool;
+	cmdBufAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	cmdBufAllocInfo.commandBufferCount = count;
+
+	VkResult res = vkAllocateCommandBuffers(m_Device, &cmdBufAllocInfo, cmdBufs);
+	CHECK_VK_RESULT(res, "vkAllocateCommandBuffers\n");
+}
+
+void FINALITY::VKRenderDevice::FreeCommandBuffers(uint32_t count, VkCommandBuffer* cmdBufs)
+{
+	m_Queue.WaitIdle();
+	vkFreeCommandBuffers(m_Device, m_CMDBufPool, count, cmdBufs);
 }
 
 void FINALITY::VKRenderDevice::DrawQueue(const std::vector<RenderPacket>& queue)
@@ -654,6 +687,50 @@ void FINALITY::VKRenderDevice::DrawQueue(const std::vector<RenderPacket>& queue)
 
 		totalProcessed += batchSize;
 	}
+}
+
+void FINALITY::VKRenderDevice::BeginDynamicRendering(VkCommandBuffer CmdBuf, int ImageIndex, VkClearValue* pClearColor, VkClearValue* pDepthValue)
+{
+	VkRenderingAttachmentInfoKHR ColorAttachment{};
+	ColorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+	ColorAttachment.pNext = NULL;
+	ColorAttachment.imageView = m_SwapChain->GetImageView(ImageIndex);
+	ColorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	ColorAttachment.resolveMode = VK_RESOLVE_MODE_NONE;
+	ColorAttachment.resolveImageView = VK_NULL_HANDLE;
+	ColorAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	ColorAttachment.loadOp = pClearColor ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+	ColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+	if (pClearColor) {
+		ColorAttachment.clearValue = *pClearColor;
+	}
+
+	VkRenderingAttachmentInfo DepthAttachment{};
+	DepthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+	DepthAttachment.pNext = NULL;
+	DepthAttachment.imageView = m_SwapChain->GetDepthView();
+	DepthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	DepthAttachment.resolveMode = VK_RESOLVE_MODE_NONE;
+	DepthAttachment.resolveImageView = VK_NULL_HANDLE;
+	DepthAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	DepthAttachment.loadOp = pDepthValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+	DepthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+	if (pDepthValue) {
+		DepthAttachment.clearValue = *pDepthValue;
+	}
+
+	VkRenderingInfoKHR RenderingInfo{};
+	RenderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
+	RenderingInfo.renderArea = { {0, 0}, {(uint32_t)m_Spec.width, (uint32_t)m_Spec.height} };
+	RenderingInfo.layerCount = 1;
+	RenderingInfo.viewMask = 0;
+	RenderingInfo.colorAttachmentCount = 1;
+	RenderingInfo.pColorAttachments = &ColorAttachment;
+	RenderingInfo.pDepthAttachment = &DepthAttachment;
+
+	pfnCmdBeginRenderingKHR(CmdBuf, &RenderingInfo);
 }
 
 std::shared_ptr<FINALITY::Mesh> FINALITY::VKRenderDevice::CreateMesh(const std::vector<Vertex>& vertices)
@@ -959,7 +1036,17 @@ void FINALITY::VKRenderDevice::EndFrame()
 	VkResult res = vkEndCommandBuffer(cmd);
 	CHECK_VK_RESULT(res, "vkEndCommandBuffer error");
 
-	m_Queue.SubmitASync(cmd, m_ImageIndex);
+	VKImGUIRenderer* imGUIRenderer = static_cast<VKImGUIRenderer*>(Application::Get().GetImGUIRenderer());
+	if (imGUIRenderer)
+	{
+		VkCommandBuffer ImGuiCmd = imGUIRenderer->PrepareCommandBuffer(m_ImageIndex);
+		m_Queue.SubmitASync(cmd, m_ImageIndex, true, false);
+		m_Queue.SubmitASync(ImGuiCmd, m_ImageIndex, false, true);
+	}
+	else
+	{
+		m_Queue.SubmitASync(cmd, m_ImageIndex, true, true);
+	}
 }
 
 void FINALITY::VKRenderDevice::PresentFrame()
