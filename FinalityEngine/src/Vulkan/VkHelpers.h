@@ -1,5 +1,7 @@
 #pragma once
 #include "VKCore.h"
+#include <Core/Mesh.h>
+#include <Core/RenderDevice.h>
 
 static VkSurfaceFormatKHR ChooseSurfaceFormatAndColorSpace(const std::vector<VkSurfaceFormatKHR>& surfaceFormats)
 {
@@ -96,4 +98,79 @@ static VkSemaphore VkCreateSemaphore(VkDevice device)
 	CHECK_VK_RESULT(res, "vkCreateSemaphore");
 
 	return semaphore;
+}
+
+inline VkPipelineVertexInputStateCreateInfo CreatePipelineVertexInputState(
+    std::vector<VkVertexInputBindingDescription>& outBindings,
+    std::vector<VkVertexInputAttributeDescription>& outAttributes)
+{
+    outBindings.clear();
+    outAttributes.clear();
+
+    VkVertexInputBindingDescription meshBinding{};
+    meshBinding.binding = 0;
+    meshBinding.stride = sizeof(FINALITY::Vertex);
+    meshBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX; // Advances per vertex
+    outBindings.push_back(meshBinding);
+
+    // Location 0: Position
+    outAttributes.push_back(VkVertexInputAttributeDescription{
+        .location = 0,
+        .binding = 0,
+        .format = VK_FORMAT_R32G32B32_SFLOAT,
+        .offset = offsetof(FINALITY::Vertex, Position)
+        });
+
+    // Location 1: Color
+	outAttributes.push_back(VkVertexInputAttributeDescription{
+		.location = 1,
+		.binding = 0,
+		.format = VK_FORMAT_R32G32B32_SFLOAT,
+		.offset = offsetof(FINALITY::Vertex, Color)
+		});
+
+    // Location 2: TexCoord
+    outAttributes.push_back(VkVertexInputAttributeDescription{
+        .location = 2,
+        .binding = 0,
+        .format = VK_FORMAT_R32G32_SFLOAT,
+        .offset = offsetof(FINALITY::Vertex, TexCoord)
+        });
+
+    VkVertexInputBindingDescription instanceBinding{};
+    instanceBinding.binding = 1;
+    instanceBinding.stride = sizeof(FINALITY::InstancePayload); // 128 bytes
+    instanceBinding.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE; // Advances per instance
+    outBindings.push_back(instanceBinding);
+
+    // Locations 3, 4, 5, 6: Transform Matrix (glm::mat4 consumes 4 consecutive vec4 locations)
+    for (uint32_t i = 0; i < 4; ++i)
+    {
+        outAttributes.push_back(VkVertexInputAttributeDescription{
+            .location = 3 + i, // Locations 3, 4, 5, 6
+            .binding = 1,
+            .format = VK_FORMAT_R32G32B32A32_SFLOAT, // 16-byte vec4 row
+            .offset = static_cast<uint32_t>(offsetof(FINALITY::InstancePayload, Transform) + (i * sizeof(glm::vec4)))
+            });
+    }
+
+    // Locations 7, 8, 9, 10: Custom Data (64 bytes mapped to 4 x vec4 locations)
+    for (uint32_t i = 0; i < 4; ++i)
+    {
+        outAttributes.push_back(VkVertexInputAttributeDescription{
+            .location = 7 + i, // Locations 7, 8, 9, 10
+            .binding = 1,
+            .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+            .offset = static_cast<uint32_t>(offsetof(FINALITY::InstancePayload, CustomData) + (i * sizeof(glm::vec4)))
+            });
+    }
+
+    VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(outBindings.size());
+    vertexInputInfo.pVertexBindingDescriptions = outBindings.data();
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(outAttributes.size());
+    vertexInputInfo.pVertexAttributeDescriptions = outAttributes.data();
+
+    return vertexInputInfo;
 }

@@ -28,6 +28,14 @@ namespace FINALITY
 		bool isActive = false;
 	};
 
+	struct FrameInstanceBuffer {
+		VkBuffer Buffer = VK_NULL_HANDLE;
+		VkDeviceMemory Memory = VK_NULL_HANDLE;
+		uint8_t* MappedData = nullptr;
+		VkDeviceSize Capacity = 0;       // Total buffer capacity in bytes
+		VkDeviceSize CurrentOffset = 0;  // Write offset for current frame
+	};
+
 	class VKRenderDevice : public RenderDevice
 	{
 	private:
@@ -43,6 +51,17 @@ namespace FINALITY
 		void CreateCommandBuffers(uint32_t count);
 		void CreateCommandBufferPool();
 		void BeginCommandBuffers(VkCommandBuffer cmdBuf, uint32_t usageFlags);
+
+		void CreateInstanceBuffers(VkDeviceSize initialSize = 1024 * 1024 * 16); // 16 MB per frame
+		void DestroyInstanceBuffers();
+
+		void UploadToDynamicInstanceBuffer(
+			const void* data,
+			VkDeviceSize dataSize,
+			VkBuffer& outBuffer,
+			VkDeviceSize& outOffset);
+
+		uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
 	public:
 		void Initialize(const NativeWindowHandle& handle) override;
@@ -148,5 +167,7 @@ namespace FINALITY
 		VkSampler m_PostProcessSampler = VK_NULL_HANDLE;
 
 		TextureUploadBatchContext m_ActiveUploadBatch;
+
+		std::vector<FrameInstanceBuffer> m_InstanceBuffers;
 	};
 }

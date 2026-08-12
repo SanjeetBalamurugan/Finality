@@ -36,22 +36,6 @@ namespace FINALITY
         void Update(float dt) override
         {
             m_HelloTimer += dt;
-            m_FPSTimer += dt;
-            m_TotalTime += dt;
-
-            if (m_HelloTimer >= 5.0f)
-            {
-                FI_CLIENT_INFO("Hello");
-                m_HelloTimer = 0.0f;
-            }
-
-            if (m_FPSTimer >= 2.0f)
-            {
-                float fps = 1.0f / dt;
-                FI_CLIENT_INFO("FPS: {}", fps);
-                m_FPSTimer = 0.0f;
-            }
-
             m_RotationAngle += 50.0f * dt;
 
             if (HasComponent<TransformComponent>())

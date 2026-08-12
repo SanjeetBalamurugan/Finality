@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <Core/Mesh.h>
 #include "Vulkan/VKShader.h"
+#include "VkHelpers.h"
 
 namespace FINALITY
 {
@@ -40,34 +41,11 @@ namespace FINALITY
 
         VkPipelineShaderStageCreateInfo shaderStages[] = { vertStageInfo, fragStageInfo };
 
-        VkVertexInputBindingDescription bindingDescription{};
-        bindingDescription.binding = 0;
-        bindingDescription.stride = sizeof(Vertex);
-        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        std::vector<VkVertexInputBindingDescription> bindingDescriptions;
+        std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
 
-        std::vector<VkVertexInputAttributeDescription> attributeDescriptions(3);
-
-        attributeDescriptions[0].binding = 0;
-        attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[0].offset = offsetof(Vertex, Position);
-
-        attributeDescriptions[1].binding = 0;
-        attributeDescriptions[1].location = 1;
-        attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[1].offset = offsetof(Vertex, Color);
-
-        attributeDescriptions[2].binding = 0;
-        attributeDescriptions[2].location = 2;
-        attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-        attributeDescriptions[2].offset = offsetof(Vertex, TexCoord);
-
-        VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-        vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        vertexInputInfo.vertexBindingDescriptionCount = 1;
-        vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-        vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-        vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+        VkPipelineVertexInputStateCreateInfo vertexInputInfo =
+            CreatePipelineVertexInputState(bindingDescriptions, attributeDescriptions);
 
         VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
         inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -87,7 +65,6 @@ namespace FINALITY
         rasterizer.rasterizerDiscardEnable = VK_FALSE;
         rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
         rasterizer.lineWidth = 1.0f;
-
         rasterizer.cullMode = ToVkCullMode(config.Culling);
         rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
         rasterizer.depthBiasEnable = VK_FALSE;
@@ -288,8 +265,22 @@ namespace FINALITY
 
     VKPipeline::~VKPipeline()
     {
-        if (m_GraphicsPipeline) vkDestroyPipeline(m_Device, m_GraphicsPipeline, nullptr);
-        if (m_PipelineLayout) vkDestroyPipelineLayout(m_Device, m_PipelineLayout, nullptr);
+        if (m_Device != VK_NULL_HANDLE)
+        {
+            vkDeviceWaitIdle(m_Device);
+
+            if (m_GraphicsPipeline != VK_NULL_HANDLE)
+            {
+                vkDestroyPipeline(m_Device, m_GraphicsPipeline, nullptr);
+                m_GraphicsPipeline = VK_NULL_HANDLE;
+            }
+
+            if (m_PipelineLayout != VK_NULL_HANDLE)
+            {
+                vkDestroyPipelineLayout(m_Device, m_PipelineLayout, nullptr);
+                m_PipelineLayout = VK_NULL_HANDLE;
+            }
+        }
     }
 
     void VKPipeline::Bind(VkCommandBuffer commandBuffer)

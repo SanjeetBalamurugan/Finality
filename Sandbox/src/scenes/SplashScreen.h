@@ -15,7 +15,7 @@ public:
 
         m_ElapsedTime += ts;
         if (m_ElapsedTime >= 3.0f) {
-            auto next = std::make_unique<MainScene>();
+            auto next = std::make_unique<BenchmarkScene>();
             FINALITY::SceneManager::GetInstance().SetScene(std::move(next));
             FINALITY::SceneManager::GetInstance().ChangeScene();
         }

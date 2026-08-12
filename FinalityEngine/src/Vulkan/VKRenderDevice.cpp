@@ -9,6 +9,7 @@
 #include <Renderer/Renderer.h>
 #include "VKTexture.h"
 #include "VKFramebuffer.h"
+#include <numeric>
 
 void FINALITY::VKRenderDevice::CreateInstance()
 {
@@ -158,6 +159,137 @@ void FINALITY::VKRenderDevice::BeginCommandBuffers(VkCommandBuffer cmdBuf, uint3
 
 	VkResult res = vkBeginCommandBuffer(cmdBuf, &cmdBufBeginInfo);
 	CHECK_VK_RESULT(res, "vkBeginCommandBuffer error");
+}
+
+void FINALITY::VKRenderDevice::CreateInstanceBuffers(VkDeviceSize initialSize)
+{
+	uint32_t frameCount = m_SwapChain->GetImageCount();
+	m_InstanceBuffers.resize(frameCount);
+
+	for (uint32_t i = 0; i < frameCount; ++i)
+	{
+		auto& buffer = m_InstanceBuffers[i];
+		buffer.Capacity = initialSize;
+		buffer.CurrentOffset = 0;
+
+		VkBufferCreateInfo bufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+		bufferInfo.size = buffer.Capacity;
+		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		if (vkCreateBuffer(m_Device, &bufferInfo, nullptr, &buffer.Buffer) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to create dynamic instance buffer!");
+		}
+
+		VkMemoryRequirements memReqs;
+		vkGetBufferMemoryRequirements(m_Device, buffer.Buffer, &memReqs);
+
+		VkMemoryAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+		allocInfo.allocationSize = memReqs.size;
+		allocInfo.memoryTypeIndex = FindMemoryType(
+			memReqs.memoryTypeBits,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+		);
+
+		if (vkAllocateMemory(m_Device, &allocInfo, nullptr, &buffer.Memory) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to allocate dynamic instance buffer memory!");
+		}
+
+		vkBindBufferMemory(m_Device, buffer.Buffer, buffer.Memory, 0);
+		vkMapMemory(m_Device, buffer.Memory, 0, buffer.Capacity, 0, reinterpret_cast<void**>(&buffer.MappedData));
+	}
+}
+
+void FINALITY::VKRenderDevice::DestroyInstanceBuffers()
+{
+	for (auto& buffer : m_InstanceBuffers)
+	{
+		if (buffer.MappedData) {
+			vkUnmapMemory(m_Device, buffer.Memory);
+			buffer.MappedData = nullptr;
+		}
+		if (buffer.Buffer != VK_NULL_HANDLE) {
+			vkDestroyBuffer(m_Device, buffer.Buffer, nullptr);
+			buffer.Buffer = VK_NULL_HANDLE;
+		}
+		if (buffer.Memory != VK_NULL_HANDLE) {
+			vkFreeMemory(m_Device, buffer.Memory, nullptr);
+			buffer.Memory = VK_NULL_HANDLE;
+		}
+	}
+	m_InstanceBuffers.clear();
+}
+
+void FINALITY::VKRenderDevice::UploadToDynamicInstanceBuffer(const void* data, VkDeviceSize dataSize, VkBuffer& outBuffer, VkDeviceSize& outOffset)
+{
+	if (dataSize == 0) return;
+
+	auto& currentFrameBuffer = m_InstanceBuffers[m_ImageIndex];
+
+	constexpr VkDeviceSize alignment = 256;
+	VkDeviceSize alignedOffset = (currentFrameBuffer.CurrentOffset + (alignment - 1)) & ~(alignment - 1);
+
+	if (alignedOffset + dataSize > currentFrameBuffer.Capacity)
+	{
+		VkDeviceSize newCapacity = std::max(currentFrameBuffer.Capacity * 2, alignedOffset + dataSize + (1024 * 1024));
+		vkDeviceWaitIdle(m_Device);
+
+		if (currentFrameBuffer.Buffer != VK_NULL_HANDLE) {
+			vkUnmapMemory(m_Device, currentFrameBuffer.Memory);
+			vkDestroyBuffer(m_Device, currentFrameBuffer.Buffer, nullptr);
+			vkFreeMemory(m_Device, currentFrameBuffer.Memory, nullptr);
+		}
+
+		VkBufferCreateInfo bufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+		bufferInfo.size = newCapacity;
+		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		vkCreateBuffer(m_Device, &bufferInfo, nullptr, &currentFrameBuffer.Buffer);
+
+		VkMemoryRequirements memReqs;
+		vkGetBufferMemoryRequirements(m_Device, currentFrameBuffer.Buffer, &memReqs);
+
+		VkMemoryAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+		allocInfo.allocationSize = memReqs.size;
+
+		allocInfo.memoryTypeIndex = FindMemoryType(
+			memReqs.memoryTypeBits,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+		);
+
+		vkAllocateMemory(m_Device, &allocInfo, nullptr, &currentFrameBuffer.Memory);
+		vkBindBufferMemory(m_Device, currentFrameBuffer.Buffer, currentFrameBuffer.Memory, 0);
+
+		vkMapMemory(m_Device, currentFrameBuffer.Memory, 0, newCapacity, 0, reinterpret_cast<void**>(&currentFrameBuffer.MappedData));
+
+		currentFrameBuffer.Capacity = newCapacity;
+		alignedOffset = 0;
+	}
+
+	std::memcpy(currentFrameBuffer.MappedData + alignedOffset, data, dataSize);
+
+	outBuffer = currentFrameBuffer.Buffer;
+	outOffset = alignedOffset;
+
+	currentFrameBuffer.CurrentOffset = alignedOffset + dataSize;
+}
+
+uint32_t FINALITY::VKRenderDevice::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
+{
+	VkPhysicalDeviceMemoryProperties memProperties;
+	vkGetPhysicalDeviceMemoryProperties(GetActivePhysicalDevice(), &memProperties);
+
+	for (uint32_t i = 0; i < memProperties.memoryTypeCount; ++i)
+	{
+		if ((typeFilter & (1 << i)) &&
+			(memProperties.memoryTypes[i].propertyFlags & properties) == properties)
+		{
+			return i;
+		}
+	}
+
+	throw std::runtime_error("Failed to find suitable Vulkan memory type!");
 }
 
 void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
@@ -316,9 +448,9 @@ void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 	descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	descriptorWrite.pImageInfo = &imageInfo;
 	vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
+
+	this->CreateInstanceBuffers();
 }
-
-
 
 void FINALITY::VKRenderDevice::SetWindowSpec(const WindowSpec& spec)
 {
@@ -332,6 +464,24 @@ void FINALITY::VKRenderDevice::SetWindowSpec(const WindowSpec& spec)
 
 void FINALITY::VKRenderDevice::DrawQueue(const std::vector<RenderPacket>& queue)
 {
+	if (queue.empty()) return;
+
+	std::vector<size_t> indices(queue.size());
+	std::iota(indices.begin(), indices.end(), 0);
+
+	std::sort(indices.begin(), indices.end(), [&queue](size_t i1, size_t i2) {
+		const auto& a = queue[i1];
+		const auto& b = queue[i2];
+
+		if (a.PipelineInstance != b.PipelineInstance) {
+			return a.PipelineInstance < b.PipelineInstance;
+		}
+		if (a.MaterialKey != b.MaterialKey) {
+			return a.MaterialKey < b.MaterialKey;
+		}
+		return a.MeshData < b.MeshData;
+		});
+
 	VkCommandBuffer cmd = m_CMDBuffers[m_ImageIndex];
 
 	VkViewport viewport{
@@ -351,14 +501,52 @@ void FINALITY::VKRenderDevice::DrawQueue(const std::vector<RenderPacket>& queue)
 	vkCmdSetScissor(cmd, 0, 1, &scissor);
 
 	VKPipeline* activePipeline = nullptr;
+	const Material* activeMaterial = nullptr;
 
-	for (const auto& packet : queue)
+	std::vector<InstancePayload> instanceBatch;
+	instanceBatch.reserve(128);
+
+	size_t totalProcessed = 0;
+	size_t queueSize = indices.size();
+
+	while (totalProcessed < queueSize)
 	{
-		if (!packet.MeshData || !packet.PipelineInstance) continue;
+		size_t batchStartIdx = indices[totalProcessed];
+		const auto& firstPacket = queue[batchStartIdx];
 
-		auto* vkPipeline = static_cast<VKPipeline*>(packet.PipelineInstance.get());
-		auto* vkMesh = static_cast<VKMesh*>(packet.MeshData.get());
+		if (!firstPacket.MeshData || !firstPacket.PipelineInstance) {
+			totalProcessed++;
+			continue;
+		}
 
+		size_t batchSize = 0;
+		instanceBatch.clear();
+
+		// Collect all instances that share the same Pipeline, Material, and Mesh
+		while ((totalProcessed + batchSize) < queueSize)
+		{
+			const auto& currPacket = queue[indices[totalProcessed + batchSize]];
+			bool sameBatch = (currPacket.PipelineInstance == firstPacket.PipelineInstance) &&
+				(currPacket.MaterialKey == firstPacket.MaterialKey) &&
+				(currPacket.MeshData == firstPacket.MeshData);
+			if (!sameBatch) break;
+
+			InstancePayload payload{};
+			std::memcpy(&payload.Transform, &currPacket.Transform, sizeof(glm::mat4));
+			if (!currPacket.CustomPushData.empty()) {
+				size_t copySize = std::min<size_t>(64, currPacket.CustomPushData.size());
+				std::memcpy(payload.CustomData, currPacket.CustomPushData.data(), copySize);
+			}
+			instanceBatch.push_back(payload);
+
+			batchSize++;
+		}
+
+		auto* vkPipeline = static_cast<VKPipeline*>(firstPacket.PipelineInstance.get());
+		auto* vkMesh = static_cast<VKMesh*>(firstPacket.MeshData.get());
+		const auto* materialKey = static_cast<const Material*>(firstPacket.MaterialKey);
+
+		// 1. Bind Pipeline state if changed
 		if (vkPipeline != activePipeline)
 		{
 			activePipeline = vkPipeline;
@@ -372,85 +560,101 @@ void FINALITY::VKRenderDevice::DrawQueue(const std::vector<RenderPacket>& queue)
 				&m_GlobalDescriptorSets[m_ImageIndex],
 				0, nullptr
 			);
+			activeMaterial = nullptr; // Reset material tracking for new pipeline
 		}
 
-		if (!packet.Textures.empty())
+		// 2. Bind Material state if changed
+		if (materialKey != activeMaterial)
 		{
-			auto it = m_MaterialDescriptorCache.find(static_cast<const Material*>(packet.MaterialKey));
-			VkDescriptorSet materialSet = VK_NULL_HANDLE;
+			activeMaterial = materialKey;
 
-			if (it == m_MaterialDescriptorCache.end())
+			if (!firstPacket.Textures.empty())
 			{
-				materialSet = m_MaterialDescriptorAllocator.Allocate(m_MaterialDescriptorSetLayout);
-				m_MaterialDescriptorCache[static_cast<const Material*>(packet.MaterialKey)] = materialSet;
+				auto it = m_MaterialDescriptorCache.find(activeMaterial);
+				VkDescriptorSet materialSet = VK_NULL_HANDLE;
 
-				auto texIt = packet.Textures.begin();
-				auto* vkTex = static_cast<VKTexture*>(texIt->second.get());
-
-				if (vkTex)
+				if (it == m_MaterialDescriptorCache.end())
 				{
-					VkDescriptorImageInfo imageInfo{};
-					imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-					imageInfo.imageView = vkTex->GetImageView();
-					imageInfo.sampler = vkTex->GetSampler();
+					materialSet = m_MaterialDescriptorAllocator.Allocate(m_MaterialDescriptorSetLayout);
+					m_MaterialDescriptorCache[activeMaterial] = materialSet;
 
-					VkWriteDescriptorSet descriptorWrite{};
-					descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-					descriptorWrite.dstSet = materialSet;
-					descriptorWrite.dstBinding = 0;
-					descriptorWrite.dstArrayElement = 0;
-					descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-					descriptorWrite.descriptorCount = 1;
-					descriptorWrite.pImageInfo = &imageInfo;
+					auto texIt = firstPacket.Textures.begin();
+					auto* vkTex = static_cast<VKTexture*>(texIt->second.get());
 
-					vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
+					if (vkTex)
+					{
+						VkDescriptorImageInfo imageInfo{};
+						imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+						imageInfo.imageView = vkTex->GetImageView();
+						imageInfo.sampler = vkTex->GetSampler();
+
+						VkWriteDescriptorSet descriptorWrite{};
+						descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+						descriptorWrite.dstSet = materialSet;
+						descriptorWrite.dstBinding = 0;
+						descriptorWrite.dstArrayElement = 0;
+						descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+						descriptorWrite.descriptorCount = 1;
+						descriptorWrite.pImageInfo = &imageInfo;
+
+						vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
+					}
 				}
-			}
-			else
-			{
-				materialSet = it->second;
-			}
+				else
+				{
+					materialSet = it->second;
+				}
 
-			vkCmdBindDescriptorSets(
-				cmd,
-				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				vkPipeline->GetVKLayout(),
-				1, 1,
-				&materialSet,
-				0, nullptr
-			);
+				vkCmdBindDescriptorSets(
+					cmd,
+					VK_PIPELINE_BIND_POINT_GRAPHICS,
+					vkPipeline->GetVKLayout(),
+					1, 1,
+					&materialSet,
+					0, nullptr
+				);
+			}
 		}
 
-		uint8_t pushBuffer[128] = { 0 };
-		std::memcpy(pushBuffer, &packet.Transform, sizeof(glm::mat4));
-
-		if (!packet.CustomPushData.empty())
-		{
-			std::memcpy(pushBuffer + 64, packet.CustomPushData.data() + 64, 64);
-		}
-
-		vkCmdPushConstants(
-			cmd,
-			vkPipeline->GetVKLayout(),
-			VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-			0,
-			128,
-			pushBuffer
+		// 3. Upload Instance Data, Bind Mesh, and issue Draw Calls (Always executed for every batch)
+		VkBuffer instanceBuffer = VK_NULL_HANDLE;
+		VkDeviceSize instanceBufferOffset = 0;
+		UploadToDynamicInstanceBuffer(
+			instanceBatch.data(),
+			instanceBatch.size() * sizeof(InstancePayload),
+			instanceBuffer,
+			instanceBufferOffset
 		);
 
 		vkMesh->Bind(cmd);
+		vkCmdBindVertexBuffers(cmd, 1, 1, &instanceBuffer, &instanceBufferOffset);
+
+		if (!firstPacket.CustomPushData.empty())
+		{
+			vkCmdPushConstants(
+				cmd,
+				vkPipeline->GetVKLayout(),
+				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+				0,                                                         // Offset
+				static_cast<uint32_t>(firstPacket.CustomPushData.size()),  // Size in bytes (must be <= 128)
+				firstPacket.CustomPushData.data()
+			);
+		}
+
+		uint32_t instanceCount = static_cast<uint32_t>(batchSize);
 
 		if (vkMesh->HasIndices())
 		{
-			vkCmdDrawIndexed(cmd, vkMesh->GetIndexCount(), 1, 0, 0, 0);
+			vkCmdDrawIndexed(cmd, vkMesh->GetIndexCount(), instanceCount, 0, 0, 0);
 		}
 		else
 		{
-			vkCmdDraw(cmd, vkMesh->GetVertexCount(), 1, 0, 0);
+			vkCmdDraw(cmd, vkMesh->GetVertexCount(), instanceCount, 0, 0);
 		}
+
+		totalProcessed += batchSize;
 	}
 }
-
 
 std::shared_ptr<FINALITY::Mesh> FINALITY::VKRenderDevice::CreateMesh(const std::vector<Vertex>& vertices)
 {
@@ -550,6 +754,9 @@ void FINALITY::VKRenderDevice::Shutdown()
 	m_Queue.ShutDown();
 	m_SwapChain->Shutdown();
 
+	vkDeviceWaitIdle(m_Device);
+	DestroyInstanceBuffers();
+
 	DestroyDevice();
 
 	if (m_EnableValidationLayers) {
@@ -603,6 +810,8 @@ void FINALITY::VKRenderDevice::BeginFrame()
 	RenderPassBeginInfo.pClearValues = clearValues.data();
 
 	vkCmdBeginRenderPass(m_CMDBuffers[m_ImageIndex], &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+	m_InstanceBuffers[m_ImageIndex].CurrentOffset = 0;
 }
 
 void FINALITY::VKRenderDevice::EndFrame()

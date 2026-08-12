@@ -26,6 +26,12 @@ namespace FINALITY
 		const void* MaterialKey = nullptr;
 	};
 
+	struct InstancePayload {
+		glm::mat4 Transform;
+		uint8_t CustomData[64];
+	};
+
+
 	class FAPI RenderDevice
 	{
 	public:

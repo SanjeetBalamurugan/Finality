@@ -1,8 +1,10 @@
 #pragma once
+
 #include <Finality.h>
 #include <Assets/AssetManager.h>
 #include <chrono>
 #include <scripts/CameraMovementScript.h>
+#include <scripts/TestScript.h>
 
 class BenchmarkScene : public FINALITY::Scene
 {
@@ -21,7 +23,6 @@ public:
         FINALITY::Renderer::SetActiveCamera(camComp.CameraInstance.get());
         cameraEntity.AddScript<FINALITY::CameraMovementScript>();
 
-        // --- shared mesh (small cube, reused for every instance) ---
         std::vector<FINALITY::Vertex> cubeVertices = {
             { { -0.3f, -0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
             { {  0.3f, -0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
@@ -74,7 +75,6 @@ public:
         auto pngTexture = FINALITY::AssetManager::CreateAsset<FINALITY::Texture>("assets/textures/test.png");
         sharedMaterial->SetTexture("textureSampler", pngTexture);
 
-        // --- spawn a grid of instances ---
         constexpr int GRID_X = 20;
         constexpr int GRID_Y = 10;
         constexpr int GRID_Z = 20;
@@ -99,6 +99,8 @@ public:
 
                     entity.AddComponent<FINALITY::MeshComponent>(cubeMesh);
                     entity.AddComponent<FINALITY::MaterialComponent>(sharedMaterial);
+                    entity.AddScript<FINALITY::TestScript>();
+
                     m_TotalEntities++;
                 }
             }
@@ -126,7 +128,6 @@ public:
             uint32_t visible = FINALITY::Renderer::GetSubmittedCount();
             uint32_t culled = FINALITY::Renderer::GetCulledCount();
 
-            // [BENCH] FPS: 2319.0 | Frame: 0.43ms | Total: 4000 | Visible: 0 | Culled: 4000 (100.0%)
             printf("[BENCH] FPS: %.1f | Frame: %.2fms | Total: %u | Visible: %u | Culled: %u (%.1f%%)\n",
                 fps, avgFrameTimeMs, m_TotalEntities, visible, culled,
                 m_TotalEntities > 0 ? (100.0f * culled / m_TotalEntities) : 0.0f);
