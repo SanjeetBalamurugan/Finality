@@ -85,7 +85,7 @@ public:
         cube1Entity.AddComponent<FINALITY::MeshComponent>(cubeMesh);
         cube1Entity.AddComponent<FINALITY::MaterialComponent>(pngMaterial);
         cube1Entity.AddScript<FINALITY::TestScript>();
-        //cube1Entity.AddScript<FINALITY::KeyPrintScript>();
+        cube1Entity.AddScript<FINALITY::KeyPrintScript>();
 
         auto cube3Entity = CreateEntity("PNG Textured Cube2");
         auto& cube3Transform = cube3Entity.GetComponent<FINALITY::TransformComponent>();
@@ -151,6 +151,7 @@ public:
         ppConfig.VertexShader = std::move(ppVert);
         ppConfig.FragmentShader = std::move(ppFrag);
         ppConfig.EnableBlending = false;
+        ppConfig.Culling = FINALITY::CullMode::None;
 
         std::shared_ptr<FINALITY::Pipeline> postProcessPipeline = FINALITY::Renderer::CreatePostProcessPipeline(ppConfig);
         FINALITY::Renderer::SetPostProcessPipeline(postProcessPipeline);

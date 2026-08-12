@@ -23,6 +23,7 @@ namespace FINALITY
 
 		std::vector<uint8_t> CustomPushData;
 		std::unordered_map<std::string, std::shared_ptr<Texture>> Textures;
+		const void* MaterialKey = nullptr;
 	};
 
 	class FAPI RenderDevice

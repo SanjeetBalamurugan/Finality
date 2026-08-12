@@ -87,6 +87,7 @@ namespace FINALITY
             packet.PipelineInstance = mat.MaterialInstance->GetPipeline();
             packet.CustomPushData = mat.MaterialInstance->GetRawDataBuffer();
             packet.Textures = mat.MaterialInstance->GetTextures();
+            packet.MaterialKey = mat.MaterialInstance.get();
         }
 
         packet.Transform = transform;

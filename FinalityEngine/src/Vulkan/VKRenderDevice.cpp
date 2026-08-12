@@ -376,14 +376,13 @@ void FINALITY::VKRenderDevice::DrawQueue(const std::vector<RenderPacket>& queue)
 
 		if (!packet.Textures.empty())
 		{
-			const void* cacheKey = &packet.Textures;
-			auto it = m_MaterialDescriptorCache.find(static_cast<const Material*>(cacheKey));
+			auto it = m_MaterialDescriptorCache.find(static_cast<const Material*>(packet.MaterialKey));
 			VkDescriptorSet materialSet = VK_NULL_HANDLE;
 
 			if (it == m_MaterialDescriptorCache.end())
 			{
 				materialSet = m_MaterialDescriptorAllocator.Allocate(m_MaterialDescriptorSetLayout);
-				m_MaterialDescriptorCache[static_cast<const Material*>(cacheKey)] = materialSet;
+				m_MaterialDescriptorCache[static_cast<const Material*>(packet.MaterialKey)] = materialSet;
 
 				auto texIt = packet.Textures.begin();
 				auto* vkTex = static_cast<VKTexture*>(texIt->second.get());
