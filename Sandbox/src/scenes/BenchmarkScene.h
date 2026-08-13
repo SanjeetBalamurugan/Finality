@@ -8,6 +8,8 @@
 #include <scripts/CameraMovementScript.h>
 #include <scripts/TestScript.h>
 
+#include "MainScene.h"
+
 class BenchmarkScene : public FINALITY::Scene
 {
 public:
@@ -169,6 +171,13 @@ public:
             1.0f
         );
 
+        if (FINALITY::Input::IsKeyUp(FINALITY::Key::L))
+        {
+            std::cout << "L key pressed, changing scene!" << std::endl;
+            FINALITY::SceneManager::GetInstance().SetScene(std::move(next));
+            FINALITY::SceneManager::GetInstance().ChangeScene();
+        }
+
         const bool f3Down =
             FINALITY::Input::IsKeyDown(FINALITY::Key::F3);
 
@@ -303,6 +312,7 @@ public:
     }
 
 private:
+    std::unique_ptr<MainScene> next = std::make_unique<MainScene>();
     uint32_t m_TotalEntities = 0;
     uint32_t m_FrameCount = 0;
 

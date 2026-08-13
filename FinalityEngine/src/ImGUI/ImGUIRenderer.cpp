@@ -22,6 +22,8 @@ void FINALITY::ImGUIRenderer::InitImGUI()
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableSetMousePos;
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	//io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 	io.DisplaySize.x = (float)m_Specification.width;
 	io.DisplaySize.y = (float)m_Specification.height;
 

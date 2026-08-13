@@ -105,6 +105,7 @@ void FINALITY::Application::Update()
 
 		m_ImGUIRenderer->Update();
 		ImGui::NewFrame();
+		ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
 
 		// Frame logic like draw calls here
 		m_CurrentGame->Update(deltaTime);
