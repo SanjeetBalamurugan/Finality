@@ -6,16 +6,41 @@
 
 namespace FINALITY
 {
+	enum PanelFlags_
+	{
+		PanelFlags_None = 0,
+		PanelFlags_NoTitleBar = 1 << 0,
+		PanelFlags_NoResize = 1 << 1,
+		PanelFlags_NoMove = 1 << 2,
+		PanelFlags_NoScrollbar = 1 << 3,
+		PanelFlags_AlwaysAutoResize = 1 << 6,
+		PanelFlags_NoBackground = 1 << 7,
+		PanelFlags_NoSavedSettings = 1 << 8,
+		PanelFlags_NoFocusOnAppearing = 1 << 11,
+		PanelFlags_NoNav = 1 << 14,
+		PanelFlags_NoDecoration = PanelFlags_NoTitleBar | PanelFlags_NoResize | PanelFlags_NoScrollbar
+	};
+	using PanelFlags = int;
+
+	enum PanelCondition_
+	{
+		PanelCondition_Always = 1 << 0,
+		PanelCondition_Once = 1 << 1,
+		PanelCondition_FirstUseEver = 1 << 2,
+		PanelCondition_Appearing = 1 << 3
+	};
+	using PanelCondition = int;
+
 	class FAPI ImGUIPanel
 	{
 	public:
-		ImGUIPanel(const std::string& name, bool* p_open = (bool*)0);
+		ImGUIPanel(const std::string& name, bool* p_open = (bool*)0, PanelFlags flags = 0);
 		~ImGUIPanel();
 
 		void Text(std::string_view text);
-
-		template<typename... Args>
-		void Text(std::string_view fmt, Args&&... args);
+		void Text(std::string_view fmt, float value);
+		void Text(std::string_view fmt, unsigned int value);
+		void Text(std::string_view fmt, unsigned int val1, float val2);
 
 		void Separator();
 
@@ -48,6 +73,9 @@ namespace FINALITY
 			float scale_max = FLT_MAX,
 			glm::vec2 graph_size = glm::vec2(0.0f, 0.0f)
 		);
+
+		static void SetNextWindowPos(const glm::vec2& pos, PanelCondition cond = PanelCondition_Always, const glm::vec2& pivot = glm::vec2(0.0f, 0.0f));
+		static void SetNextWindowBgAlpha(float alpha);
 	private:
 
 	};

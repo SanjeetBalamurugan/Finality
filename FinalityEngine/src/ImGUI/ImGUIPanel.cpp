@@ -2,9 +2,9 @@
 
 #include <imgui.h>
 
-FINALITY::ImGUIPanel::ImGUIPanel(const std::string& name, bool* p_open)
+FINALITY::ImGUIPanel::ImGUIPanel(const std::string& name, bool* p_open, PanelFlags flags)
 {
-	ImGui::Begin(name.c_str(), p_open);
+	ImGui::Begin(name.c_str(), p_open, static_cast<ImGuiWindowFlags>(flags));
 }
 
 FINALITY::ImGUIPanel::~ImGUIPanel()
@@ -22,12 +22,20 @@ void FINALITY::ImGUIPanel::Separator()
 	ImGui::Separator();
 }
 
-template<typename ...Args>
-inline void FINALITY::ImGUIPanel::Text(std::string_view fmt, Args && ...args)
+void FINALITY::ImGUIPanel::Text(std::string_view fmt, float value)
 {
-	ImGui::Text(fmt.data(), std::forward<Args>(args)...);
+	ImGui::Text(fmt.data(), value);
 }
-template void FINALITY::ImGUIPanel::Text<>(std::string_view);
+
+void FINALITY::ImGUIPanel::Text(std::string_view fmt, unsigned int value)
+{
+	ImGui::Text(fmt.data(), value);
+}
+
+void FINALITY::ImGUIPanel::Text(std::string_view fmt, unsigned int val1, float val2)
+{
+	ImGui::Text(fmt.data(), val1, val2);
+}
 
 void FINALITY::ImGUIPanel::TextColored(const glm::vec4& col, std::string_view text)
 {
@@ -126,4 +134,14 @@ void FINALITY::ImGUIPanel::PlotLines(
 		scale_max,
 		im_size
 	);
+}
+
+void FINALITY::ImGUIPanel::SetNextWindowPos(const glm::vec2& pos, PanelCondition cond, const glm::vec2& pivot)
+{
+	ImGui::SetNextWindowPos(ImVec2(pos.x, pos.y), static_cast<ImGuiCond>(cond), ImVec2(pivot.x, pivot.y));
+}
+
+void FINALITY::ImGUIPanel::SetNextWindowBgAlpha(float alpha)
+{
+	ImGui::SetNextWindowBgAlpha(alpha);
 }

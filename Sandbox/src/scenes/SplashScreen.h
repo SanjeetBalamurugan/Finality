@@ -1,5 +1,6 @@
 #pragma once
 #include <Finality.h>
+#include <memory>
 
 #include "MainScene.h"
 #include "BenchmarkScene.h"
@@ -7,7 +8,9 @@
 class SplashScreen : public FINALITY::Scene
 {
 public:
-    void OnInit() override {}
+    void OnInit() override {
+        FINALITY::Scene::OnInit();
+    }
 
     void OnUpdate(float ts) override {
         FINALITY::Scene::OnUpdate(ts);
@@ -15,7 +18,7 @@ public:
 
         m_ElapsedTime += ts;
         if (m_ElapsedTime >= 3.0f) {
-            auto next = std::make_unique<MainScene>();
+            auto next = std::make_unique<BenchmarkScene>();
             FINALITY::SceneManager::GetInstance().SetScene(std::move(next));
             FINALITY::SceneManager::GetInstance().ChangeScene();
         }
