@@ -13,6 +13,7 @@ namespace FINALITY
 		PanelFlags_NoResize = 1 << 1,
 		PanelFlags_NoMove = 1 << 2,
 		PanelFlags_NoScrollbar = 1 << 3,
+		PanelFlags_HorizontalScrollbar = 1 << 5,
 		PanelFlags_AlwaysAutoResize = 1 << 6,
 		PanelFlags_NoBackground = 1 << 7,
 		PanelFlags_NoSavedSettings = 1 << 8,
@@ -21,6 +22,7 @@ namespace FINALITY
 		PanelFlags_NoDecoration = PanelFlags_NoTitleBar | PanelFlags_NoResize | PanelFlags_NoScrollbar
 	};
 	using PanelFlags = int;
+
 
 	enum PanelCondition_
 	{
@@ -88,6 +90,34 @@ namespace FINALITY
 		static bool BeginMenu(std::string_view label);
 		static void EndMenu();
 		static bool MenuItem(std::string_view label, std::string_view shortcut = "");
+
+		bool BeginChild(std::string_view str_id, const glm::vec2& size = glm::vec2(0.0f, 0.0f), bool border = false, PanelFlags flags = 0);
+		void EndChild();
+		bool Selectable(std::string_view label, bool selected = false);
+		void PushStyleColor(int idx, const glm::vec4& col);
+		void PopStyleColor(int count = 1);
+		float GetTextLineHeightWithSpacing();
+
+		void SetScrollHereY(float center_y_ratio = 0.5f);
+		bool InputText(std::string_view label, std::string* str, PanelFlags flags = 0);
+
+		float GetFontSize();
+		glm::vec2 GetStyleItemSpacing();
+		void PushItemWidth(float item_width);
+		void PopItemWidth();
+		float GetCursorPosX();
+
+		void PushID(int int_id);
+		void PushID(std::string_view str_id);
+		void PopID();
+
+		float GetWindowWidth();
+		float GetWindowHeight();
+
+		void SetCursorPosX(float x);
+		float CalcTextWidth(const std::string& text);
+
+		glm::vec2 GetWindowPadding();
 	private:
 	};
 }

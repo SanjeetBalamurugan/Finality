@@ -1,4 +1,5 @@
 #include "Log.h"
+#include <regex>
 
 std::shared_ptr<spdlog::logger> FINALITY::Logger::s_CoreLogger;
 std::shared_ptr<spdlog::logger> FINALITY::Logger::s_ClientLogger;
@@ -22,7 +23,26 @@ void FINALITY::ConsoleSink::sink_it_(const spdlog::details::log_msg& msg)
 	spdlog::memory_buf_t formatted;
 	base_sink<std::mutex>::formatter_->format(msg, formatted);
 
-	m_Entries.push_back({ std::string(formatted.data(), formatted.size()), msg.level });
+	LogEntry entry;
+	entry.Message = fmt::to_string(formatted);
+
+	std::string rawStr = std::string(msg.payload.data(), msg.payload.size());
+	entry.RawPayload = std::regex_replace(rawStr, std::regex("\\x1B\\[[0-9;]*[a-zA-Z]"), "");
+	entry.LoggerName = std::string(msg.logger_name.data(), msg.logger_name.size());
+	entry.Level = msg.level;
+	entry.FilePath = msg.source.filename ? msg.source.filename : "";
+	entry.LineNumber = msg.source.line;
+
+	if (!entry.FilePath.empty())
+	{
+		entry.stackTrace = fmt::format("at {}:{}\n", entry.FilePath, entry.LineNumber);
+	}
+	else
+	{
+		entry.stackTrace = "Source context unavailable.\n";
+	}
+
+	m_Entries.push_back(entry);
 	if (m_Entries.size() > s_MaxEntries)
 	{
 		m_Entries.pop_front();

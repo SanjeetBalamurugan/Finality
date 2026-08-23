@@ -35,6 +35,6 @@
 // UI
 #include "ImGUI/ImGUIPanel.h"
 
-#define FI_CLIENT_ERROR(...)       ::FINALITY::Logger::GetClientLogger()->error(__VA_ARGS__)
-#define FI_CLIENT_WARN(...)        ::FINALITY::Logger::GetClientLogger()->warn(__VA_ARGS__)
-#define FI_CLIENT_INFO(...)        ::FINALITY::Logger::GetClientLogger()->info(__VA_ARGS__)
+#define FI_CLIENT_ERROR(...)       SPDLOG_LOGGER_CALL(::FINALITY::Logger::GetClientLogger(), spdlog::level::err, __VA_ARGS__)
+#define FI_CLIENT_WARN(...)        SPDLOG_LOGGER_CALL(::FINALITY::Logger::GetClientLogger(), spdlog::level::warn, __VA_ARGS__)
+#define FI_CLIENT_INFO(...)        SPDLOG_LOGGER_CALL(::FINALITY::Logger::GetClientLogger(), spdlog::level::info, __VA_ARGS__)

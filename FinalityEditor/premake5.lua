@@ -1,5 +1,5 @@
 project "FinalityEditor"
-    kind "ConsoleApp"
+    kind "WindowedApp"
     language "C++"
     cppdialect "C++20"
     staticruntime "Off"
@@ -23,3 +23,9 @@ project "FinalityEditor"
 
     filter "system:windows"
         systemversion "latest"
+        entrypoint "mainCRTStartup" 
+        files { 
+            "assets/windows/Resource.rc", 
+            "assets/windows/favicon.ico" 
+        }
+    filter {} 

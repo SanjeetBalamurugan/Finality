@@ -40,7 +40,7 @@ void FINALITY::ImGUIRenderer::InitImGUI()
 	ImFont* interRegular = io.Fonts->AddFontFromMemoryCompressedBase85TTF(Inter_18pt_Regular_compressed_data_base85, 18);
 	if (interRegular != nullptr) io.FontDefault = interRegular;
 
-	FINALITY::ApplyDark01();
+	FINALITY::ApplyCatppuccinMacchiato();
 
 	m_ActiveAPI = this->m_Device->GetActiveApi();
 

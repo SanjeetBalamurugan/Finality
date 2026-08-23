@@ -91,6 +91,6 @@ public:
     void OnUpdate(float ts) override
     {
         Scene::OnUpdate(ts);
-        
+        FI_CLIENT_WARN("Hello");
     }
 };

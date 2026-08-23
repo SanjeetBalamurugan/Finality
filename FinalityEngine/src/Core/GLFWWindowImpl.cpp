@@ -33,6 +33,18 @@ void FINALITY::GLFWWindowImpl::Initialize(const WindowSpec& specification)
 		std::exit(EXIT_FAILURE);
 	}
 
+	// Icon
+#ifdef _WIN32
+	HWND hwnd = glfwGetWin32Window(m_Window);
+	if (hwnd) {
+		HICON hIconLarge = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(1));
+		HICON hIconSmall = (HICON)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(1), IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR);
+
+		SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIconLarge);
+		SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIconSmall);
+	}
+#endif
+
 	m_NativeHandle.WindowHandle = static_cast<void*>(m_Window);
 	m_NativeHandle.DeviceContext = static_cast<void*>(glfwGetWin32Window(m_Window));
 

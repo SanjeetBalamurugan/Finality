@@ -191,3 +191,121 @@ bool FINALITY::ImGUIPanel::MenuItem(std::string_view label, std::string_view sho
 {
 	return ImGui::MenuItem(label.data(), shortcut.empty() ? nullptr : shortcut.data());
 }
+
+bool FINALITY::ImGUIPanel::BeginChild(std::string_view str_id, const glm::vec2& size, bool border, PanelFlags flags)
+{
+	return ImGui::BeginChild(str_id.data(), ImVec2(size.x, size.y), border, flags);
+}
+
+void FINALITY::ImGUIPanel::EndChild()
+{
+	ImGui::EndChild();
+}
+
+bool FINALITY::ImGUIPanel::Selectable(std::string_view label, bool selected)
+{
+	return ImGui::Selectable(label.data(), selected);
+}
+
+void FINALITY::ImGUIPanel::PushStyleColor(int idx, const glm::vec4& col)
+{
+	ImGui::PushStyleColor(idx, ImVec4(col.x, col.y, col.z, col.w));
+}
+
+void FINALITY::ImGUIPanel::PopStyleColor(int count)
+{
+	ImGui::PopStyleColor(count);
+}
+
+float FINALITY::ImGUIPanel::GetTextLineHeightWithSpacing()
+{
+	return ImGui::GetTextLineHeightWithSpacing();
+}
+
+void FINALITY::ImGUIPanel::SetScrollHereY(float center_y_ratio)
+{
+	ImGui::SetScrollHereY(center_y_ratio);
+}
+
+static int InputTextCallback(ImGuiInputTextCallbackData* data)
+{
+	std::string* str = (std::string*)data->UserData;
+	if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
+	{
+		str->resize(data->BufTextLen);
+		data->Buf = (char*)str->data();
+	}
+	return 0;
+}
+
+bool FINALITY::ImGUIPanel::InputText(std::string_view label, std::string* str, PanelFlags flags)
+{
+	flags |= ImGuiInputTextFlags_CallbackResize;
+	return ImGui::InputText(label.data(), (char*)str->data(), str->capacity() + 1, flags, InputTextCallback, str);
+}
+
+float FINALITY::ImGUIPanel::GetFontSize()
+{
+	return ImGui::GetFontSize();
+}
+
+glm::vec2 FINALITY::ImGUIPanel::GetStyleItemSpacing()
+{
+	ImVec2 spacing = ImGui::GetStyle().ItemSpacing;
+	return glm::vec2(spacing.x, spacing.y);
+}
+
+void FINALITY::ImGUIPanel::PushItemWidth(float item_width)
+{
+	ImGui::PushItemWidth(item_width);
+}
+
+void FINALITY::ImGUIPanel::PopItemWidth()
+{
+	ImGui::PopItemWidth();
+}
+
+float FINALITY::ImGUIPanel::GetCursorPosX()
+{
+	return ImGui::GetCursorPosX();
+}
+
+void FINALITY::ImGUIPanel::PushID(int int_id)
+{
+	ImGui::PushID(int_id);
+}
+
+void FINALITY::ImGUIPanel::PushID(std::string_view str_id)
+{
+	ImGui::PushID(str_id.data());
+}
+
+void FINALITY::ImGUIPanel::PopID()
+{
+	ImGui::PopID();
+}
+
+float FINALITY::ImGUIPanel::GetWindowWidth()
+{
+	return ImGui::GetWindowWidth();
+}
+
+float FINALITY::ImGUIPanel::GetWindowHeight()
+{
+	return ImGui::GetWindowHeight();
+}
+
+void FINALITY::ImGUIPanel::SetCursorPosX(float x)
+{
+	return ImGui::SetCursorPosX(x);
+}
+
+float FINALITY::ImGUIPanel::CalcTextWidth(const std::string& text)
+{
+	return ImGui::CalcTextSize(text.c_str()).x;
+}
+
+glm::vec2 FINALITY::ImGUIPanel::GetWindowPadding()
+{
+	return glm::vec2(ImGui::GetStyle().WindowPadding.x, ImGui::GetStyle().WindowPadding.y);
+}
