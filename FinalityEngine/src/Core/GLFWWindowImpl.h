@@ -21,6 +21,9 @@ namespace FINALITY
 
 		GLFWwindow* GetGLFWwindow() const { return m_Window; }
 
+		void SetCallbacks() override;
+		bool ConsumePendingResize(int& outW, int& outH) override;
+
 		void SetCursorMode(bool hiddenAndLocked) override;
 		void SetWindowTitle(const std::string& title) override;
 
@@ -29,5 +32,8 @@ namespace FINALITY
 		WindowSpec m_Specification;
 
 		NativeWindowHandle m_NativeHandle;
+
+		bool m_PendingResize = false; 
+		int m_PendingWidth = 0, m_PendingHeight = 0;
 	};
 }

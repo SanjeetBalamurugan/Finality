@@ -7,6 +7,7 @@
 
 #include "Texture.h"
 #include "RenderTypes.h"
+#include "RenderTarget.h"
 
 namespace FINALITY
 {
@@ -56,6 +57,16 @@ namespace FINALITY
 		virtual std::shared_ptr<Mesh> CreateMesh(const std::vector<Vertex>& vertices) = 0;
 		virtual std::shared_ptr<Mesh> CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices) = 0;
 		virtual std::shared_ptr<Pipeline> CreatePipeline(const PipelineConfig& config) = 0;
+
+		virtual std::shared_ptr<RenderTarget> CreateRenderTarget(uint32_t width, uint32_t height) = 0;
+		virtual void ResizeRenderTarget(const std::shared_ptr<RenderTarget>& target, uint32_t width, uint32_t height) = 0;
+		virtual void UpdateRenderTargetCamera(const std::shared_ptr<RenderTarget>& target, Camera* camera) = 0;
+		virtual void DestroyRenderTargetGpuResources(RenderTarget & target) = 0;
+		virtual void RenderSceneToTarget(const std::shared_ptr<RenderTarget>& target, const std::vector<RenderPacket>& queue) = 0;
+		virtual void* GetRenderTargetTextureHandle(const std::shared_ptr<RenderTarget>& target) = 0;
+		virtual void SetRenderTargetClearColor(const std::shared_ptr<RenderTarget>& target, float r, float g, float b, float a) = 0;
+		virtual void SetGameRenderTarget(const std::shared_ptr<RenderTarget>& target) = 0;
+		virtual void SetSwapchainClearColor(float r, float g, float b, float a) = 0;
 
 		virtual void BeginTextureBatch() = 0;
 		virtual void EndAndSubmitTextureBatch() = 0;

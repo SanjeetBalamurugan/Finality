@@ -18,6 +18,7 @@ namespace FINALITY
 		void Initialize() override;
 
 		VkCommandBuffer PrepareCommandBuffer(int image);
+		VkDescriptorPool GetDescriptorPool() const { return m_DescriptorPool; }
 	private:
 		void CreateDescriptorPool();
 

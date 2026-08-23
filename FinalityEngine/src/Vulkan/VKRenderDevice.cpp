@@ -11,6 +11,7 @@
 #include "VKFramebuffer.h"
 #include <numeric>
 #include "VKImGUI/VKImGUIRenderer.h"
+#include "VKRenderTarget.h"
 
 void FINALITY::VKRenderDevice::CreateInstance()
 {
@@ -227,24 +228,31 @@ void FINALITY::VKRenderDevice::DestroyInstanceBuffers()
 	m_InstanceBuffers.clear();
 }
 
-void FINALITY::VKRenderDevice::UploadToDynamicInstanceBuffer(const void* data, VkDeviceSize dataSize, VkBuffer& outBuffer, VkDeviceSize& outOffset)
+void FINALITY::VKRenderDevice::UploadToDynamicInstanceBuffer(
+	VkBuffer& buffer,
+	VkDeviceMemory& memory,
+	uint8_t*& mappedData,
+	VkDeviceSize& capacity,
+	VkDeviceSize& currentOffset,
+	const void* data,
+	VkDeviceSize dataSize,
+	VkBuffer& outBuffer,
+	VkDeviceSize& outOffset)
 {
 	if (dataSize == 0) return;
 
-	auto& currentFrameBuffer = m_InstanceBuffers[m_ImageIndex];
-
 	constexpr VkDeviceSize alignment = 256;
-	VkDeviceSize alignedOffset = (currentFrameBuffer.CurrentOffset + (alignment - 1)) & ~(alignment - 1);
+	VkDeviceSize alignedOffset = (currentOffset + (alignment - 1)) & ~(alignment - 1);
 
-	if (alignedOffset + dataSize > currentFrameBuffer.Capacity)
+	if (alignedOffset + dataSize > capacity)
 	{
-		VkDeviceSize newCapacity = std::max(currentFrameBuffer.Capacity * 2, alignedOffset + dataSize + (1024 * 1024));
+		VkDeviceSize newCapacity = std::max(capacity * 2, alignedOffset + dataSize + (1024 * 1024));
 		vkDeviceWaitIdle(m_Device);
 
-		if (currentFrameBuffer.Buffer != VK_NULL_HANDLE) {
-			vkUnmapMemory(m_Device, currentFrameBuffer.Memory);
-			vkDestroyBuffer(m_Device, currentFrameBuffer.Buffer, nullptr);
-			vkFreeMemory(m_Device, currentFrameBuffer.Memory, nullptr);
+		if (buffer != VK_NULL_HANDLE) {
+			vkUnmapMemory(m_Device, memory);
+			vkDestroyBuffer(m_Device, buffer, nullptr);
+			vkFreeMemory(m_Device, memory, nullptr);
 		}
 
 		VkBufferCreateInfo bufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
@@ -252,34 +260,32 @@ void FINALITY::VKRenderDevice::UploadToDynamicInstanceBuffer(const void* data, V
 		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-		vkCreateBuffer(m_Device, &bufferInfo, nullptr, &currentFrameBuffer.Buffer);
+		vkCreateBuffer(m_Device, &bufferInfo, nullptr, &buffer);
 
 		VkMemoryRequirements memReqs;
-		vkGetBufferMemoryRequirements(m_Device, currentFrameBuffer.Buffer, &memReqs);
+		vkGetBufferMemoryRequirements(m_Device, buffer, &memReqs);
 
 		VkMemoryAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
 		allocInfo.allocationSize = memReqs.size;
-
 		allocInfo.memoryTypeIndex = FindMemoryType(
 			memReqs.memoryTypeBits,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
 		);
 
-		vkAllocateMemory(m_Device, &allocInfo, nullptr, &currentFrameBuffer.Memory);
-		vkBindBufferMemory(m_Device, currentFrameBuffer.Buffer, currentFrameBuffer.Memory, 0);
+		vkAllocateMemory(m_Device, &allocInfo, nullptr, &memory);
+		vkBindBufferMemory(m_Device, buffer, memory, 0);
+		vkMapMemory(m_Device, memory, 0, newCapacity, 0, reinterpret_cast<void**>(&mappedData));
 
-		vkMapMemory(m_Device, currentFrameBuffer.Memory, 0, newCapacity, 0, reinterpret_cast<void**>(&currentFrameBuffer.MappedData));
-
-		currentFrameBuffer.Capacity = newCapacity;
+		capacity = newCapacity;
 		alignedOffset = 0;
 	}
 
-	std::memcpy(currentFrameBuffer.MappedData + alignedOffset, data, dataSize);
+	std::memcpy(mappedData + alignedOffset, data, dataSize);
 
-	outBuffer = currentFrameBuffer.Buffer;
+	outBuffer = buffer;
 	outOffset = alignedOffset;
 
-	currentFrameBuffer.CurrentOffset = alignedOffset + dataSize;
+	currentOffset = alignedOffset + dataSize;
 }
 
 uint32_t FINALITY::VKRenderDevice::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
@@ -299,6 +305,238 @@ uint32_t FINALITY::VKRenderDevice::FindMemoryType(uint32_t typeFilter, VkMemoryP
 	throw std::runtime_error("Failed to find suitable Vulkan memory type!");
 }
 
+void FINALITY::VKRenderDevice::RecreateSwapchainResources()
+{
+	if (m_Spec.width == 0 || m_Spec.height == 0)
+	{
+		m_PendingSwapchainRecreate = true;
+		return;
+	}
+
+	vkDeviceWaitIdle(m_Device);
+
+	m_SwapChain->Recreate(m_Spec);
+	m_Queue.UpdateSwapChain(m_SwapChain->GetVKHandle());
+
+	m_PostProcessingFramebuffer->Resize(m_SwapChain->GetWidth(), m_SwapChain->GetHeight());
+
+	auto* vkFB = static_cast<VKFramebuffer*>(m_PostProcessingFramebuffer.get());
+	VkDescriptorImageInfo imageInfo{};
+	imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	imageInfo.imageView = (VkImageView)vkFB->GetColorAttachmentRendererID();
+	imageInfo.sampler = m_PostProcessSampler;
+
+	VkWriteDescriptorSet write{};
+	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	write.dstSet = m_PostProcessDescriptorSet;
+	write.dstBinding = 0;
+	write.descriptorCount = 1;
+	write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	write.pImageInfo = &imageInfo;
+	vkUpdateDescriptorSets(m_Device, 1, &write, 0, nullptr);
+}
+
+void FINALITY::VKRenderDevice::DrawQueueToTarget(
+	VkCommandBuffer cmd, uint32_t width, uint32_t height,
+	VkDescriptorSet globalDescriptorSet,
+	VkBuffer& instanceBuffer,
+	VkDeviceMemory& instanceBufferMemory,
+	uint8_t*& instanceBufferMapped,
+	VkDeviceSize& instanceBufferCapacity,
+	VkDeviceSize& instanceBufferOffset,
+	const std::vector<RenderPacket>& queue)
+{
+	if (queue.empty()) return;
+
+	std::vector<size_t> indices(queue.size());
+	std::iota(indices.begin(), indices.end(), 0);
+
+	std::sort(indices.begin(), indices.end(), [&queue](size_t i1, size_t i2) {
+		const auto& a = queue[i1];
+		const auto& b = queue[i2];
+
+		if (a.PipelineInstance != b.PipelineInstance) {
+			return a.PipelineInstance < b.PipelineInstance;
+		}
+		if (a.MaterialKey != b.MaterialKey) {
+			return a.MaterialKey < b.MaterialKey;
+		}
+		return a.MeshData < b.MeshData;
+		});
+
+	VkViewport viewport{
+		.x = 0.0f,
+		.y = static_cast<float>(height),
+		.width = static_cast<float>(width),
+		.height = -static_cast<float>(height),
+		.minDepth = 0.0f,
+		.maxDepth = 1.0f
+	};
+	vkCmdSetViewport(cmd, 0, 1, &viewport);
+
+	VkRect2D scissor{
+		.offset = { 0, 0 },
+		.extent = { width, height }
+	};
+	vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+	VKPipeline* activePipeline = nullptr;
+	const Material* activeMaterial = nullptr;
+
+	std::vector<InstancePayload> instanceBatch;
+	instanceBatch.reserve(128);
+
+	size_t totalProcessed = 0;
+	size_t queueSize = indices.size();
+
+	while (totalProcessed < queueSize)
+	{
+		size_t batchStartIdx = indices[totalProcessed];
+		const auto& firstPacket = queue[batchStartIdx];
+
+		if (!firstPacket.MeshData || !firstPacket.PipelineInstance) {
+			totalProcessed++;
+			continue;
+		}
+
+		size_t batchSize = 0;
+		instanceBatch.clear();
+
+		while ((totalProcessed + batchSize) < queueSize)
+		{
+			const auto& currPacket = queue[indices[totalProcessed + batchSize]];
+			bool sameBatch = (currPacket.PipelineInstance == firstPacket.PipelineInstance) &&
+				(currPacket.MaterialKey == firstPacket.MaterialKey) &&
+				(currPacket.MeshData == firstPacket.MeshData);
+			if (!sameBatch) break;
+
+			InstancePayload payload{};
+			std::memcpy(&payload.Transform, &currPacket.Transform, sizeof(glm::mat4));
+			if (!currPacket.CustomPushData.empty()) {
+				size_t copySize = std::min<size_t>(64, currPacket.CustomPushData.size());
+				std::memcpy(payload.CustomData, currPacket.CustomPushData.data(), copySize);
+			}
+			instanceBatch.push_back(payload);
+
+			batchSize++;
+		}
+
+		auto* vkPipeline = static_cast<VKPipeline*>(firstPacket.PipelineInstance.get());
+		auto* vkMesh = static_cast<VKMesh*>(firstPacket.MeshData.get());
+		const auto* materialKey = static_cast<const Material*>(firstPacket.MaterialKey);
+
+		if (vkPipeline != activePipeline)
+		{
+			activePipeline = vkPipeline;
+			activePipeline->Bind(cmd);
+
+			vkCmdBindDescriptorSets(
+				cmd,
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				vkPipeline->GetVKLayout(),
+				0, 1,
+				&globalDescriptorSet,
+				0, nullptr
+			);
+			activeMaterial = nullptr;
+		}
+
+		if (materialKey != activeMaterial)
+		{
+			activeMaterial = materialKey;
+
+			if (!firstPacket.Textures.empty())
+			{
+				auto it = m_MaterialDescriptorCache.find(activeMaterial);
+				VkDescriptorSet materialSet = VK_NULL_HANDLE;
+
+				if (it == m_MaterialDescriptorCache.end())
+				{
+					materialSet = m_MaterialDescriptorAllocator.Allocate(m_MaterialDescriptorSetLayout);
+					m_MaterialDescriptorCache[activeMaterial] = materialSet;
+
+					auto texIt = firstPacket.Textures.begin();
+					auto* vkTex = static_cast<VKTexture*>(texIt->second.get());
+
+					if (vkTex)
+					{
+						VkDescriptorImageInfo imageInfo{};
+						imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+						imageInfo.imageView = vkTex->GetImageView();
+						imageInfo.sampler = vkTex->GetSampler();
+
+						VkWriteDescriptorSet descriptorWrite{};
+						descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+						descriptorWrite.dstSet = materialSet;
+						descriptorWrite.dstBinding = 0;
+						descriptorWrite.dstArrayElement = 0;
+						descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+						descriptorWrite.descriptorCount = 1;
+						descriptorWrite.pImageInfo = &imageInfo;
+
+						vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
+					}
+				}
+				else
+				{
+					materialSet = it->second;
+				}
+
+				vkCmdBindDescriptorSets(
+					cmd,
+					VK_PIPELINE_BIND_POINT_GRAPHICS,
+					vkPipeline->GetVKLayout(),
+					1, 1,
+					&materialSet,
+					0, nullptr
+				);
+			}
+		}
+
+		VkBuffer outInstanceBuffer = VK_NULL_HANDLE;
+		VkDeviceSize outInstanceBufferOffset = 0;
+		UploadToDynamicInstanceBuffer(
+			instanceBuffer,
+			instanceBufferMemory,
+			instanceBufferMapped,
+			instanceBufferCapacity,
+			instanceBufferOffset,
+			instanceBatch.data(),
+			instanceBatch.size() * sizeof(InstancePayload),
+			outInstanceBuffer,
+			outInstanceBufferOffset
+		);
+
+		vkMesh->Bind(cmd);
+		vkCmdBindVertexBuffers(cmd, 1, 1, &outInstanceBuffer, &outInstanceBufferOffset);
+
+		if (!firstPacket.CustomPushData.empty())
+		{
+			vkCmdPushConstants(
+				cmd,
+				vkPipeline->GetVKLayout(),
+				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+				0,
+				static_cast<uint32_t>(firstPacket.CustomPushData.size()),
+				firstPacket.CustomPushData.data()
+			);
+		}
+
+		uint32_t instanceCount = static_cast<uint32_t>(batchSize);
+
+		if (vkMesh->HasIndices())
+		{
+			vkCmdDrawIndexed(cmd, vkMesh->GetIndexCount(), instanceCount, 0, 0, 0);
+		}
+		else
+		{
+			vkCmdDraw(cmd, vkMesh->GetVertexCount(), instanceCount, 0, 0);
+		}
+
+		totalProcessed += batchSize;
+	}
+}
+
 void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 {
 	this->CreateInstance();
@@ -315,7 +553,7 @@ void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 
 	this->CreateCommandBufferPool();
 
-	m_Queue.Initialize(m_Device, m_SwapChain->GetVKHandle(), m_SwapChain->GetImageCount() , m_QueueFamily, 0);
+	m_Queue.Initialize(m_Device, m_SwapChain->GetVKHandle(), m_SwapChain->GetImageCount(), m_QueueFamily, 0);
 	this->CreateCommandBuffers(m_SwapChain->GetImageCount());
 
 	m_FrameDeletionQueues.resize(m_SwapChain->GetImageCount());
@@ -468,12 +706,16 @@ void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 
 void FINALITY::VKRenderDevice::SetWindowSpec(const WindowSpec& spec)
 {
-	m_Spec = spec;
-	if (m_SwapChain)
+	if (spec.width == 0 || spec.height == 0)
 	{
-		m_SwapChain->Recreate(m_Spec);
-		m_Queue.UpdateSwapChain(m_SwapChain->GetVKHandle());
+		m_Spec = spec;
+		return;
 	}
+
+	m_Spec = spec;
+	if (!m_SwapChain) return;
+
+	RecreateSwapchainResources();
 }
 
 void FINALITY::VKRenderDevice::CreateCommandBuffers(uint32_t count, VkCommandBuffer* cmdBufs) const
@@ -497,196 +739,19 @@ void FINALITY::VKRenderDevice::FreeCommandBuffers(uint32_t count, VkCommandBuffe
 
 void FINALITY::VKRenderDevice::DrawQueue(const std::vector<RenderPacket>& queue)
 {
-	if (queue.empty()) return;
-
-	std::vector<size_t> indices(queue.size());
-	std::iota(indices.begin(), indices.end(), 0);
-
-	std::sort(indices.begin(), indices.end(), [&queue](size_t i1, size_t i2) {
-		const auto& a = queue[i1];
-		const auto& b = queue[i2];
-
-		if (a.PipelineInstance != b.PipelineInstance) {
-			return a.PipelineInstance < b.PipelineInstance;
-		}
-		if (a.MaterialKey != b.MaterialKey) {
-			return a.MaterialKey < b.MaterialKey;
-		}
-		return a.MeshData < b.MeshData;
-		});
-
-	VkCommandBuffer cmd = m_CMDBuffers[m_ImageIndex];
-
-	VkViewport viewport{
-		.x = 0.0f,
-		.y = static_cast<float>(m_SwapChain->GetHeight()),
-		.width = static_cast<float>(m_SwapChain->GetWidth()),
-		.height = -static_cast<float>(m_SwapChain->GetHeight()),
-		.minDepth = 0.0f,
-		.maxDepth = 1.0f
-	};
-	vkCmdSetViewport(cmd, 0, 1, &viewport);
-
-	VkRect2D scissor{
-		.offset = { 0, 0 },
-		.extent = { m_SwapChain->GetWidth(), m_SwapChain->GetHeight() }
-	};
-	vkCmdSetScissor(cmd, 0, 1, &scissor);
-
-	VKPipeline* activePipeline = nullptr;
-	const Material* activeMaterial = nullptr;
-
-	std::vector<InstancePayload> instanceBatch;
-	instanceBatch.reserve(128);
-
-	size_t totalProcessed = 0;
-	size_t queueSize = indices.size();
-
-	while (totalProcessed < queueSize)
-	{
-		size_t batchStartIdx = indices[totalProcessed];
-		const auto& firstPacket = queue[batchStartIdx];
-
-		if (!firstPacket.MeshData || !firstPacket.PipelineInstance) {
-			totalProcessed++;
-			continue;
-		}
-
-		size_t batchSize = 0;
-		instanceBatch.clear();
-
-		// Collect all instances that share the same Pipeline, Material, and Mesh
-		while ((totalProcessed + batchSize) < queueSize)
-		{
-			const auto& currPacket = queue[indices[totalProcessed + batchSize]];
-			bool sameBatch = (currPacket.PipelineInstance == firstPacket.PipelineInstance) &&
-				(currPacket.MaterialKey == firstPacket.MaterialKey) &&
-				(currPacket.MeshData == firstPacket.MeshData);
-			if (!sameBatch) break;
-
-			InstancePayload payload{};
-			std::memcpy(&payload.Transform, &currPacket.Transform, sizeof(glm::mat4));
-			if (!currPacket.CustomPushData.empty()) {
-				size_t copySize = std::min<size_t>(64, currPacket.CustomPushData.size());
-				std::memcpy(payload.CustomData, currPacket.CustomPushData.data(), copySize);
-			}
-			instanceBatch.push_back(payload);
-
-			batchSize++;
-		}
-
-		auto* vkPipeline = static_cast<VKPipeline*>(firstPacket.PipelineInstance.get());
-		auto* vkMesh = static_cast<VKMesh*>(firstPacket.MeshData.get());
-		const auto* materialKey = static_cast<const Material*>(firstPacket.MaterialKey);
-
-		// 1. Bind Pipeline state if changed
-		if (vkPipeline != activePipeline)
-		{
-			activePipeline = vkPipeline;
-			activePipeline->Bind(cmd);
-
-			vkCmdBindDescriptorSets(
-				cmd,
-				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				vkPipeline->GetVKLayout(),
-				0, 1,
-				&m_GlobalDescriptorSets[m_ImageIndex],
-				0, nullptr
-			);
-			activeMaterial = nullptr; // Reset material tracking for new pipeline
-		}
-
-		// 2. Bind Material state if changed
-		if (materialKey != activeMaterial)
-		{
-			activeMaterial = materialKey;
-
-			if (!firstPacket.Textures.empty())
-			{
-				auto it = m_MaterialDescriptorCache.find(activeMaterial);
-				VkDescriptorSet materialSet = VK_NULL_HANDLE;
-
-				if (it == m_MaterialDescriptorCache.end())
-				{
-					materialSet = m_MaterialDescriptorAllocator.Allocate(m_MaterialDescriptorSetLayout);
-					m_MaterialDescriptorCache[activeMaterial] = materialSet;
-
-					auto texIt = firstPacket.Textures.begin();
-					auto* vkTex = static_cast<VKTexture*>(texIt->second.get());
-
-					if (vkTex)
-					{
-						VkDescriptorImageInfo imageInfo{};
-						imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-						imageInfo.imageView = vkTex->GetImageView();
-						imageInfo.sampler = vkTex->GetSampler();
-
-						VkWriteDescriptorSet descriptorWrite{};
-						descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-						descriptorWrite.dstSet = materialSet;
-						descriptorWrite.dstBinding = 0;
-						descriptorWrite.dstArrayElement = 0;
-						descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-						descriptorWrite.descriptorCount = 1;
-						descriptorWrite.pImageInfo = &imageInfo;
-
-						vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
-					}
-				}
-				else
-				{
-					materialSet = it->second;
-				}
-
-				vkCmdBindDescriptorSets(
-					cmd,
-					VK_PIPELINE_BIND_POINT_GRAPHICS,
-					vkPipeline->GetVKLayout(),
-					1, 1,
-					&materialSet,
-					0, nullptr
-				);
-			}
-		}
-
-		// 3. Upload Instance Data, Bind Mesh, and issue Draw Calls (Always executed for every batch)
-		VkBuffer instanceBuffer = VK_NULL_HANDLE;
-		VkDeviceSize instanceBufferOffset = 0;
-		UploadToDynamicInstanceBuffer(
-			instanceBatch.data(),
-			instanceBatch.size() * sizeof(InstancePayload),
-			instanceBuffer,
-			instanceBufferOffset
-		);
-
-		vkMesh->Bind(cmd);
-		vkCmdBindVertexBuffers(cmd, 1, 1, &instanceBuffer, &instanceBufferOffset);
-
-		if (!firstPacket.CustomPushData.empty())
-		{
-			vkCmdPushConstants(
-				cmd,
-				vkPipeline->GetVKLayout(),
-				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-				0,                                                         // Offset
-				static_cast<uint32_t>(firstPacket.CustomPushData.size()),  // Size in bytes (must be <= 128)
-				firstPacket.CustomPushData.data()
-			);
-		}
-
-		uint32_t instanceCount = static_cast<uint32_t>(batchSize);
-
-		if (vkMesh->HasIndices())
-		{
-			vkCmdDrawIndexed(cmd, vkMesh->GetIndexCount(), instanceCount, 0, 0, 0);
-		}
-		else
-		{
-			vkCmdDraw(cmd, vkMesh->GetVertexCount(), instanceCount, 0, 0);
-		}
-
-		totalProcessed += batchSize;
-	}
+	auto& fb = m_InstanceBuffers[m_ImageIndex];
+	DrawQueueToTarget(
+		m_CMDBuffers[m_ImageIndex],
+		m_SwapChain->GetWidth(),
+		m_SwapChain->GetHeight(),
+		m_GlobalDescriptorSets[m_ImageIndex],
+		fb.Buffer,
+		fb.Memory,
+		fb.MappedData,
+		fb.Capacity,
+		fb.CurrentOffset,
+		queue
+	);
 }
 
 void FINALITY::VKRenderDevice::BeginDynamicRendering(VkCommandBuffer CmdBuf, int ImageIndex, VkClearValue* pClearColor, VkClearValue* pDepthValue)
@@ -748,6 +813,223 @@ std::shared_ptr<FINALITY::Pipeline> FINALITY::VKRenderDevice::CreatePipeline(con
 	return std::make_shared<VKPipeline>(m_Device, GetActiveRenderPass(), config, m_GlobalDescriptorSetLayout, m_MaterialDescriptorSetLayout);
 }
 
+std::shared_ptr<FINALITY::RenderTarget> FINALITY::VKRenderDevice::CreateRenderTarget(uint32_t width, uint32_t height)
+{
+	if (width == 0 || height == 0)
+	{
+		FI_CORE_ERROR("CreateRenderTarget called with zero size");
+		width = std::max(width, 1u);
+		height = std::max(height, 1u);
+	}
+
+	auto target = std::make_shared<VKRenderTarget>();
+	target->Width = width;
+	target->Height = height;
+
+	FramebufferSpecification fbSpec{};
+	fbSpec.Width = width;
+	fbSpec.Height = height;
+	fbSpec.IsSwapChainTarget = false;
+
+	target->Framebuffer = Framebuffer::Create(fbSpec);
+
+	target->CameraUBO.Initialize(m_Device, m_Devices.SelectedDevice().device, sizeof(GlobalUniformBufferObject), 1);
+
+	VkDescriptorPoolSize poolSize{};
+	poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	poolSize.descriptorCount = 1;
+
+	VkDescriptorPoolCreateInfo poolInfo{};
+	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	poolInfo.poolSizeCount = 1;
+	poolInfo.pPoolSizes = &poolSize;
+	poolInfo.maxSets = 1;
+
+	VkResult res = vkCreateDescriptorPool(m_Device, &poolInfo, nullptr, &target->DescriptorPool);
+	CHECK_VK_RESULT(res, "vkCreateDescriptorPool (RenderTarget)");
+
+	VkDescriptorSetAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.descriptorPool = target->DescriptorPool;
+	allocInfo.descriptorSetCount = 1;
+	allocInfo.pSetLayouts = &m_GlobalDescriptorSetLayout;
+
+	res = vkAllocateDescriptorSets(m_Device, &allocInfo, &target->GlobalDescriptorSet);
+	CHECK_VK_RESULT(res, "vkAllocateDescriptorSets (RenderTarget)");
+
+	VkDescriptorBufferInfo bufferInfo{};
+	bufferInfo.buffer = target->CameraUBO.GetBuffer(0);
+	bufferInfo.offset = 0;
+	bufferInfo.range = sizeof(GlobalUniformBufferObject);
+
+	VkWriteDescriptorSet write{};
+	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	write.dstSet = target->GlobalDescriptorSet;
+	write.dstBinding = 0;
+	write.dstArrayElement = 0;
+	write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	write.descriptorCount = 1;
+	write.pBufferInfo = &bufferInfo;
+
+	vkUpdateDescriptorSets(m_Device, 1, &write, 0, nullptr);
+
+	return target;
+}
+
+void FINALITY::VKRenderDevice::UpdateRenderTargetCamera(const std::shared_ptr<RenderTarget>& target, Camera* camera)
+{
+	if (!target || !camera) return;
+
+	auto* vkTarget = static_cast<VKRenderTarget*>(target.get());
+
+	GlobalUniformBufferObject ubo{};
+	ubo.View = camera->GetViewMatrix();
+	ubo.Projection = camera->GetProjection();
+
+	vkTarget->CameraUBO.Update(0, &ubo);
+	target->SourceCamera = camera;
+}
+
+void FINALITY::VKRenderDevice::DestroyRenderTargetGpuResources(RenderTarget& target)
+{
+	auto it = m_TargetImGuiHandles.find(&target);
+	if (it != m_TargetImGuiHandles.end())
+	{
+		ImGui_ImplVulkan_RemoveTexture(it->second);
+		m_TargetImGuiHandles.erase(it);
+	}
+
+	auto& vkTarget = static_cast<VKRenderTarget&>(target);
+
+	if (vkTarget.InstanceBuffer != VK_NULL_HANDLE)
+	{
+		if (vkTarget.InstanceBufferMapped) {
+			vkUnmapMemory(m_Device, vkTarget.InstanceBufferMemory);
+			vkTarget.InstanceBufferMapped = nullptr;
+		}
+		vkDestroyBuffer(m_Device, vkTarget.InstanceBuffer, nullptr);
+		vkFreeMemory(m_Device, vkTarget.InstanceBufferMemory, nullptr);
+		vkTarget.InstanceBuffer = VK_NULL_HANDLE;
+		vkTarget.InstanceBufferMemory = VK_NULL_HANDLE;
+	}
+
+	if (vkTarget.DescriptorPool != VK_NULL_HANDLE)
+	{
+		vkDestroyDescriptorPool(m_Device, vkTarget.DescriptorPool, nullptr);
+		vkTarget.DescriptorPool = VK_NULL_HANDLE;
+		vkTarget.GlobalDescriptorSet = VK_NULL_HANDLE;
+	}
+
+	vkTarget.CameraUBO.Shutdown();
+}
+
+void FINALITY::VKRenderDevice::ResizeRenderTarget(const std::shared_ptr<RenderTarget>& target, uint32_t width, uint32_t height)
+{
+	if (!target) return;
+	if (width == 0 || height == 0) return;
+	if (target->Width == width && target->Height == height) return;
+
+	target->PendingWidth = width;
+	target->PendingHeight = height;
+	target->ResizeRequested = true;
+}
+
+void FINALITY::VKRenderDevice::RenderSceneToTarget(const std::shared_ptr<RenderTarget>& target, const std::vector<RenderPacket>& queue)
+{
+	if (!target) return;
+	auto* vkTarget = static_cast<VKRenderTarget*>(target.get());
+
+	if (target->ResizeRequested)
+	{
+		vkDeviceWaitIdle(m_Device);
+		target->Width = target->PendingWidth;
+		target->Height = target->PendingHeight;
+		target->Framebuffer->Resize(target->Width, target->Height);
+		target->ResizeRequested = false;
+
+		auto handleIt = m_TargetImGuiHandles.find(target.get());
+		if (handleIt != m_TargetImGuiHandles.end())
+		{
+			ImGui_ImplVulkan_RemoveTexture(handleIt->second);
+			m_TargetImGuiHandles.erase(handleIt);
+		}
+	}
+
+	VkCommandBufferAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandPool = m_CMDBufPool;
+	allocInfo.commandBufferCount = 1;
+
+	VkCommandBuffer cmd = VK_NULL_HANDLE;
+	vkAllocateCommandBuffers(m_Device, &allocInfo, &cmd);
+
+	BeginCommandBuffers(cmd, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+	auto* vkFB = static_cast<VKFramebuffer*>(target->Framebuffer.get());
+
+	std::vector<VkClearValue> clearValues(2);
+	clearValues[0].color = { target->ClearColor.r, target->ClearColor.g, target->ClearColor.b, target->ClearColor.a };
+	clearValues[1].depthStencil = { 1.0f, 0 };
+
+	VkRenderPassBeginInfo rpInfo{};
+	rpInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	rpInfo.renderPass = vkFB->GetVKRenderPass();
+	rpInfo.framebuffer = vkFB->GetVKFramebuffer();
+	rpInfo.renderArea = { {0, 0}, {target->Width, target->Height} };
+	rpInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+	rpInfo.pClearValues = clearValues.data();
+
+	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+	vkTarget->InstanceBufferOffset = 0;
+
+	DrawQueueToTarget(
+		cmd, target->Width, target->Height,
+		vkTarget->GlobalDescriptorSet,
+		vkTarget->InstanceBuffer,
+		vkTarget->InstanceBufferMemory,
+		vkTarget->InstanceBufferMapped,
+		vkTarget->InstanceBufferCapacity,
+		vkTarget->InstanceBufferOffset,
+		queue
+	);
+
+	vkCmdEndRenderPass(cmd);
+	vkEndCommandBuffer(cmd);
+
+	VkSubmitInfo submitInfo{};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &cmd;
+
+	VkFenceCreateInfo fenceInfo{};
+	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	VkFence fence = VK_NULL_HANDLE;
+	vkCreateFence(m_Device, &fenceInfo, nullptr, &fence);
+
+	vkQueueSubmit(m_Queue.GetQueue(), 1, &submitInfo, fence);
+	vkWaitForFences(m_Device, 1, &fence, VK_TRUE, UINT64_MAX);
+	vkDestroyFence(m_Device, fence, nullptr);
+
+	vkFreeCommandBuffers(m_Device, m_CMDBufPool, 1, &cmd);
+}
+
+void* FINALITY::VKRenderDevice::GetRenderTargetTextureHandle(const std::shared_ptr<RenderTarget>& target)
+{
+	return (void*)GetOrCreateTargetImGuiHandle(target);
+}
+
+void FINALITY::VKRenderDevice::SetGameRenderTarget(const std::shared_ptr<RenderTarget>& target)
+{
+	m_GameRenderTarget = target;
+}
+
+void FINALITY::VKRenderDevice::SetSwapchainClearColor(float r, float g, float b, float a)
+{
+	m_ClearColor = { .float32 = { r, g, b, a } };
+}
+
 void FINALITY::VKRenderDevice::BeginTextureBatch()
 {
 	m_ActiveUploadBatch.isActive = true;
@@ -771,7 +1053,6 @@ void FINALITY::VKRenderDevice::EndAndSubmitTextureBatch()
 
 	vkEndCommandBuffer(m_ActiveUploadBatch.commandBuffer);
 
-	// Submit the monolithic batch once
 	VkSubmitInfo submitInfo{};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submitInfo.commandBufferCount = 1;
@@ -794,6 +1075,32 @@ void FINALITY::VKRenderDevice::EndAndSubmitTextureBatch()
 	vkFreeCommandBuffers(m_Device, m_CMDBufPool, 1, &m_ActiveUploadBatch.commandBuffer);
 
 	m_ActiveUploadBatch = TextureUploadBatchContext();
+}
+
+void FINALITY::VKRenderDevice::SetRenderTargetClearColor(const std::shared_ptr<RenderTarget>& target, float r, float g, float b, float a)
+{
+	if (!target) return;
+	target->ClearColor = { r, g, b, a };
+}
+
+VkDescriptorSet FINALITY::VKRenderDevice::GetOrCreateTargetImGuiHandle(const std::shared_ptr<RenderTarget>& target)
+{
+	if (!target) return VK_NULL_HANDLE;
+
+	auto it = m_TargetImGuiHandles.find(target.get());
+	if (it != m_TargetImGuiHandles.end())
+		return it->second;
+
+	auto* vkFB = static_cast<VKFramebuffer*>(target->Framebuffer.get());
+
+	VkDescriptorSet imguiSet = ImGui_ImplVulkan_AddTexture(
+		vkFB->GetColorSampler(),
+		(VkImageView)vkFB->GetColorAttachmentRendererID(),
+		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+	);
+
+	m_TargetImGuiHandles[target.get()] = imguiSet;
+	return imguiSet;
 }
 
 void FINALITY::VKRenderDevice::Shutdown()
@@ -844,16 +1151,20 @@ void FINALITY::VKRenderDevice::Shutdown()
 	vkDestroyInstance(m_Instance, nullptr);
 }
 
-
 void FINALITY::VKRenderDevice::BeginFrame()
 {
-	m_ImageIndex = m_Queue.AcquireNextImage();
+	bool needsRecreate = false;
+	m_ImageIndex = m_Queue.AcquireNextImage(needsRecreate);
 
 	if (m_ImageIndex == UINT32_MAX)
 	{
-		m_SwapChain->Recreate(m_Spec);
-		m_Queue.UpdateSwapChain(m_SwapChain->GetVKHandle());
-		m_ImageIndex = m_Queue.AcquireNextImage();
+		RecreateSwapchainResources();
+		m_ImageIndex = m_Queue.AcquireNextImage(needsRecreate);
+	}
+
+	if (needsRecreate)
+	{
+		m_PendingSwapchainRecreate = true;
 	}
 
 	m_FrameDeletionQueues[m_ImageIndex].Flush();
@@ -1051,10 +1362,20 @@ void FINALITY::VKRenderDevice::EndFrame()
 
 void FINALITY::VKRenderDevice::PresentFrame()
 {
-	m_Queue.Present(m_ImageIndex);
+	bool needsRecreate = m_Queue.Present(m_ImageIndex);
+	if (needsRecreate || m_PendingSwapchainRecreate)
+	{
+		RecreateSwapchainResources();
+		m_PendingSwapchainRecreate = false;
+	}
 }
 
 void FINALITY::VKRenderDevice::Clear(float r, float g, float b, float a)
 {
+	if (m_GameRenderTarget)
+	{
+		m_GameRenderTarget->ClearColor = { r, g, b, a };
+		return;
+	}
 	m_ClearColor = { .float32 = { r, g, b, a } };
 }

@@ -1,6 +1,6 @@
 workspace "Finality"  
     architecture "x64"
-    startproject "Sandbox"
+    startproject "FinalityEditor"
     staticruntime "off"
     cppdialect "C++20"
 
@@ -33,6 +33,7 @@ workspace "Finality"
     -- Projects
        include "FinalityEngine"
        include "Sandbox"
+       include "FinalityEditor"
     
     -- Tools
     group "Tools"

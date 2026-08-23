@@ -5,7 +5,7 @@
 
 namespace FINALITY
 {
-    class Camera
+    class FAPI Camera
     {
     public:
         Camera(float fovDegrees, float aspectRatio, float nearClip, float farClip)

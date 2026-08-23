@@ -19,6 +19,7 @@
 // RENDERER
 #include "Renderer/Shader.h"
 #include "Renderer/Renderer.h"
+#include "Renderer/Camera.h"
 
 // EVENTS
 #include "Events/Mouse.h"

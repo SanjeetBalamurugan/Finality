@@ -32,6 +32,9 @@ namespace FINALITY
 		virtual uint32_t GetWidth() const = 0;
 		virtual uint32_t GetHeight() const = 0;
 
+		virtual void SetCallbacks() = 0;
+		virtual bool ConsumePendingResize(int& outW, int& outH) = 0;
+
 		virtual void SetCursorMode(bool hiddenAndLocked) = 0;
 		virtual void SetWindowTitle(const std::string& title) = 0;
 

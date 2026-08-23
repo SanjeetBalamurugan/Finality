@@ -19,6 +19,8 @@
 #include <Core/RenderTypes.h>
 #include "VKFramebuffer.h"
 
+#include <Core/RenderTarget.h>
+
 namespace FINALITY
 {
 	struct TextureUploadBatchContext {
@@ -32,8 +34,8 @@ namespace FINALITY
 		VkBuffer Buffer = VK_NULL_HANDLE;
 		VkDeviceMemory Memory = VK_NULL_HANDLE;
 		uint8_t* MappedData = nullptr;
-		VkDeviceSize Capacity = 0;       // Total buffer capacity in bytes
-		VkDeviceSize CurrentOffset = 0;  // Write offset for current frame
+		VkDeviceSize Capacity = 0;
+		VkDeviceSize CurrentOffset = 0;
 	};
 
 	class VKRenderDevice : public RenderDevice
@@ -52,17 +54,35 @@ namespace FINALITY
 		void CreateCommandBufferPool();
 		void BeginCommandBuffers(VkCommandBuffer cmdBuf, uint32_t usageFlags);
 
-		void CreateInstanceBuffers(VkDeviceSize initialSize = 1024 * 1024 * 16); // 16 MB per frame
+		void CreateInstanceBuffers(VkDeviceSize initialSize = 1024 * 1024 * 16);
 		void DestroyInstanceBuffers();
 
 		void RecordCommandBuffersInternal(bool TransitionToPresent, std::vector<VkCommandBuffer>& CmdBufs);
+
 		void UploadToDynamicInstanceBuffer(
+			VkBuffer& buffer,
+			VkDeviceMemory& memory,
+			uint8_t*& mappedData,
+			VkDeviceSize& capacity,
+			VkDeviceSize& currentOffset,
 			const void* data,
 			VkDeviceSize dataSize,
 			VkBuffer& outBuffer,
 			VkDeviceSize& outOffset);
 
 		uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+		void RecreateSwapchainResources();
+
+		void DrawQueueToTarget(VkCommandBuffer cmd, uint32_t width, uint32_t height,
+			VkDescriptorSet globalDescriptorSet,
+			VkBuffer& instanceBuffer,
+			VkDeviceMemory& instanceBufferMemory,
+			uint8_t*& instanceBufferMapped,
+			VkDeviceSize& instanceBufferCapacity,
+			VkDeviceSize& instanceBufferOffset,
+			const std::vector<RenderPacket>& queue);
+
+		VkDescriptorSet GetOrCreateTargetImGuiHandle(const std::shared_ptr<RenderTarget>& target);
 
 	public:
 		void Initialize(const NativeWindowHandle& handle) override;
@@ -91,7 +111,15 @@ namespace FINALITY
 		std::shared_ptr<Mesh> CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices) override;
 		std::shared_ptr<Pipeline> CreatePipeline(const PipelineConfig& config) override;
 
-		// Texture Batch
+		std::shared_ptr<RenderTarget> CreateRenderTarget(uint32_t width, uint32_t height) override;
+		void ResizeRenderTarget(const std::shared_ptr<RenderTarget>& target, uint32_t width, uint32_t height) override;
+		void UpdateRenderTargetCamera(const std::shared_ptr<RenderTarget>& target, Camera* camera) override;
+		void DestroyRenderTargetGpuResources(RenderTarget& target) override;
+		void RenderSceneToTarget(const std::shared_ptr<RenderTarget>& target, const std::vector<RenderPacket>& queue) override;
+		void* GetRenderTargetTextureHandle(const std::shared_ptr<RenderTarget>& target) override;
+		void SetGameRenderTarget(const std::shared_ptr<RenderTarget>& target) override;
+		void SetSwapchainClearColor(float r, float g, float b, float a) override;
+
 		void BeginTextureBatch();
 		void EndAndSubmitTextureBatch();
 
@@ -102,7 +130,6 @@ namespace FINALITY
 			m_ActiveUploadBatch.stagingBuffers.push_back(buffer);
 			m_ActiveUploadBatch.stagingMemories.push_back(memory);
 		}
-		//
 
 		VkDescriptorSetLayout GetGlobalDescriptorSetLayout() const { return m_GlobalDescriptorSetLayout; }
 		VkDescriptorSet GetGlobalDescriptorSet(uint32_t index) const { return m_GlobalDescriptorSets[index]; }
@@ -136,6 +163,7 @@ namespace FINALITY
 		VkFormat GetSwapChainFormat() const { return m_SwapChain->GetVKFormat(); }
 
 		VkImage GetImages(int image) const { return m_SwapChain->GetVKImage(image); }
+		void SetRenderTargetClearColor(const std::shared_ptr<RenderTarget>& target, float r, float g, float b, float a) override;
 
 	private:
 		WindowSpec m_Spec;
@@ -185,6 +213,9 @@ namespace FINALITY
 		TextureUploadBatchContext m_ActiveUploadBatch;
 
 		std::vector<FrameInstanceBuffer> m_InstanceBuffers;
+		bool m_PendingSwapchainRecreate = false;
+		std::unordered_map<RenderTarget*, VkDescriptorSet> m_TargetImGuiHandles;
+		std::shared_ptr<RenderTarget> m_GameRenderTarget;
 
 		friend class VKImGUIRenderer;
 	};

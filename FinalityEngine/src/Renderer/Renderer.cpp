@@ -98,6 +98,7 @@ namespace FINALITY
     void Renderer::EndScene()
     {
         if (!s_Device) return;
+        if (!s_DirectRenderingEnabled) return;
 
         s_Device->DrawQueue(s_RenderQueue);
     }

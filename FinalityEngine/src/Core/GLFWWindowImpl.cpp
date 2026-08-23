@@ -6,6 +6,15 @@
 #include <GLFW/glfw3native.h>
 #include <Events/Mouse.h>
 
+bool FINALITY::GLFWWindowImpl::ConsumePendingResize(int& outW, int& outH)
+{
+	if (!m_PendingResize) return false;
+	outW = m_PendingWidth;
+	outH = m_PendingHeight;
+	m_PendingResize = false;
+	return true;
+}
+
 void FINALITY::GLFWWindowImpl::Initialize(const WindowSpec& specification)
 {
 	m_Specification = specification;
@@ -67,6 +76,19 @@ void FINALITY::GLFWWindowImpl::Shutdown()
 bool FINALITY::GLFWWindowImpl::ShouldClose() const
 {
 	return glfwWindowShouldClose(m_Window);
+}
+
+void FINALITY::GLFWWindowImpl::SetCallbacks()
+{
+	glfwSetWindowUserPointer(m_Window, this);
+
+	glfwSetFramebufferSizeCallback(m_Window, [](GLFWwindow* w, int width, int height)
+		{
+			auto* self = static_cast<GLFWWindowImpl*>(glfwGetWindowUserPointer(w));
+			self->m_PendingResize = true;
+			self->m_PendingWidth = width;
+			self->m_PendingHeight = height;
+		});
 }
 
 void FINALITY::GLFWWindowImpl::SetCursorMode(bool hiddenAndLocked)

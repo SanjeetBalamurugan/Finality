@@ -14,6 +14,7 @@ namespace FINALITY
 
 		virtual void OnInit() = 0;
 		virtual void OnUpdate(float ts);
+		virtual void OnRender();
 		virtual void OnDestroy();
 
 		Entity CreateEntity(const std::string& name = std::string());
@@ -30,6 +31,7 @@ namespace FINALITY
 	public:
 		void OnInit() override {}
 		void OnUpdate(float ts) override {}
+		void OnRender() override {}
 		void OnDestroy() override {}
 	};
 }

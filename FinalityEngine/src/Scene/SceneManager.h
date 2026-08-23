@@ -25,11 +25,16 @@ namespace FINALITY
 
 		void SetScene(std::unique_ptr<Scene> scene);
 		void ChangeScene();
+
+		void SetSimulationEnabled(bool enabled) { m_SimulationEnabled = enabled; }
+		bool IsSimulationEnabled() const { return m_SimulationEnabled; }
+
 	private:
 		SceneManager() {};
 		~SceneManager() = default;
 
 		std::unique_ptr<Scene> m_CurrentScene = std::make_unique<FINALITY::EmptyScene>();
 		std::unique_ptr<Scene> m_NextScene = nullptr;
+		bool m_SimulationEnabled = true;
 	};
 }

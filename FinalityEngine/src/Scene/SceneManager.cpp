@@ -7,7 +7,12 @@ void FINALITY::SceneManager::Initialize() const
 
 void FINALITY::SceneManager::Update(float ts) const
 {
-	m_CurrentScene->OnUpdate(ts);
+	if (m_SimulationEnabled)
+	{
+		m_CurrentScene->OnUpdate(ts);
+	}
+
+	m_CurrentScene->OnRender();
 }
 
 void FINALITY::SceneManager::Shutdown() const

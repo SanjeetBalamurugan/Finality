@@ -21,6 +21,8 @@ namespace FINALITY
 		void Update();
 		void Shutdown();
 
+		void RequestClose() { m_Running = false; }
+
 		static RendererAPI GetActiveAPI() { return s_CurrentAPI; }
 		static Application& Get() { return *s_Instance; }
 		

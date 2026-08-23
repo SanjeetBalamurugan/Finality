@@ -76,7 +76,18 @@ namespace FINALITY
 
 		static void SetNextWindowPos(const glm::vec2& pos, PanelCondition cond = PanelCondition_Always, const glm::vec2& pivot = glm::vec2(0.0f, 0.0f));
 		static void SetNextWindowBgAlpha(float alpha);
-	private:
 
+		void Image(void* textureHandle, const glm::vec2& size, const glm::vec2& uv0 = glm::vec2(0.0f, 0.0f), const glm::vec2& uv1 = glm::vec2(1.0f, 1.0f));
+		glm::vec2 GetContentRegionAvail();
+
+		bool IsFocused();
+		bool IsHovered();
+
+		static bool BeginMainMenuBar();
+		static void EndMainMenuBar();
+		static bool BeginMenu(std::string_view label);
+		static void EndMenu();
+		static bool MenuItem(std::string_view label, std::string_view shortcut = "");
+	private:
 	};
 }

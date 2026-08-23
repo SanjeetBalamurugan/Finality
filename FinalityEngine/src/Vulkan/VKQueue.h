@@ -14,12 +14,11 @@ namespace FINALITY
 
 		void UpdateSwapChain(VkSwapchainKHR newSwapchain) { m_SwapChain = newSwapchain; }
 
-		uint32_t AcquireNextImage();
-
 		void SubmitSync(VkCommandBuffer cmdBuf);
 		void SubmitASync(VkCommandBuffer cmdBuf, uint32_t imageIndex, bool isFirst, bool isLast);
 
-		void Present(uint32_t imageIndex);
+		uint32_t AcquireNextImage(bool& outNeedsRecreate);
+		bool Present(uint32_t imageIndex);
 		void WaitIdle();
 
 		VkQueue GetQueue() { return m_Queue; }

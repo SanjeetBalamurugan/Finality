@@ -45,36 +45,6 @@ namespace FINALITY
         }
     }
 
-    uint32_t VKQueue::AcquireNextImage()
-    {
-        vkWaitForFences(m_Device, 1, &m_InFlightFences[m_CurrentFrame], VK_TRUE, UINT64_MAX);
-
-        uint32_t imageIndex = 0;
-        VkResult result = vkAcquireNextImageKHR(
-            m_Device,
-            m_SwapChain,
-            UINT64_MAX,
-            m_ImageAvailableSemaphores[m_CurrentFrame],
-            VK_NULL_HANDLE,
-            &imageIndex
-        );
-
-        if (result == VK_ERROR_OUT_OF_DATE_KHR)
-        {
-            return UINT32_MAX;
-        }
-
-        if (m_ImagesInFlight[imageIndex] != VK_NULL_HANDLE)
-        {
-            vkWaitForFences(m_Device, 1, &m_ImagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
-        }
-        m_ImagesInFlight[imageIndex] = m_InFlightFences[m_CurrentFrame];
-
-        vkResetFences(m_Device, 1, &m_InFlightFences[m_CurrentFrame]);
-
-        return imageIndex;
-    }
-
     void VKQueue::SubmitASync(VkCommandBuffer cmdBuf, uint32_t imageIndex, bool isFirst, bool isLast)
     {
         VkSubmitInfo submitInfo{};
@@ -100,25 +70,6 @@ namespace FINALITY
 
         VkResult res = vkQueueSubmit(m_Queue, 1, &submitInfo, isLast ? m_InFlightFences[m_CurrentFrame] : VK_NULL_HANDLE);
         CHECK_VK_RESULT(res, "vkQueueSubmit frame execution failure");
-    }
-
-    void VKQueue::Present(uint32_t imageIndex)
-    {
-        VkPresentInfoKHR presentInfo{};
-        presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
-        VkSemaphore waitSemaphores[] = { m_RenderFinishedSemaphores[imageIndex] }; // matches SubmitASync's signal
-        presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = waitSemaphores;
-
-        VkSwapchainKHR swapChains[] = { m_SwapChain };
-        presentInfo.swapchainCount = 1;
-        presentInfo.pSwapchains = swapChains;
-        presentInfo.pImageIndices = &imageIndex;
-
-        vkQueuePresentKHR(m_Queue, &presentInfo);
-
-        m_CurrentFrame = (m_CurrentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
     }
 
     void VKQueue::WaitIdle()
@@ -147,4 +98,73 @@ namespace FINALITY
             vkDestroySemaphore(m_Device, m_RenderFinishedSemaphores[i], nullptr);
         }
     }
+
+    uint32_t VKQueue::AcquireNextImage(bool& outNeedsRecreate)
+    {
+        outNeedsRecreate = false;
+        vkWaitForFences(m_Device, 1, &m_InFlightFences[m_CurrentFrame], VK_TRUE, UINT64_MAX);
+
+        uint32_t imageIndex = 0;
+        VkResult result = vkAcquireNextImageKHR(
+            m_Device,
+            m_SwapChain,
+            UINT64_MAX,
+            m_ImageAvailableSemaphores[m_CurrentFrame],
+            VK_NULL_HANDLE,
+            &imageIndex
+        );
+
+        if (result == VK_ERROR_OUT_OF_DATE_KHR)
+        {
+            outNeedsRecreate = true;
+            return UINT32_MAX;
+        }
+
+        if (result == VK_SUBOPTIMAL_KHR)
+        {
+            outNeedsRecreate = true;
+        }
+        else if (result != VK_SUCCESS)
+        {
+            CHECK_VK_RESULT(result, "vkAcquireNextImageKHR");
+        }
+
+        if (m_ImagesInFlight[imageIndex] != VK_NULL_HANDLE)
+        {
+            vkWaitForFences(m_Device, 1, &m_ImagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+        }
+        m_ImagesInFlight[imageIndex] = m_InFlightFences[m_CurrentFrame];
+
+        vkResetFences(m_Device, 1, &m_InFlightFences[m_CurrentFrame]);
+
+        return imageIndex;
+    }
+
+    bool VKQueue::Present(uint32_t imageIndex)
+    {
+        VkPresentInfoKHR presentInfo{};
+        presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+        VkSemaphore waitSemaphores[] = { m_RenderFinishedSemaphores[imageIndex] };
+        presentInfo.waitSemaphoreCount = 1;
+        presentInfo.pWaitSemaphores = waitSemaphores;
+
+        VkSwapchainKHR swapChains[] = { m_SwapChain };
+        presentInfo.swapchainCount = 1;
+        presentInfo.pSwapchains = swapChains;
+        presentInfo.pImageIndices = &imageIndex;
+
+        VkResult result = vkQueuePresentKHR(m_Queue, &presentInfo);
+
+        m_CurrentFrame = (m_CurrentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+
+        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+        {
+            return true;
+        }
+
+        CHECK_VK_RESULT(result, "vkQueuePresentKHR");
+        return false;
+    }
 }
+

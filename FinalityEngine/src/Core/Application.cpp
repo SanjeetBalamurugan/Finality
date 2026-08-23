@@ -49,7 +49,7 @@ void FINALITY::Application::Initialize(const RendererAPI& api, const WindowSpec&
 	}
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
 	switch (api)
 	{
@@ -81,7 +81,9 @@ void FINALITY::Application::Initialize(const RendererAPI& api, const WindowSpec&
 	m_CurrentGame->Init();
 
 	FINALITY::AssetManager::Initialize();
-	SceneManager::GetInstance().Initialize();
+	//SceneManager::GetInstance().Initialize();
+
+	m_Window->SetCallbacks();
 
 	m_Running = true;
 }
@@ -100,6 +102,17 @@ void FINALITY::Application::Update()
 		lastFrameTime = currentFrameTime;
 
 		m_Window->Update();
+		int newW, newH;
+		if (m_Window->ConsumePendingResize(newW, newH))
+		{
+			if (newW > 0 && newH > 0)
+			{
+				WindowSpec spec = m_Window->GetSpecifications();
+				spec.width = newW;
+				spec.height = newH;
+				m_RenderDevice->SetWindowSpec(spec);
+			}
+		}
 
 		m_RenderDevice->BeginFrame();
 
@@ -108,8 +121,8 @@ void FINALITY::Application::Update()
 		ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
 
 		// Frame logic like draw calls here
-		m_CurrentGame->Update(deltaTime);
 		SceneManager::GetInstance().Update(deltaTime);
+		m_CurrentGame->Update(deltaTime);
 
 		ImGui::Render();
 		m_RenderDevice->EndFrame();
@@ -128,9 +141,9 @@ void FINALITY::Application::Shutdown()
 	FINALITY::AssetManager::Shutdown();
 	FINALITY::Renderer::Shutdown();
 
+	if (m_CurrentGame) m_CurrentGame->Destroy();
 	m_ImGUIRenderer->Destroy();
 
-	if (m_CurrentGame) m_CurrentGame->Destroy();
 	if (m_Window)
 	{
 		m_Window->Shutdown();

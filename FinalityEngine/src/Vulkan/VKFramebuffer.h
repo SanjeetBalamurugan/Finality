@@ -20,6 +20,7 @@ namespace FINALITY
         VkRenderPass GetVKRenderPass() const { return m_RenderPass; }
         VkFramebuffer GetVKFramebuffer() const { return m_Framebuffer; }
         VkImage GetVKColorImage() const { return m_ColorImage; }
+        VkSampler GetColorSampler() const { return m_ColorSampler; }
 
     private:
         void Invalidate(VkPhysicalDevice physicalDevice);

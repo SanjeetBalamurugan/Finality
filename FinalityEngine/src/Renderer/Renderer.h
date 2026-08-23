@@ -38,6 +38,12 @@ namespace FINALITY
         
         static uint32_t GetSubmittedCount() { return (uint32_t)s_RenderQueue.size(); }
         static uint32_t GetCulledCount() { return s_CulledCount; }
+        static const std::vector<RenderPacket>& GetRenderQueue() { return s_RenderQueue; }
+
+        static void SetDirectRenderingEnabled(bool enabled) { s_DirectRenderingEnabled = enabled; }
+        static bool IsDirectRenderingEnabled() { return s_DirectRenderingEnabled; }
+
+        static void SetFrustumCullingEnabled(bool enabled) { s_FrustumCullingEnabled = enabled; }
 
     private:
         static RenderDevice* s_Device;
@@ -48,10 +54,10 @@ namespace FINALITY
         static bool s_FrustumCullingEnabled;
 
         static uint32_t s_CulledCount;
+        static inline bool s_DirectRenderingEnabled = true;
 
     protected:
         static bool TryGetCullingFrustum(const Frustum*& outFrustum);
-        static void SetFrustumCullingEnabled(bool enabled) { s_FrustumCullingEnabled = enabled; }
         static bool IsFrustumCullingEnabled() { return s_FrustumCullingEnabled; }
     };
 }

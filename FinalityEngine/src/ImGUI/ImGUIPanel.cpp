@@ -145,3 +145,49 @@ void FINALITY::ImGUIPanel::SetNextWindowBgAlpha(float alpha)
 {
 	ImGui::SetNextWindowBgAlpha(alpha);
 }
+
+void FINALITY::ImGUIPanel::Image(void* textureHandle, const glm::vec2& size, const glm::vec2& uv0, const glm::vec2& uv1)
+{
+	ImGui::Image((ImTextureID)textureHandle, ImVec2(size.x, size.y), ImVec2(uv0.x, uv0.y), ImVec2(uv1.x, uv1.y));
+}
+
+glm::vec2 FINALITY::ImGUIPanel::GetContentRegionAvail()
+{
+	ImVec2 avail = ImGui::GetContentRegionAvail();
+	return glm::vec2(avail.x, avail.y);
+}
+
+bool FINALITY::ImGUIPanel::IsFocused()
+{
+	return ImGui::IsWindowFocused();
+}
+
+bool FINALITY::ImGUIPanel::IsHovered()
+{
+	return ImGui::IsWindowHovered();
+}
+
+bool FINALITY::ImGUIPanel::BeginMainMenuBar()
+{
+	return ImGui::BeginMainMenuBar();
+}
+
+void FINALITY::ImGUIPanel::EndMainMenuBar()
+{
+	ImGui::EndMainMenuBar();
+}
+
+bool FINALITY::ImGUIPanel::BeginMenu(std::string_view label)
+{
+	return ImGui::BeginMenu(label.data());
+}
+
+void FINALITY::ImGUIPanel::EndMenu()
+{
+	ImGui::EndMenu();
+}
+
+bool FINALITY::ImGUIPanel::MenuItem(std::string_view label, std::string_view shortcut)
+{
+	return ImGui::MenuItem(label.data(), shortcut.empty() ? nullptr : shortcut.data());
+}

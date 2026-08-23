@@ -13,12 +13,6 @@ namespace FINALITY
 
     void Scene::OnUpdate(float ts)
     {
-        if (!m_TexturesUploaded && Renderer::GetDevice()->IsUploadBatchActive())
-        {
-            Renderer::GetDevice()->EndAndSubmitTextureBatch();
-            m_TexturesUploaded = true;
-        }
-
         auto scriptView = m_EntityRegistry.view<ScriptStorage>();
 
         std::vector entities(scriptView.begin(), scriptView.end());
@@ -42,6 +36,15 @@ namespace FINALITY
                 script.Instance->Update(ts);
             }
         }
+    }
+
+    void Scene::OnRender()
+    {
+        if (!m_TexturesUploaded && Renderer::GetDevice()->IsUploadBatchActive())
+        {
+            Renderer::GetDevice()->EndAndSubmitTextureBatch();
+            m_TexturesUploaded = true;
+        }
 
         auto cameraView = m_EntityRegistry.view<CameraComponent, TransformComponent>();
         for (auto entityHandle : cameraView)
@@ -51,6 +54,8 @@ namespace FINALITY
 
             if (cam.IsPrimary)
             {
+                cam.CameraInstance->SetPosition(transform.Position);
+                cam.CameraInstance->SetRotation(transform.Rotation);
                 Renderer::SetActiveCamera(cam.CameraInstance.get());
             }
         }
