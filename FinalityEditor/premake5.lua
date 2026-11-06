@@ -1,3 +1,4 @@
+
 project "FinalityEditor"
     kind "WindowedApp"
     language "C++"
@@ -14,18 +15,21 @@ project "FinalityEditor"
         "../FinalityEngine/src",
         "../vendor/glm",
         "../vendor/entt/include",
-        "../vendor/spdlog/include/"
+        "../vendor/spdlog/include/",
+        "../vendor/yaml-cpp/include",
+        "../vendor/imgui"
     }
 
     links {
-        "FinalityEngine"
+        "FinalityEngine",
+        "yaml-cpp"
     }
 
     filter "system:windows"
         systemversion "latest"
-        entrypoint "mainCRTStartup" 
-        files { 
-            "assets/windows/Resource.rc", 
-            "assets/windows/favicon.ico" 
+        entrypoint "mainCRTStartup"
+        files {
+            "assets/windows/Resource.rc",
+            "assets/windows/favicon.ico"
         }
-    filter {} 
+    filter {}

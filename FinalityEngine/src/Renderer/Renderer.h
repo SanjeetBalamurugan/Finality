@@ -28,6 +28,7 @@ namespace FINALITY
         static void EndScene();
 
         static void PushEntity(Entity entity);
+        static void PushEntity(Entity entity, const glm::mat4& worldTransform);
         static RenderDevice* GetDevice() { return s_Device; }
 
         static void SetActiveCamera(Camera* camera) { s_ActiveCamera = camera; }

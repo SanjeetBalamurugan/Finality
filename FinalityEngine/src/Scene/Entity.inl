@@ -22,7 +22,14 @@ namespace FINALITY
 
         T* ptr = script.get();
 
-        storage.Scripts.emplace_back(std::move(script), false);
+        storage.Scripts.emplace_back(std::move(script), false,
+            []() -> std::unique_ptr<ScriptableComponent>
+            {
+                if constexpr (std::is_default_constructible_v<T>)
+                    return std::make_unique<T>();
+                else
+                    return nullptr;
+            });
 
         ptr->Awake();
 
@@ -60,4 +67,77 @@ namespace FINALITY
 
         m_CurrentScene->m_EntityRegistry.remove<T>(m_EntityHandle);
     }
+
+	inline void Entity::SetParent(Entity parent)
+	{
+		auto& registry = m_CurrentScene->m_EntityRegistry;
+		auto& rel = registry.get<RelationshipComponent>(m_EntityHandle);
+
+        if (parent.IsValid())
+        {
+        if (parent.m_CurrentScene != m_CurrentScene ||
+            !registry.valid(parent.GetHandle()) ||
+            parent.GetHandle() == m_EntityHandle)
+            return;
+        entt::entity cursor = parent.GetHandle();
+        size_t depth = 0;
+        while (cursor != entt::null && registry.valid(cursor) && depth++ < 1024)
+        {
+            if (cursor == m_EntityHandle) return;
+            const auto* ancestor = registry.try_get<RelationshipComponent>(cursor);
+            cursor = ancestor ? ancestor->Parent : entt::null;
+        }
+        }
+		if (rel.Parent != entt::null)
+		{
+			auto& oldParentRel = registry.get<RelationshipComponent>(rel.Parent);
+
+			if (oldParentRel.FirstChild == m_EntityHandle)
+			{
+				oldParentRel.FirstChild = rel.NextSibling;
+			}
+			else if (rel.PrevSibling != entt::null)
+			{
+				auto& prevRel = registry.get<RelationshipComponent>(rel.PrevSibling);
+				prevRel.NextSibling = rel.NextSibling;
+			}
+
+			if (rel.NextSibling != entt::null)
+			{
+				auto& nextRel = registry.get<RelationshipComponent>(rel.NextSibling);
+				nextRel.PrevSibling = rel.PrevSibling;
+			}
+		}
+
+		rel.Parent = entt::null;
+		rel.NextSibling = entt::null;
+		rel.PrevSibling = entt::null;
+
+        if (!parent.IsValid()) return;
+        rel.Parent = parent.GetHandle();
+
+		auto& parentRel = registry.get<RelationshipComponent>(parent.GetHandle());
+
+		if (parentRel.FirstChild == entt::null)
+		{
+			parentRel.FirstChild = m_EntityHandle;
+			return;
+		}
+
+		entt::entity lastChild = parentRel.FirstChild;
+
+		while (true)
+		{
+			auto& lastRel = registry.get<RelationshipComponent>(lastChild);
+
+			if (lastRel.NextSibling == entt::null)
+			{
+				lastRel.NextSibling = m_EntityHandle;
+				rel.PrevSibling = lastChild;
+				break;
+			}
+
+			lastChild = lastRel.NextSibling;
+		}
+	}
 }

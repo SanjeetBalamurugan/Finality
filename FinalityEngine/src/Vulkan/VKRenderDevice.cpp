@@ -695,6 +695,12 @@ void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 	vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
 
 	this->CreateInstanceBuffers();
+	this->CheckTimeQuerySupport();
+
+	if (m_timeQuerySupported)
+	{
+		m_TimeQueryPool = CreateQueryPool(m_Device, VK_QUERY_TYPE_TIMESTAMP, 2 * m_SwapChain->GetImageCount());
+	}
 
 	pfnCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)vkGetDeviceProcAddr(m_Device, "vkCmdBeginRenderingKHR");
 	pfnCmdEndRenderingKHR = (PFN_vkCmdEndRenderingKHR)vkGetDeviceProcAddr(m_Device, "vkCmdEndRenderingKHR");
@@ -806,6 +812,11 @@ std::shared_ptr<FINALITY::Mesh> FINALITY::VKRenderDevice::CreateMesh(const std::
 std::shared_ptr<FINALITY::Mesh> FINALITY::VKRenderDevice::CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices)
 {
 	return std::make_shared<VKMesh>(m_Device, m_Devices.SelectedDevice().device, vertices, indices);
+}
+
+std::shared_ptr<FINALITY::Mesh> FINALITY::VKRenderDevice::CreateMesh(const std::string& meshPath)
+{
+	return std::make_shared<VKMesh>(m_Device, m_Devices.SelectedDevice().device, meshPath);
 }
 
 std::shared_ptr<FINALITY::Pipeline> FINALITY::VKRenderDevice::CreatePipeline(const PipelineConfig& config)
@@ -1083,6 +1094,22 @@ void FINALITY::VKRenderDevice::SetRenderTargetClearColor(const std::shared_ptr<R
 	target->ClearColor = { r, g, b, a };
 }
 
+double FINALITY::VKRenderDevice::GetGPUTime()
+{
+	float period = m_Devices.SelectedDevice().properties.limits.timestampPeriod;
+
+	uint64_t timestamps[2] = {0, 0};
+	uint32_t timestampSlot = m_ImageIndex * 2;
+	VkResult res = vkGetQueryPoolResults(m_Device, m_TimeQueryPool, timestampSlot, 2, sizeof(timestamps), timestamps, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+	CHECK_VK_RESULT(res, "vkGetQueryPoolResults");
+
+	uint64_t delta = timestamps[1] - timestamps[0];
+	double nanoseconds = delta * static_cast<double>(period);
+	double milliseconds = nanoseconds / 1000000.0;
+
+	return milliseconds;
+}
+
 VkDescriptorSet FINALITY::VKRenderDevice::GetOrCreateTargetImGuiHandle(const std::shared_ptr<RenderTarget>& target)
 {
 	if (!target) return VK_NULL_HANDLE;
@@ -1101,6 +1128,21 @@ VkDescriptorSet FINALITY::VKRenderDevice::GetOrCreateTargetImGuiHandle(const std
 
 	m_TargetImGuiHandles[target.get()] = imguiSet;
 	return imguiSet;
+}
+
+void FINALITY::VKRenderDevice::CheckTimeQuerySupport()
+{
+	m_ImageHasTimestamp.assign(m_SwapChain->GetImageCount(), false);
+
+	uint32_t timestampValidBits = this->m_Devices.SelectedDevice().qFamilyProps[m_QueueFamily].timestampValidBits;
+	if (timestampValidBits == 0)
+	{
+		FI_CORE_WARN("Timestamp queries are not supported on this device.");
+	}
+	else
+	{
+		m_timeQuerySupported = true;
+	}
 }
 
 void FINALITY::VKRenderDevice::Shutdown()
@@ -1137,6 +1179,8 @@ void FINALITY::VKRenderDevice::Shutdown()
 
 	m_Queue.ShutDown();
 	m_SwapChain->Shutdown();
+
+	vkDestroyQueryPool(m_Device, m_TimeQueryPool, nullptr); // Destroy the time query pool if it was created
 
 	vkDeviceWaitIdle(m_Device);
 	DestroyInstanceBuffers();
@@ -1178,7 +1222,19 @@ void FINALITY::VKRenderDevice::BeginFrame()
 		m_GlobalUBO.Update(m_ImageIndex, &ubo);
 	}
 
+	if (m_timeQuerySupported && m_TimeQueryPool != VK_NULL_HANDLE && m_ImageHasTimestamp[m_ImageIndex])
+	{
+		m_LastGPUTime = GetGPUTime();
+	}
+
 	BeginCommandBuffers(m_CMDBuffers[m_ImageIndex], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+	if (m_timeQuerySupported && m_TimeQueryPool != VK_NULL_HANDLE)
+	{
+		uint32_t timestampSlot = m_ImageIndex * 2;
+		vkCmdResetQueryPool(m_CMDBuffers[m_ImageIndex], m_TimeQueryPool, timestampSlot, 2);
+		vkCmdWriteTimestamp(m_CMDBuffers[m_ImageIndex], VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, m_TimeQueryPool, timestampSlot);
+	}
 
 	std::vector<VkClearValue> clearValues(2);
 	clearValues[0].color = m_ClearColor;
@@ -1344,6 +1400,12 @@ void FINALITY::VKRenderDevice::EndFrame()
 		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &presentBarrier);
 	}
 
+	if (m_timeQuerySupported && m_TimeQueryPool != VK_NULL_HANDLE)
+	{
+		uint32_t timestampSlot = m_ImageIndex * 2 + 1;
+		vkCmdWriteTimestamp(m_CMDBuffers[m_ImageIndex], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, m_TimeQueryPool, timestampSlot);
+	}
+
 	VkResult res = vkEndCommandBuffer(cmd);
 	CHECK_VK_RESULT(res, "vkEndCommandBuffer error");
 
@@ -1357,6 +1419,10 @@ void FINALITY::VKRenderDevice::EndFrame()
 	else
 	{
 		m_Queue.SubmitASync(cmd, m_ImageIndex, true, true);
+	}
+
+	if (m_timeQuerySupported && m_TimeQueryPool != VK_NULL_HANDLE) {
+		m_ImageHasTimestamp[m_ImageIndex] = true;
 	}
 }
 

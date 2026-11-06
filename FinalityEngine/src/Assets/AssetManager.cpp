@@ -1,4 +1,6 @@
 #include "AssetManager.h"
+#include "MaterialAsset.h"
+#include <vector>
 
 namespace FINALITY
 {
@@ -31,4 +33,23 @@ namespace FINALITY
     {
         return s_LoadedAssets.find(handle) != s_LoadedAssets.end();
     }
+}
+
+size_t FINALITY::AssetManager::ReloadMaterialShaders(bool force)
+{
+    size_t rebuilt = 0;
+    for (auto& [handle, asset] : s_LoadedAssets)
+    {
+        if (auto material = std::dynamic_pointer_cast<MaterialAsset>(asset))
+            rebuilt += material->ReloadShadersIfChanged(force) ? 1 : 0;
+    }
+    return rebuilt;
+}
+
+void FINALITY::AssetManager::InvalidateAssetPath(const std::string& filePath)
+{
+    auto it = s_PathToHandleRegistry.find(filePath);
+    if (it == s_PathToHandleRegistry.end()) return;
+    s_LoadedAssets.erase(it->second);
+    s_PathToHandleRegistry.erase(it);
 }

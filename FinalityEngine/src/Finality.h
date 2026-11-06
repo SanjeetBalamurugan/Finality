@@ -8,6 +8,7 @@
 #include "Core/Log.h"
 #include "Core/Mesh.h"
 #include "Core/Pipeline.h"
+#include "Core/FileDialogs.h"
 
 // SCENE
 #include "Scene/Scene.h"
@@ -18,6 +19,7 @@
 
 // RENDERER
 #include "Renderer/Shader.h"
+#include "Renderer/ShaderCompiler.h"
 #include "Renderer/Renderer.h"
 #include "Renderer/Camera.h"
 
@@ -28,9 +30,12 @@
 
 // ASSETS
 #include "Assets/AssetManager.h"
+#include "Assets/MaterialAsset.h"
 
 // UTILS
 #include "Utils/UUID.h"
+#include "Utils/Serializers/SceneSerializer.h"
+#include "Utils/Serializers/MaterialSerializer.h"
 
 // UI
 #include "ImGUI/ImGUIPanel.h"

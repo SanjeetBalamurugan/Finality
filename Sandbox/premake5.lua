@@ -14,7 +14,8 @@ project "Sandbox"
         "../FinalityEngine/src",
         "../vendor/glm",
         "../vendor/entt/include",
-        "../vendor/spdlog/include/"
+        "../vendor/spdlog/include/",
+        "../vendor/yaml-cpp/include/"
     }
 
     links {

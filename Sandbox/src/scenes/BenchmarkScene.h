@@ -263,6 +263,11 @@ public:
             m_UiAvgFrameTimeMs
         );
 
+        perfPanel.Text(
+            "GPU main render: %.2f ms",
+			static_cast<float>(FINALITY::Renderer::GetDevice()->GetGPUTimeMS())
+        );
+
         perfPanel.PlotLines(
             "##TimeGraph",
             m_FrameTimeHistory,

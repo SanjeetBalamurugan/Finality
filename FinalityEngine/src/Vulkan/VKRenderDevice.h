@@ -83,6 +83,8 @@ namespace FINALITY
 			const std::vector<RenderPacket>& queue);
 
 		VkDescriptorSet GetOrCreateTargetImGuiHandle(const std::shared_ptr<RenderTarget>& target);
+		void CheckTimeQuerySupport();
+		double GetGPUTime() override;
 
 	public:
 		void Initialize(const NativeWindowHandle& handle) override;
@@ -109,6 +111,7 @@ namespace FINALITY
 
 		std::shared_ptr<Mesh> CreateMesh(const std::vector<Vertex>& vertices) override;
 		std::shared_ptr<Mesh> CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices) override;
+		std::shared_ptr<Mesh> CreateMesh(const std::string& meshPath) override;
 		std::shared_ptr<Pipeline> CreatePipeline(const PipelineConfig& config) override;
 
 		std::shared_ptr<RenderTarget> CreateRenderTarget(uint32_t width, uint32_t height) override;
@@ -165,6 +168,8 @@ namespace FINALITY
 		VkImage GetImages(int image) const { return m_SwapChain->GetVKImage(image); }
 		void SetRenderTargetClearColor(const std::shared_ptr<RenderTarget>& target, float r, float g, float b, float a) override;
 
+		const double GetGPUTimeMS() const override { return m_LastGPUTime; };
+
 	private:
 		WindowSpec m_Spec;
 		const std::vector<const char*> m_ValidationLayers = {
@@ -216,6 +221,11 @@ namespace FINALITY
 		bool m_PendingSwapchainRecreate = false;
 		std::unordered_map<RenderTarget*, VkDescriptorSet> m_TargetImGuiHandles;
 		std::shared_ptr<RenderTarget> m_GameRenderTarget;
+
+		bool m_timeQuerySupported = false;
+		float m_LastGPUTime = 0.0f;
+		VkQueryPool m_TimeQueryPool = VK_NULL_HANDLE;
+		std::vector<bool> m_ImageHasTimestamp;
 
 		friend class VKImGUIRenderer;
 	};

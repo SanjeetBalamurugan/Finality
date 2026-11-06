@@ -95,6 +95,52 @@ namespace FINALITY
         s_RenderQueue.push_back(packet);
     }
 
+    void Renderer::PushEntity(Entity entity, const glm::mat4& worldTransform)
+    {
+        if (!entity.HasComponent<MeshComponent>() || !entity.HasComponent<MaterialComponent>())
+            return;
+
+        const auto& meshComp = entity.GetComponent<MeshComponent>();
+        if (!meshComp.MeshData)
+            return;
+
+        const Frustum* cullingFrustum = nullptr;
+        if (TryGetCullingFrustum(cullingFrustum))
+        {
+            glm::vec3 worldCenter = glm::vec3(worldTransform * glm::vec4(meshComp.MeshData->GetBoundsCenter(), 1.0f));
+
+            glm::vec3 scale;
+            scale.x = glm::length(glm::vec3(worldTransform[0]));
+            scale.y = glm::length(glm::vec3(worldTransform[1]));
+            scale.z = glm::length(glm::vec3(worldTransform[2]));
+            float maxScale = std::max({ scale.x, scale.y, scale.z });
+
+            float worldRadius = meshComp.MeshData->GetBoundsRadius() * maxScale;
+
+            if (!cullingFrustum->IntersectsSphere(worldCenter, worldRadius))
+            {
+                s_CulledCount++;
+                return;
+            }
+        }
+
+        RenderPacket packet{};
+        packet.MeshData = meshComp.MeshData;
+
+        const auto& mat = entity.GetComponent<MaterialComponent>();
+        if (mat.MaterialInstance)
+        {
+            packet.PipelineInstance = mat.MaterialInstance->GetPipeline();
+            packet.CustomPushData = mat.MaterialInstance->GetRawDataBuffer();
+            packet.Textures = mat.MaterialInstance->GetTextures();
+            packet.MaterialKey = mat.MaterialInstance.get();
+        }
+
+        packet.Transform = worldTransform;
+
+        s_RenderQueue.push_back(packet);
+    }
+
     void Renderer::EndScene()
     {
         if (!s_Device) return;

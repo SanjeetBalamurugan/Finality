@@ -20,7 +20,7 @@ namespace FINALITY
             auto it = s_PathToHandleRegistry.find(filePath);
             if (it != s_PathToHandleRegistry.end())
             {
-                return std::static_pointer_cast<T>(s_LoadedAssets[it->second]);
+                return std::dynamic_pointer_cast<T>(s_LoadedAssets[it->second]);
             }
 
             std::shared_ptr<T> asset = T::Create(filePath, std::forward<Args>(args)...);
@@ -37,6 +37,8 @@ namespace FINALITY
 
         static std::shared_ptr<Asset> GetAsset(UUID handle);
         static bool HasAsset(UUID handle);
+        static size_t ReloadMaterialShaders(bool force = false);
+        static void InvalidateAssetPath(const std::string& filePath);
 
     private:
         static std::unordered_map<UUID, std::shared_ptr<Asset>> s_LoadedAssets;

@@ -309,3 +309,68 @@ glm::vec2 FINALITY::ImGUIPanel::GetWindowPadding()
 {
 	return glm::vec2(ImGui::GetStyle().WindowPadding.x, ImGui::GetStyle().WindowPadding.y);
 }
+
+bool FINALITY::ImGUIPanel::TreeNode(std::string_view label, bool selected)
+{
+	ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow;
+
+	if (selected)
+		flags |= ImGuiTreeNodeFlags_Selected;
+
+	return ImGui::TreeNodeEx(label.data(), flags);
+}
+
+bool FINALITY::ImGUIPanel::IsItemClicked(int mouseButton)
+{
+	return ImGui::IsItemClicked(mouseButton);
+}
+
+void FINALITY::ImGUIPanel::Indent(float width)
+{
+	ImGui::Indent(width);
+}
+
+void FINALITY::ImGUIPanel::Unindent(float width)
+{
+	ImGui::Unindent(width);
+}
+
+void FINALITY::ImGUIPanel::Spacing()
+{
+	ImGui::Spacing();
+}
+
+void FINALITY::ImGUIPanel::OpenPopup(std::string_view str_id, PanelPopupFlags popup_flags)
+{
+	ImGui::OpenPopup(str_id.data(), popup_flags);
+}
+
+bool FINALITY::ImGUIPanel::BeginPopup(std::string_view str_id, PanelFlags flags)
+{
+	return ImGui::BeginPopup(str_id.data(), flags);
+}
+
+void FINALITY::ImGUIPanel::EndPopup()
+{
+	ImGui::EndPopup();
+}
+
+bool FINALITY::ImGUIPanel::IsAnyItemHovered()
+{
+	return ImGui::IsAnyItemHovered();
+}
+
+bool FINALITY::ImGUIPanel::IsItemHovered()
+{
+	return ImGui::IsItemHovered();
+}
+
+bool FINALITY::ImGUIPanel::IsMouseClicked(int a)
+{
+	return ImGui::IsMouseClicked(a);
+}
+
+void FINALITY::ImGUIPanel::CloseCurrentPopup()
+{
+	ImGui::CloseCurrentPopup();
+}

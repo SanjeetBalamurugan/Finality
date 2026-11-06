@@ -1,5 +1,5 @@
 #include "EditorApp.h"
-#include "MainScene.h"
+#include <MainScene.h>
 
 void FINALITY::EditorApp::Init()
 {

@@ -1,0 +1,18 @@
+Material:
+  Version: 1
+  Name: Custom Pulse
+  Type: Custom/Pulse
+  Shaders:
+    Vertex: assets/shaders/shader.vert
+    Fragment: assets/shaders/shader.frag
+  Pipeline:
+    Blending: false
+    Culling: Back
+  Properties:
+    - Name: time
+      Type: Float
+      Offset: 64
+      Default: 0.0
+  Texture:
+    Binding: textureSampler
+    Path: assets/textures/test.png

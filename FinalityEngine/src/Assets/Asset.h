@@ -10,7 +10,8 @@ namespace FINALITY
         Texture,
         Shader,
         Mesh,
-        Pipeline
+        Pipeline,
+        Material
     };
 
     class Asset

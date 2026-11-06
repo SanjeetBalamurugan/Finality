@@ -20,6 +20,21 @@ static VkSurfaceFormatKHR ChooseSurfaceFormatAndColorSpace(const std::vector<VkS
 	return surfaceFormats[0];
 }
 
+static VkQueryPool CreateQueryPool(VkDevice device, VkQueryType queryType, uint32_t queryCount)
+{
+	VkQueryPoolCreateInfo queryPoolInfo{};
+	queryPoolInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+	queryPoolInfo.pNext = nullptr;
+	queryPoolInfo.flags = 0;
+	queryPoolInfo.queryType = queryType;
+	queryPoolInfo.queryCount = queryCount;
+	queryPoolInfo.pipelineStatistics = 0;
+	VkQueryPool queryPool;
+	VkResult res = vkCreateQueryPool(device, &queryPoolInfo, nullptr, &queryPool);
+	CHECK_VK_RESULT(res, "vkCreateQueryPool");
+	return queryPool;
+}
+
 static uint32_t ChooseNumImages(const VkSurfaceCapabilitiesKHR& Capabilities)
 {
 	uint32_t RequestedNumImages = Capabilities.minImageCount + 1;
@@ -39,22 +54,23 @@ static uint32_t ChooseNumImages(const VkSurfaceCapabilitiesKHR& Capabilities)
 
 static VkPresentModeKHR ChoosePresentMode(const std::vector<VkPresentModeKHR>& PresentModes)
 {
-	for (size_t i = 0; i < PresentModes.size(); i++)
-	{
-		if (PresentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) // Using Mailbox mode
-		{
-			FI_CORE_INFO("USING MAILBOX MODE");
-			return PresentModes[i];
-		}
-		else if (PresentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)
-		{
-			FI_CORE_INFO("USING IMMEDIATE MODE");
-			return PresentModes[i];
-		}
-	}
+	return VK_PRESENT_MODE_IMMEDIATE_KHR;
+	//for (size_t i = 0; i < PresentModes.size(); i++)
+	//{
+	//	if (PresentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) // Using Mailbox mode
+	//	{
+	//		FI_CORE_INFO("USING MAILBOX MODE");
+	//		return PresentModes[i];
+	//	}
+	//	else if (PresentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)
+	//	{
+	//		FI_CORE_INFO("USING IMMEDIATE MODE");
+	//		return PresentModes[i];
+	//	}
+	//}
 
-	FI_CORE_INFO("USING FIFO MODE");
-	return VK_PRESENT_MODE_FIFO_KHR;
+	//FI_CORE_INFO("USING FIFO MODE");
+	//return VK_PRESENT_MODE_FIFO_KHR;
 }
 
 static VkImageView CreateImageView(VkDevice device, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags,
@@ -138,6 +154,20 @@ inline VkPipelineVertexInputStateCreateInfo CreatePipelineVertexInputState(
         .format = VK_FORMAT_R32G32_SFLOAT,
         .offset = offsetof(FINALITY::Vertex, TexCoord)
         });
+
+    outAttributes.push_back(VkVertexInputAttributeDescription{
+        .location = 11,
+        .binding = 0,
+        .format = VK_FORMAT_R32G32B32_SFLOAT,
+        .offset = offsetof(FINALITY::Vertex, Normal)
+    });
+
+    outAttributes.push_back(VkVertexInputAttributeDescription{
+        .location = 12,
+        .binding = 0,
+        .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+        .offset = offsetof(FINALITY::Vertex, Tangent)
+    });
 
     VkVertexInputBindingDescription instanceBinding{};
     instanceBinding.binding = 1;

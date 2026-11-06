@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <vector>
+#include <functional>
 #include <entt.hpp>
 #include <Core/Core.h>
 
@@ -18,9 +19,11 @@ namespace FINALITY
         {
             std::unique_ptr<ScriptableComponent> Instance;
             bool Started = false;
+            std::function<std::unique_ptr<ScriptableComponent>()> Factory;
 
-            ScriptInstance(std::unique_ptr<ScriptableComponent> instance, bool started)
-                : Instance(std::move(instance)), Started(started)
+            ScriptInstance(std::unique_ptr<ScriptableComponent> instance, bool started,
+                std::function<std::unique_ptr<ScriptableComponent>()> factory = {})
+                : Instance(std::move(instance)), Started(started), Factory(std::move(factory))
             {
             }
 

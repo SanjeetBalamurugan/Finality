@@ -27,6 +27,8 @@ workspace "Finality"
         include "Scripts/premake_glfw.lua" -- GLFW
         include "Scripts/premake_vk.lua" -- VULKAN
         include "Scripts/premake_imgui.lua" -- IMGUI
+        include "Scripts/premake_yaml.lua" -- YAML-CPP
+        include "Scripts/premake_imguizmo.lua" -- IMGUIZMO
         include "vendor/stb" -- STB
     group ""
             

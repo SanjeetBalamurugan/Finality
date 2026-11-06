@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 
 #include <Core/Core.h>
+#include <string>
 
 namespace FINALITY
 {
@@ -13,6 +14,8 @@ namespace FINALITY
 		glm::vec3 Position;
 		glm::vec3 Color;
 		glm::vec2 TexCoord;
+        glm::vec3 Normal{0.0f, 1.0f, 0.0f};
+        glm::vec4 Tangent{1.0f, 0.0f, 0.0f, 1.0f};
 	};
 
 	struct MeshPushConstants
@@ -35,6 +38,8 @@ namespace FINALITY
 
 		static std::shared_ptr<Mesh> Create(const std::vector<Vertex>& vertices);
 		static std::shared_ptr<Mesh> Create(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
+		static std::shared_ptr<Mesh> Create(const std::string& meshPath);
+        static void CalculateNormalsAndTangents(std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
 
 		virtual void Destroy() = 0;
 		virtual void UpdateVertices(const std::vector<Vertex>& vertices) = 0;

@@ -1,3 +1,4 @@
+
 project "FinalityEngine"
     kind "SharedLib"
     language "C++"
@@ -15,17 +16,21 @@ project "FinalityEngine"
         "src",
         "../vendor/glfw/include/",
         "../vendor/imgui",
+        "../vendor/ImGuizmo/src",
         "../vendor/spdlog/include/",
         "../vendor/glm",
         "../vendor/entt/include",
         "../vendor/stb/include",
-        "../vendor/gli"
+        "../vendor/gli",
+        "../vendor/yaml-cpp/include"
     }
 
     links {
         "GLFW",
         "stb",
-        "ImGui"
+        "ImGuizmo",
+        "ImGui",
+        "yaml-cpp"
     }
 
     defines {
@@ -43,7 +48,7 @@ project "FinalityEngine"
     local vulkan = GetVulkanSDK()
     if vulkan then
         print("Vulkan SDK detected at: " .. vulkan.root)
-        
+
         includedirs { vulkan.include }
         libdirs     { vulkan.lib }
         defines     { "FINALITY_INCLUDE_VULKAN" }

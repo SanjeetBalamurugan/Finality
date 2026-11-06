@@ -9,6 +9,7 @@ namespace FINALITY
     public:
         VKMesh(VkDevice device, VkPhysicalDevice physicalDevice, const std::vector<Vertex>& vertices);
         VKMesh(VkDevice device, VkPhysicalDevice physicalDevice, const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
+        VKMesh(VkDevice device, VkPhysicalDevice physicalDevice, const std::string& meshPath);
         ~VKMesh() override;
 
         VKMesh(const VKMesh&) = delete;

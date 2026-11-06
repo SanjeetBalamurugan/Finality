@@ -56,6 +56,7 @@ namespace FINALITY
 
 		virtual std::shared_ptr<Mesh> CreateMesh(const std::vector<Vertex>& vertices) = 0;
 		virtual std::shared_ptr<Mesh> CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices) = 0;
+		virtual std::shared_ptr<Mesh> CreateMesh(const std::string& meshPath) = 0;
 		virtual std::shared_ptr<Pipeline> CreatePipeline(const PipelineConfig& config) = 0;
 
 		virtual std::shared_ptr<RenderTarget> CreateRenderTarget(uint32_t width, uint32_t height) = 0;
@@ -71,5 +72,10 @@ namespace FINALITY
 		virtual void BeginTextureBatch() = 0;
 		virtual void EndAndSubmitTextureBatch() = 0;
 		virtual bool IsUploadBatchActive() const = 0;
+
+		virtual const double GetGPUTimeMS() const = 0;
+
+	private:
+		virtual double GetGPUTime() = 0;
 	};
 }

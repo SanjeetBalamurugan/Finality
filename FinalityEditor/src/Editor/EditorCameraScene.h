@@ -18,9 +18,23 @@ namespace FINALITY
 			transform.Rotation = glm::vec3(-15.0f, 0.0f, 0.0f);
 
 			camEntity.AddScript<CameraMovementScript>();
+            camComp.CameraInstance->SetPosition(transform.Position);
+            camComp.CameraInstance->SetRotation(transform.Rotation);
 
 			m_CameraEntity = camEntity;
 		}
+
+        void OnUpdate(float dt) override
+        {
+            Scene::OnUpdate(dt);
+            if (m_CameraEntity.IsValid())
+            {
+                auto& transform = m_CameraEntity.GetComponent<TransformComponent>();
+                auto& camera = m_CameraEntity.GetComponent<CameraComponent>();
+                camera.CameraInstance->SetPosition(transform.Position);
+                camera.CameraInstance->SetRotation(transform.Rotation);
+            }
+        }
 
 		void OnRender() override
 		{

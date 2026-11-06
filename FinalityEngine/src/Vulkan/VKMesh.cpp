@@ -1,4 +1,6 @@
 #include "VKMesh.h"
+
+#include "Scene/Primitives/Cube.h"
 #include <stdexcept>
 #include <cstring>
 
@@ -19,6 +21,34 @@ namespace FINALITY
         ComputeBounds(vertices);
     }
 
+    VKMesh::VKMesh(VkDevice device, VkPhysicalDevice physicalDevice, const std::string& meshPath)
+		: m_Device(device), m_PhysicalDevice(physicalDevice), m_VertexCount(0), m_IndexCount(0), m_HasIndices(false)
+    {
+        if (meshPath.empty())
+        {
+			FI_CORE_WARN("VKMesh constructor called with an empty mesh path. Creating an empty mesh.??");
+        }
+
+        if (meshPath == "builtin://cube")
+        {
+			const auto& vertices = Primitives::Cube::GetVertices();
+			const auto& indices = Primitives::Cube::GetIndices();
+			m_VertexCount = static_cast<uint32_t>(vertices.size());
+			m_IndexCount = static_cast<uint32_t>(indices.size());
+			m_HasIndices = true;
+            std::vector<Vertex> prepared = vertices;
+            Mesh::CalculateNormalsAndTangents(prepared, indices);
+            CreateVertexBuffer(prepared);
+            if (m_HasIndices)
+                CreateIndexBuffer(indices);
+			ComputeBounds(vertices);
+        }
+        else
+        {
+            FI_CORE_ERROR("VKMesh constructor called with an unrecognized mesh path: {}. Creating an empty mesh.", meshPath);
+        }
+    }
+
     VKMesh::~VKMesh()
     {
         Destroy();
@@ -26,10 +56,12 @@ namespace FINALITY
 
     void VKMesh::Bind(VkCommandBuffer commandBuffer) const
     {
+        if (m_VertexBuffer == VK_NULL_HANDLE || m_VertexCount == 0)
+            return;
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexBuffer, offsets);
 
-        if (m_HasIndices)
+        if (m_HasIndices && m_IndexBuffer != VK_NULL_HANDLE)
         {
             vkCmdBindIndexBuffer(commandBuffer, m_IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
         }

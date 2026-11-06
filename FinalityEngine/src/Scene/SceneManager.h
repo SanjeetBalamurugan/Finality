@@ -25,6 +25,12 @@ namespace FINALITY
 
 		void SetScene(std::unique_ptr<Scene> scene);
 		void ChangeScene();
+        bool EnterRuntime(std::unique_ptr<Scene> scene);
+        void ExitRuntime();
+        bool IsRuntimeSceneActive() const { return m_EditorScene != nullptr; }
+
+		const Scene* GetActiveScene() const { return m_CurrentScene.get(); }
+		Scene* GetActiveScene() { return m_CurrentScene.get(); }
 
 		void SetSimulationEnabled(bool enabled) { m_SimulationEnabled = enabled; }
 		bool IsSimulationEnabled() const { return m_SimulationEnabled; }
@@ -35,6 +41,7 @@ namespace FINALITY
 
 		std::unique_ptr<Scene> m_CurrentScene = std::make_unique<FINALITY::EmptyScene>();
 		std::unique_ptr<Scene> m_NextScene = nullptr;
+        std::unique_ptr<Scene> m_EditorScene;
 		bool m_SimulationEnabled = true;
 	};
 }

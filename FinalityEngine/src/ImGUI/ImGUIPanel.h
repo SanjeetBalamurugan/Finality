@@ -6,6 +6,71 @@
 
 namespace FINALITY
 {
+	enum PanelColor_
+	{
+		PanelColor_Text = 0,
+		PanelColor_TextDisabled = 1,
+		PanelColor_WindowBg = 2,
+		PanelColor_ChildBg = 3,
+		PanelColor_PopupBg = 4,
+		PanelColor_Border = 5,
+		PanelColor_BorderShadow = 6,
+		PanelColor_FrameBg = 7,
+		PanelColor_FrameBgHovered = 8,
+		PanelColor_FrameBgActive = 9,
+		PanelColor_TitleBg = 10,
+		PanelColor_TitleBgActive = 11,
+		PanelColor_TitleBgCollapsed = 12,
+		PanelColor_MenuBarBg = 13,
+		PanelColor_ScrollbarBg = 14,
+		PanelColor_ScrollbarGrab = 15,
+		PanelColor_ScrollbarGrabHovered = 16,
+		PanelColor_ScrollbarGrabActive = 17,
+		PanelColor_CheckMark = 18,
+		PanelColor_SliderGrab = 19,
+		PanelColor_SliderGrabActive = 20,
+		PanelColor_Button = 21,
+		PanelColor_ButtonHovered = 22,
+		PanelColor_ButtonActive = 23,
+		PanelColor_Header = 24,
+		PanelColor_HeaderHovered = 25,
+		PanelColor_HeaderActive = 26,
+		PanelColor_Separator = 27,
+		PanelColor_SeparatorHovered = 28,
+		PanelColor_SeparatorActive = 29,
+		PanelColor_ResizeGrip = 30,
+		PanelColor_ResizeGripHovered = 31,
+		PanelColor_ResizeGripActive = 32,
+		PanelColor_InputTextCursor = 33,
+		PanelColor_TabHovered = 34,
+		PanelColor_Tab = 35,
+		PanelColor_TabSelected = 36,
+		PanelColor_TabSelectedOverline = 37,
+		PanelColor_TabDimmed = 38,
+		PanelColor_TabDimmedSelected = 39,
+		PanelColor_TabDimmedSelectedOverline = 40,
+		PanelColor_DockingPreview = 41,
+		PanelColor_DockingEmptyBg = 42,
+		PanelColor_PlotLines = 43,
+		PanelColor_PlotLinesHovered = 44,
+		PanelColor_PlotHistogram = 45,
+		PanelColor_PlotHistogramHovered = 46,
+		PanelColor_TableHeaderBg = 47,
+		PanelColor_TableBorderStrong = 48,
+		PanelColor_TableBorderLight = 49,
+		PanelColor_TableRowBg = 50,
+		PanelColor_TableRowBgAlt = 51,
+		PanelColor_TextLink = 52,
+		PanelColor_TextSelectedBg = 53,
+		PanelColor_DragDropTarget = 54,
+		PanelColor_NavCursor = 55,
+		PanelColor_NavWindowingHighlight = 56,
+		PanelColor_NavWindowingDimBg = 57,
+		PanelColor_ModalWindowDimBg = 58
+	};
+
+	using PanelColor = int;
+
 	enum PanelFlags_
 	{
 		PanelFlags_None = 0,
@@ -32,6 +97,22 @@ namespace FINALITY
 		PanelCondition_Appearing = 1 << 3
 	};
 	using PanelCondition = int;
+
+	enum PanelPopupFlags_
+	{
+		PanelPopupFlags_None = 0,
+		PanelPopupFlags_MouseButtonLeft = 0,
+		PanelPopupFlags_MouseButtonRight = 1,
+		PanelPopupFlags_MouseButtonMiddle = 2,
+		PanelPopupFlags_MouseButtonMask_ = 0x1F,
+		PanelPopupFlags_MouseButtonDefault_ = 1,
+		PanelPopupFlags_NoOpenOverExistingPopup = 1 << 5,
+		PanelPopupFlags_NoOpenOverItems = 1 << 6,
+		PanelPopupFlags_AnyPopupId = 1 << 7,
+		PanelPopupFlags_AnyPopupLevel = 1 << 8,
+		PanelPopupFlags_AnyPopup = PanelPopupFlags_AnyPopupId | PanelPopupFlags_AnyPopupLevel
+	};
+	using PanelPopupFlags = int;
 
 	class FAPI ImGUIPanel
 	{
@@ -116,8 +197,24 @@ namespace FINALITY
 
 		void SetCursorPosX(float x);
 		float CalcTextWidth(const std::string& text);
+		bool TreeNode(std::string_view label, bool selected);
+		bool IsItemClicked(int mouseButton = 0);
+
+		void Indent(float width = 0.0f);
+		void Unindent(float width = 0.0f);
+		void Spacing();
 
 		glm::vec2 GetWindowPadding();
+
+		void OpenPopup(std::string_view str_id, PanelPopupFlags popup_flags = 0);
+		bool BeginPopup(std::string_view str_id, PanelFlags flags = 0);
+		void EndPopup();
+
+		bool IsAnyItemHovered();
+		bool IsItemHovered();
+		bool IsMouseClicked(int a);
+
+		void CloseCurrentPopup();
 	private:
 	};
 }

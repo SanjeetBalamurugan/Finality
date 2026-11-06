@@ -1,0 +1,50 @@
+Scene: MainScene
+Entities:
+  - Entity: 17498311305661187322
+    TagComponent:
+      Tag: Textured Cube
+    RelationshipComponent:
+      Parent: 8322824616153518724
+      FirstChild: 0
+      NextSibling: 0
+      PrevSibling: 0
+    TransformComponent:
+      Position: [0, 0, 0]
+      Rotation: [0, 0, 0]
+      Scale: [1, 1, 1]
+    MeshComponent:
+      MeshIdentifier: ""
+    MaterialComponent:
+      MaterialIdentifier: ""
+  - Entity: 8322824616153518724
+    TagComponent:
+      Tag: Empty Cube handle
+    RelationshipComponent:
+      Parent: 0
+      FirstChild: 17498311305661187322
+      NextSibling: 0
+      PrevSibling: 0
+    TransformComponent:
+      Position: [0, 0, 0]
+      Rotation: [0, 0, 0]
+      Scale: [1, 1, 1]
+  - Entity: 15547225574810996216
+    TagComponent:
+      Tag: Main Camera
+    RelationshipComponent:
+      Parent: 0
+      FirstChild: 0
+      NextSibling: 0
+      PrevSibling: 0
+    TransformComponent:
+      Position: [0, 1.5, 5]
+      Rotation: [-15, 0, 0]
+      Scale: [1, 1, 1]
+    CameraComponent:
+      IsPrimary: true
+      CameraComponent:
+        IsPrimary: true
+        FOV: 45
+        AspectRatio: 1.7777778
+        NearClip: 0.01
+        FarClip: 100
