@@ -1,6 +1,7 @@
 #pragma once
 #include <Utils/UUID.h>
 #include <string>
+#include <Core/Core.h>
 
 namespace FINALITY
 {
@@ -14,7 +15,7 @@ namespace FINALITY
         Material
     };
 
-    class Asset
+    class FAPI Asset
     {
     public:
         UUID Handle;

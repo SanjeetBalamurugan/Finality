@@ -17,7 +17,7 @@ namespace FINALITY
 			transform.Position = glm::vec3(0.0f, 1.5f, 5.0f);
 			transform.Rotation = glm::vec3(-15.0f, 0.0f, 0.0f);
 
-			camEntity.AddScript<CameraMovementScript>();
+			m_Navigation = &camEntity.AddScript<CameraMovementScript>();
             camComp.CameraInstance->SetPosition(transform.Position);
             camComp.CameraInstance->SetRotation(transform.Rotation);
 
@@ -45,8 +45,11 @@ namespace FINALITY
 		{
 			return m_CameraEntity.GetComponent<CameraComponent>().CameraInstance.get();
 		}
+        void ConfigureNavigation(float speed, float sprint, float sensitivity)
+        { if (m_Navigation) m_Navigation->Configure(speed,sprint,sensitivity); }
 
 	private:
 		Entity m_CameraEntity;
+        CameraMovementScript* m_Navigation = nullptr;
 	};
 }

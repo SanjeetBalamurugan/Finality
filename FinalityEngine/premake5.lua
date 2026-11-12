@@ -9,7 +9,9 @@ project "FinalityEngine"
         "src/**.h",
         "src/**.cpp",
         "src/**.c",
-        "src/**.inl"
+        "src/**.inl",
+        "../vendor/imgui/backends/imgui_impl_glfw.cpp",
+        "../vendor/imgui/backends/imgui_impl_vulkan.cpp"
     }
 
     includedirs {
@@ -22,7 +24,11 @@ project "FinalityEngine"
         "../vendor/entt/include",
         "../vendor/stb/include",
         "../vendor/gli",
-        "../vendor/yaml-cpp/include"
+        "../vendor/yaml-cpp/include",
+        "../vendor/assimp/include",
+        "../bin-int/Assimp/include",
+        "../vendor/assimp/contrib/rapidjson/include",
+        "../vendor/tomlplusplus"
     }
 
     links {
@@ -32,6 +38,17 @@ project "FinalityEngine"
         "ImGui",
         "yaml-cpp"
     }
+    libdirs { "../bin-int/Assimp/lib/%{cfg.buildcfg}" }
+    links { "assimp-vc145-mt" }
+    filter "configurations:Debug"
+        libdirs { "../bin-int/Assimp/contrib/zlib/Debug" }
+        links { "zlibstaticd" }
+        links { "spirv-cross-cored" }
+    filter "configurations:Release"
+        libdirs { "../bin-int/Assimp/contrib/zlib/Release" }
+        links { "zlibstatic" }
+        links { "spirv-cross-core" }
+    filter {}
 
     defines {
         "FINALITY_BUILD_DLL",
@@ -63,6 +80,7 @@ project "FinalityEngine"
     end
 
     filter "system:windows"
+        defines { "IMGUI_API=__declspec(dllimport)", "IMGUI_IMPL_API=" }
         systemversion "latest"
 
         defines {

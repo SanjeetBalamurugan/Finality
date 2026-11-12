@@ -19,7 +19,8 @@ void FINALITY::VKRenderDevice::CreateInstance()
 
 	if (m_EnableValidationLayers && !VKDebug::CheckValidationLayerSupport())
 	{
-		FI_CORE_ERROR("validation layers requested, but not available!");
+		FI_CORE_WARN("Vulkan validation layers are unavailable; continuing without them");
+		m_EnableValidationLayers = false;
 	}
 
 	m_AppInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -354,6 +355,7 @@ void FINALITY::VKRenderDevice::DrawQueueToTarget(
 	std::sort(indices.begin(), indices.end(), [&queue](size_t i1, size_t i2) {
 		const auto& a = queue[i1];
 		const auto& b = queue[i2];
+        if (a.EditorOverlay != b.EditorOverlay) return !a.EditorOverlay;
 
 		if (a.PipelineInstance != b.PipelineInstance) {
 			return a.PipelineInstance < b.PipelineInstance;
@@ -447,13 +449,19 @@ void FINALITY::VKRenderDevice::DrawQueueToTarget(
 
 			if (!firstPacket.Textures.empty())
 			{
-				auto it = m_MaterialDescriptorCache.find(activeMaterial);
+                const auto* textureKey = firstPacket.Textures.begin()->second.get();
+				auto it = m_MaterialDescriptorCache.find(textureKey);
 				VkDescriptorSet materialSet = VK_NULL_HANDLE;
 
-				if (it == m_MaterialDescriptorCache.end())
+				if (it == m_MaterialDescriptorCache.end() || it->second.TextureReference.lock() != firstPacket.Textures.begin()->second)
 				{
+                    if (it != m_MaterialDescriptorCache.end())
+                    {
+                        const auto old = it->second.Set;
+                        m_FrameDeletionQueues[m_ImageIndex].Push([this,old]() { m_MaterialDescriptorAllocator.Free(old); });
+                    }
 					materialSet = m_MaterialDescriptorAllocator.Allocate(m_MaterialDescriptorSetLayout);
-					m_MaterialDescriptorCache[activeMaterial] = materialSet;
+					m_MaterialDescriptorCache[textureKey] = { materialSet, firstPacket.Textures.begin()->second };
 
 					auto texIt = firstPacket.Textures.begin();
 					auto* vkTex = static_cast<VKTexture*>(texIt->second.get());
@@ -479,7 +487,7 @@ void FINALITY::VKRenderDevice::DrawQueueToTarget(
 				}
 				else
 				{
-					materialSet = it->second;
+					materialSet = it->second.Set;
 				}
 
 				vkCmdBindDescriptorSets(
@@ -745,6 +753,7 @@ void FINALITY::VKRenderDevice::FreeCommandBuffers(uint32_t count, VkCommandBuffe
 
 void FINALITY::VKRenderDevice::DrawQueue(const std::vector<RenderPacket>& queue)
 {
+    m_FrameDeletionQueues[m_ImageIndex].Push([retained = queue]() {});
 	auto& fb = m_InstanceBuffers[m_ImageIndex];
 	DrawQueueToTarget(
 		m_CMDBuffers[m_ImageIndex],
@@ -1043,6 +1052,7 @@ void FINALITY::VKRenderDevice::SetSwapchainClearColor(float r, float g, float b,
 
 void FINALITY::VKRenderDevice::BeginTextureBatch()
 {
+	if (m_ActiveUploadBatch.isActive) return;
 	m_ActiveUploadBatch.isActive = true;
 
 	VkCommandBufferAllocateInfo allocInfo{};
@@ -1162,12 +1172,12 @@ void FINALITY::VKRenderDevice::Shutdown()
 		m_PostProcessDescriptorSetLayout = VK_NULL_HANDLE;
 	}
 
-	m_MaterialDescriptorAllocator.Shutdown();
-
 	for (auto& queue : m_FrameDeletionQueues)
 	{
 		queue.Flush();
 	}
+    m_MaterialDescriptorCache.clear();
+    m_MaterialDescriptorAllocator.Shutdown();
 
 	if (m_MaterialDescriptorSetLayout) vkDestroyDescriptorSetLayout(m_Device, m_MaterialDescriptorSetLayout, nullptr);
 

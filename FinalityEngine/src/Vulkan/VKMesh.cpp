@@ -121,6 +121,7 @@ namespace FINALITY
 
     void FINALITY::VKMesh::CreateIndexBuffer(const std::vector<uint32_t>& indices)
     {
+        SetIndices(indices);
         VkDeviceSize bufferSize = sizeof(uint32_t) * indices.size();
 
         CreateBuffer(

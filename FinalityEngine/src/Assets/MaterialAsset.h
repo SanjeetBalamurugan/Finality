@@ -42,7 +42,7 @@ namespace FINALITY
         CullMode Culling = CullMode::Back;
         std::vector<MaterialParameterDefinition> Properties;
         // Current Vulkan implementation binds one combined image sampler at set=1, binding=0.
-        std::string TextureBinding = "textureSampler";
+        std::string TextureBinding;
         std::string TexturePath;
     };
 

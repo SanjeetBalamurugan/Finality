@@ -22,10 +22,12 @@ project "FinalityEditor"
 
     links {
         "FinalityEngine",
-        "yaml-cpp"
+        "ImGui",
+        "yaml-cpp", "Shell32"
     }
 
     filter "system:windows"
+        defines { "IMGUI_API=__declspec(dllimport)" }
         systemversion "latest"
         entrypoint "mainCRTStartup"
         files {

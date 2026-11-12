@@ -1,0 +1,30 @@
+[theme]
+version = 1
+name = "Graphite"
+base = "Dark01"
+
+[colors]
+WindowBg = "#292929"
+ChildBg = "#252525"
+PopupBg = "#2D2D2D"
+FrameBg = "#222222"
+FrameBgHovered = "#303030"
+FrameBgActive = "#383838"
+Header = "#353535"
+HeaderHovered = "#424242"
+HeaderActive = "#355783"
+Button = "#363636"
+ButtonHovered = "#484848"
+ButtonActive = "#355783"
+Text = "#C7C7C7"
+TextDisabled = "#7F7F7F"
+CheckMark = "#C7C7C7"
+Border = "#1C1C1C"
+Separator = "#1C1C1C"
+
+[style]
+FramePadding = [5, 3]
+CellPadding = [5, 1]
+ItemSpacing = [5, 4]
+FrameRounding = 3
+FrameBorderSize = 1

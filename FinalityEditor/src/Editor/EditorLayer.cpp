@@ -1,19 +1,37 @@
 
 #include "EditorLayer.h"
-#include "Panels/InspectorPanel.h"
+#include "Panels/EntityInspector.h"
 #include <Util/Helpers.h>
 #include <filesystem>
 #include <Assets/MaterialAsset.h>
 #include <ImGUI/ImGuizmoBridge.h>
+#include <ImGUI/AssetPreview.h>
+#include <ImGUI/EditorTheme.h>
+
+#include <imgui_internal.h>
+#include "ExternalTools.h"
+#include "Prefab.h"
+#include "ImportProgress.h"
 
 void FINALITY::EditorLayer::Init()
 {
+    const auto* userDirectory = std::getenv("USERPROFILE");
+    m_ProjectLocation = ((userDirectory ? std::filesystem::path(userDirectory) / "Documents" : std::filesystem::current_path()) / "Finality Projects").string();
+    if (const auto* localDirectory = std::getenv("LOCALAPPDATA"))
+    {
+        const auto layout = std::filesystem::path(localDirectory) / "Finality/EditorLayout.ini";
+        std::filesystem::create_directories(layout.parent_path());
+        m_LayoutPath = layout.string();
+        ImGui::GetIO().IniFilename = m_LayoutPath.c_str();
+        if (std::filesystem::exists(layout)) ImGui::LoadIniSettingsFromDisk(m_LayoutPath.c_str());
+    }
     FINALITY::RenderDevice* device = &Application::Get().GetDevice();
 
     m_SceneTarget = device->CreateRenderTarget(1280, 720);
     m_GameTarget = device->CreateRenderTarget(1280, 720);
 
-    m_SceneTarget->ClearColor = glm::vec4(0.0f, 0.05f, 0.15f, 1.0f);
+    m_SceneTarget->ClearColor = glm::vec4(0.075f, 0.09f, 0.11f, 1.0f);
+    InitializeSceneTools();
     device->SetSwapchainClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     device->SetGameRenderTarget(m_GameTarget);
 
@@ -24,10 +42,36 @@ void FINALITY::EditorLayer::Init()
     Renderer::SetFrustumCullingEnabled(false);
     SceneManager::GetInstance().SetSimulationEnabled(false);
     m_LastLogTime = std::chrono::steady_clock::now();
+    if (!m_InitialProject.empty()) OpenProject(m_InitialProject);
 }
 
 void FINALITY::EditorLayer::OnUpdate(float deltaTime)
 {
+    ExternalTools::Update();
+    ImportProgress::Update();
+    for (const auto& path : Application::Get().GetWindow().ConsumeDroppedPaths())
+        if (m_Project.IsOpen() && m_State == EditorState::Edit)
+        {
+            AssetPreview::Clear();
+            ImportProgress::Import(std::filesystem::u8path(path), std::filesystem::path(m_ContentDirectory).lexically_relative(m_Project.GetDirectory()));
+        }
+    if (m_ThemePending)
+    {
+        m_ThemePending = false;
+        if (!EditorTheme::Apply(m_Project.Settings.Theme, m_EngineAssets, m_Project.GetDirectory(), m_ThemeMessage))
+            FI_CLIENT_ERROR("Theme: {}", m_ThemeMessage);
+    }
+    AssetPreview::Update();
+    if (m_Project.IsOpen())
+    {
+        m_ProjectScripts.Update(m_Project,SceneManager::GetInstance().GetActiveScene(),m_State == EditorState::Edit);
+        m_AssetScanClock += deltaTime;
+        if (m_Project.Settings.AutoReimport && m_AssetScanClock >= m_Project.Settings.AssetScanInterval && m_State == EditorState::Edit)
+        {
+            m_AssetScanClock = 0;
+            AssetRegistry::Scan();
+        }
+    }
     if (m_SceneViewActive)
     {
         m_EditorCameraScene->OnUpdate(deltaTime);
@@ -67,29 +111,60 @@ void FINALITY::EditorLayer::OnUpdate(float deltaTime)
 
 void FINALITY::EditorLayer::OnImGuiRender()
 {
-    DrawToolbar();
+    SetupLayout();
+    ImportProgress::Draw(m_ProjectScripts.IsBuilding() || ExternalTools::SolutionGeneration.valid(),
+        ExternalTools::SolutionGeneration.valid() ? ExternalTools::Status : m_ProjectScripts.GetStatus());
     DrawMenuBar();
-    DrawSceneView();
-    DrawGameView();
-    FINALITY::DrawConsole();
+    DrawProjectManager();
+    if (!m_Project.IsOpen()) return;
+    if (m_ShowToolbar) DrawToolbar();
+    if (m_ShowScene) DrawSceneView();
+    else m_SceneViewActive = false;
+    if (m_ShowGame) DrawGameView();
+    if (m_ShowConsole) FINALITY::DrawConsole(&m_ShowConsole);
 
-    FINALITY::DrawPerformancePanel(m_UiFps, m_HistoryOffset, m_FrameTimeHistory, m_UiAvgFrameTimeMs);
+    if (m_ShowPerformance) FINALITY::DrawPerformancePanel(m_UiFps, m_HistoryOffset, m_FrameTimeHistory, m_UiAvgFrameTimeMs, &m_ShowPerformance);
 
     Scene* activeScene = SceneManager::GetInstance().GetActiveScene();
     if (!activeScene) activeScene = m_EditorCameraScene.get();
     if (!activeScene->GetRegistry().valid(m_SelectedEntity))
         m_SelectedEntity = entt::null;
-    DrawSceneHierarchyPanel(activeScene, m_SelectedEntity);
-    DrawInspectorPanel(activeScene, m_SelectedEntity);
-    DrawContentBrowser(m_SelectedEntity);
+    ImGui::BeginDisabled(m_State != EditorState::Edit);
+    if (m_ShowHierarchy) DrawHierarchy();
+    if (m_ShowInspector)
+    {
+        if (m_SelectedAsset) m_AssetInspector.Draw(m_SelectedAsset, m_AssetPicker, &m_ShowInspector);
+        else DrawEntityInspector(activeScene, m_SelectedEntity, m_AssetPicker, &m_ShowInspector);
+    }
+    if (m_ShowContentBrowser) DrawContentBrowser(m_SelectedEntity);
+    DrawProjectSettings();
+    ImGui::EndDisabled();
+    m_AssetPicker.Draw();
+    if (!m_FocusWindow.empty())
+    {
+        ImGui::SetWindowFocus(m_FocusWindow.c_str());
+        m_FocusWindow.clear();
+    }
     if (m_State == EditorState::Edit)
         RecordHistory();
+    if (!ImGui::GetIO().WantTextInput && m_State == EditorState::Edit)
+    {
+        if (ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_S)) SaveScene();
+        if (ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Z) && m_HistoryIndex > 0) RestoreHistory(m_HistoryIndex - 1);
+        if (ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Y) && m_HistoryIndex + 1 < m_History.size()) RestoreHistory(m_HistoryIndex + 1);
+        if (m_SceneViewActive && !ImGui::GetIO().KeyCtrl && !ImGui::IsMouseDown(ImGuiMouseButton_Right))
+        {
+            if (ImGui::IsKeyPressed(ImGuiKey_W)) m_GizmoOperation = 0;
+            if (ImGui::IsKeyPressed(ImGuiKey_E)) m_GizmoOperation = 1;
+            if (ImGui::IsKeyPressed(ImGuiKey_R)) m_GizmoOperation = 2;
+        }
+    }
 }
 
 void FINALITY::EditorLayer::DrawToolbar()
 {
     //FINALITY::ImGUIPanel panel("Toolbar", nullptr, FINALITY::PanelFlags_NoTitleBar | FINALITY::PanelFlags_NoResize | FINALITY::PanelFlags_NoMove);
-    FINALITY::ImGUIPanel panel("Toolbar");
+    FINALITY::ImGUIPanel panel("Toolbar", &m_ShowToolbar);
 
     if (panel.Button("Play") && m_State == EditorState::Edit)
     {
@@ -116,12 +191,14 @@ void FINALITY::EditorLayer::DrawToolbar()
     panel.SameLine();
     if (panel.Button("Scale")) m_GizmoOperation = 2;
     panel.SameLine();
-    if (panel.Button("Recompile Shaders")) AssetManager::ReloadMaterialShaders(true);
+    panel.Checkbox("Local", &m_LocalGizmo);
+    panel.SameLine();
+    if (panel.Checkbox("Grid", &m_ShowGrid)) m_Project.Settings.Grid = m_ShowGrid;
 }
 
 void FINALITY::EditorLayer::DrawSceneView()
 {
-    FINALITY::ImGUIPanel panel("Scene");
+    FINALITY::ImGUIPanel panel("Scene", &m_ShowScene);
 
     m_SceneViewActive = panel.IsFocused() || panel.IsHovered();
 
@@ -139,16 +216,39 @@ void FINALITY::EditorLayer::DrawSceneView()
     editorCam->SetViewportSize(static_cast<float>(width), static_cast<float>(height));
 
     device->UpdateRenderTargetCamera(m_SceneTarget, editorCam);
-    device->RenderSceneToTarget(m_SceneTarget, Renderer::GetRenderQueue());
+    auto sceneQueue = Renderer::GetRenderQueue();
+    AppendSceneGrid(sceneQueue, *editorCam);
+    device->RenderSceneToTarget(m_SceneTarget, sceneQueue);
 
     void* textureHandle = device->GetRenderTargetTextureHandle(m_SceneTarget);
     panel.Image(textureHandle, panelSize);
+    const auto imageMinimum = ImGui::GetItemRectMin();
+    const auto imageMaximum = ImGui::GetItemRectMax();
+    const bool select = ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left);
+    if (m_State == EditorState::Edit && ImGui::BeginDragDropTarget())
+    {
+        if (const auto* payload = ImGui::AcceptDragDropPayload("FinalityAsset"))
+        {
+            if (payload->DataSize == sizeof(uint64_t))
+                if (const auto* record = AssetRegistry::Find(*static_cast<const uint64_t*>(payload->Data)); record)
+                {
+                    if (record->Type == ProjectAssetType::Model)
+                        CreatePrimitive(std::filesystem::path(record->Path).stem().string(), "asset://" + std::to_string(record->ID));
+                    if (record->Type == ProjectAssetType::Prefab)
+                        if (auto* scene = SceneManager::GetInstance().GetActiveScene())
+                            m_SelectedEntity = InstantiatePrefab(*scene, AssetRegistry::Resolve("asset://" + std::to_string(record->ID))).GetHandle();
+                }
+        }
+        ImGui::EndDragDropTarget();
+    }
     DrawGizmo(m_SelectedEntity);
+    if (select && m_State == EditorState::Edit && !ImGui::GetDragDropPayload() &&
+        (m_SelectedEntity == entt::null || !ImGuizmoBridge::IsActive())) PickSceneEntity(imageMinimum, imageMaximum);
 }
 
 void FINALITY::EditorLayer::DrawGameView()
 {
-    FINALITY::ImGUIPanel panel("Game");
+    FINALITY::ImGUIPanel panel("Game", &m_ShowGame);
 
     glm::vec2 panelSize = panel.GetContentRegionAvail();
     if (panelSize.x < 1.0f || panelSize.y < 1.0f) return;
@@ -175,6 +275,9 @@ void FINALITY::EditorLayer::DrawMenuBar()
     if (!ImGUIPanel::BeginMainMenuBar()) return;
     if (ImGUIPanel::BeginMenu("File"))
     {
+        if (ImGUIPanel::MenuItem("Project Manager") && m_State == EditorState::Edit) m_ShowProjectManager = true;
+        if (ImGUIPanel::MenuItem("Save Project")) m_Project.Save();
+        if (ImGUIPanel::MenuItem("Project Settings")) m_ShowProjectSettings = true;
         if (ImGUIPanel::MenuItem("New Scene") && m_State == EditorState::Edit) NewScene();
         if (ImGUIPanel::MenuItem("Save Scene") && m_State == EditorState::Edit) SaveScene();
         if (ImGUIPanel::MenuItem("Open Scene") && m_State == EditorState::Edit)
@@ -186,6 +289,11 @@ void FINALITY::EditorLayer::DrawMenuBar()
         if (ImGUIPanel::MenuItem("Exit")) Application::Get().RequestClose();
         ImGUIPanel::EndMenu();
     }
+    if (ImGUIPanel::BeginMenu("Create"))
+    {
+        if (m_Project.IsOpen() && m_State == EditorState::Edit) DrawCreateMenu();
+        ImGUIPanel::EndMenu();
+    }
     if (ImGUIPanel::BeginMenu("Edit"))
     {
         if (ImGUIPanel::MenuItem("Undo") && m_State == EditorState::Edit && m_HistoryIndex > 0)
@@ -193,6 +301,38 @@ void FINALITY::EditorLayer::DrawMenuBar()
         if (ImGUIPanel::MenuItem("Redo") && m_State == EditorState::Edit && m_HistoryIndex + 1 < m_History.size())
             RestoreHistory(m_HistoryIndex + 1);
         ImGUIPanel::EndMenu();
+    }
+    if (ImGUIPanel::BeginMenu("Assets"))
+    {
+        if (ImGUIPanel::MenuItem("Recompile Shaders")) AssetManager::ReloadMaterialShaders(true);
+        ImGUIPanel::EndMenu();
+    }
+    if (ImGui::BeginMenu("Window"))
+    {
+        auto panel = [this](const char* name, bool& visible)
+        {
+            if (ImGui::MenuItem(name, nullptr, &visible) && visible) m_FocusWindow = name;
+        };
+        panel("Scene", m_ShowScene);
+        panel("Game", m_ShowGame);
+        panel("Hierarchy", m_ShowHierarchy);
+        panel("Inspector", m_ShowInspector);
+        panel("Content Browser", m_ShowContentBrowser);
+        panel("Console", m_ShowConsole);
+        panel("Toolbar", m_ShowToolbar);
+        panel("Performance Overlay", m_ShowPerformance);
+        ImGui::Separator();
+        if (ImGui::MenuItem("Reset Layout"))
+        {
+            ImGui::ClearIniSettings();
+            ImGui::DockBuilderRemoveNode(0xF1A117);
+            m_LayoutReady = false;
+            m_ShowScene = m_ShowGame = m_ShowHierarchy = m_ShowInspector = true;
+            m_ShowContentBrowser = m_ShowConsole = m_ShowToolbar = true;
+        }
+        if (ImGui::MenuItem("Project Settings")) m_ShowProjectSettings = true;
+        if (ImGui::MenuItem("Project Manager") && m_State == EditorState::Edit) m_ShowProjectManager = true;
+        ImGui::EndMenu();
     }
     ImGUIPanel::EndMainMenuBar();
 }
@@ -203,10 +343,13 @@ void FINALITY::EditorLayer::NewScene()
     auto scene = std::make_unique<EmptyScene>();
     auto camera = scene->CreateEntity("Main Camera");
     camera.AddComponent<CameraComponent>(60.0f, 16.0f / 9.0f, 0.1f, 1000.0f);
+    camera.GetComponent<TransformComponent>().Position = {0,1.5f,5};
+    camera.GetComponent<TransformComponent>().Rotation = {-15,0,0};
     SceneManager::GetInstance().SetScene(std::move(scene));
     SceneManager::GetInstance().ChangeScene();
     m_SelectedEntity = entt::null;
     m_ScenePath.clear();
+    m_SelectedAsset = 0;
     m_History.clear();
     RecordHistory();
 }
@@ -217,10 +360,13 @@ bool FINALITY::EditorLayer::OpenScene(const std::string& path)
     auto scene = std::make_unique<EmptyScene>();
     SceneSerializer serializer(*scene);
     if (!serializer.DeSerialize(path)) return false;
+    m_AssetPicker.Close();
     SceneManager::GetInstance().SetScene(std::move(scene));
     SceneManager::GetInstance().ChangeScene();
     m_SelectedEntity = entt::null;
     m_ScenePath = path;
+    if (m_Project.IsOpen()) std::ofstream(m_Project.GetDirectory() / "Settings/LastScene.txt") << std::quoted(path);
+    m_SelectedAsset = 0;
     m_History.clear();
     RecordHistory();
     return true;
@@ -240,6 +386,8 @@ void FINALITY::EditorLayer::SaveScene()
     if (std::filesystem::path(m_ScenePath).extension() != ".fscene")
         m_ScenePath += ".fscene";
     SceneSerializer(*scene, std::filesystem::path(m_ScenePath).stem().string()).Serialize(m_ScenePath);
+    if (m_Project.IsOpen()) std::ofstream(m_Project.GetDirectory() / "Settings/LastScene.txt") << std::quoted(m_ScenePath);
+    AssetRegistry::Scan();
 }
 
 void FINALITY::EditorLayer::RecordHistory()
@@ -266,6 +414,7 @@ void FINALITY::EditorLayer::RestoreHistory(size_t index)
     SceneManager::GetInstance().ChangeScene();
     m_SelectedEntity = entt::null;
     m_HistoryIndex = index;
+    m_SelectedAsset = 0;
 }
 
 void FINALITY::EditorLayer::OnPlay()
@@ -303,55 +452,6 @@ void FINALITY::EditorLayer::OnStop()
     m_SelectedEntity = entt::null;
 }
 
-void FINALITY::EditorLayer::DrawContentBrowser(entt::entity selectedEntityHandle)
-{
-    ImGUIPanel panel("Content Browser");
-    namespace fs = std::filesystem;
-    fs::path current(m_ContentDirectory);
-    if (!fs::exists(current))
-    {
-        current = fs::exists("assets") ? fs::path("assets") : fs::path("SandboxFinality/Assets");
-        if (!fs::exists(current)) return;
-        m_ContentDirectory = current.string();
-    }
-    if (panel.Button("Up") && current.has_parent_path())
-        m_ContentDirectory = current.parent_path().string();
-    panel.SameLine();
-    panel.Text(current.generic_string());
-    std::error_code error;
-    for (fs::directory_iterator it(current, fs::directory_options::skip_permission_denied, error), end;
-        it != end && !error; it.increment(error))
-    {
-        const auto& entry = *it;
-        const std::string name = entry.path().filename().string();
-        const std::string label = (entry.is_directory() ? "[Folder] " : "[File] ") + name;
-        if (!panel.Button(label)) continue;
-        if (entry.is_directory())
-        {
-            m_ContentDirectory = entry.path().string();
-            break;
-        }
-        if (m_State != EditorState::Edit) continue;
-        if (entry.path().extension() == ".fscene")
-        {
-            OpenScene(entry.path().string());
-            break;
-        }
-        if (entry.path().extension() == ".fmat")
-        {
-            auto* scene = SceneManager::GetInstance().GetActiveScene();
-            if (!scene || !scene->GetRegistry().valid(selectedEntityHandle)) continue;
-            auto asset = AssetManager::CreateAsset<MaterialAsset>(
-                entry.path().generic_string(), Renderer::GetDevice());
-            if (!asset) continue;
-            auto& registry = scene->GetRegistry();
-            auto& component = registry.get_or_emplace<MaterialComponent>(selectedEntityHandle);
-            component.MaterialIdentifier = entry.path().generic_string();
-            component.MaterialInstance = asset->CreateInstance();
-        }
-    }
-}
-
 void FINALITY::EditorLayer::DrawGizmo(entt::entity selectedEntityHandle)
 {
     if (m_State != EditorState::Edit || selectedEntityHandle == entt::null)
@@ -374,7 +474,7 @@ void FINALITY::EditorLayer::DrawGizmo(entt::entity selectedEntityHandle)
     glm::mat4 world = scene->GetWorldTransform(selectedEntityHandle);
     if (!ImGuizmoBridge::Manipulate(
         camera->GetViewMatrix(), camera->GetProjection(),
-        m_GizmoOperation, world))
+        m_GizmoOperation, world, m_LocalGizmo))
         return;
 
     if (auto* relation = scene->GetRegistry().try_get<RelationshipComponent>(selectedEntityHandle))
@@ -383,18 +483,26 @@ void FINALITY::EditorLayer::DrawGizmo(entt::entity selectedEntityHandle)
             world = glm::inverse(scene->GetWorldTransform(relation->Parent)) * world;
     }
 
-    ImGuizmoBridge::DecomposeTransform(
-        world, transform->Position, transform->Rotation, transform->Scale);
-    transform->Matrix = transform->GetTransformMatrix();
+    ImGuizmoBridge::SetLocalTransform(*transform,world);
 }
 
 void FINALITY::EditorLayer::Shutdown()
 {
+    if (!m_LayoutPath.empty()) ImGui::SaveIniSettingsToDisk(m_LayoutPath.c_str());
+    ImGui::GetIO().IniFilename = nullptr;
+    m_AssetPicker.Close();
+    AssetPreview::Clear();
+    m_ProjectScripts.Close();
+    m_AssetInspector.Clear();
+    ClearInspectorClipboard();
+    if (m_Project.IsOpen()) { m_Project.Save(); AssetRegistry::Save(); }
     Renderer::SetFrustumCullingEnabled(true);
     Renderer::SetDirectRenderingEnabled(true);
 
     FINALITY::RenderDevice* device = &Application::Get().GetDevice();
     device->WaitIdle();
+    m_GridMaterial.reset();
+    m_GridMesh.reset();
 
     if (m_EditorCameraScene)
     {

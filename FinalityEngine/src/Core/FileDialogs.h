@@ -8,6 +8,7 @@ namespace FINALITY
 	{
 	public:
 		static std::string OpenFile(const char* filter);
+        static std::string OpenFolder();
 		static std::string SaveFile(const char* filter, const char* defaultName);
 	};
 }

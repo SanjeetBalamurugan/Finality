@@ -10,6 +10,8 @@ namespace FINALITY
     {
     public:
         CameraMovementScript() = default;
+        void Configure(float speed, float sprint, float sensitivity)
+        { m_MoveSpeed = speed; m_SprintMultiplier = sprint; m_LookSensitivity = sensitivity; }
 
     private:
         void Start() override
@@ -39,6 +41,8 @@ namespace FINALITY
 
             if (Mouse::IsButtonUp(MouseButton::Right))
                 RenderCommand::SetCursorMode(false);
+
+            if (!Mouse::IsButtonHeld(MouseButton::Right)) return;
 
             if (Mouse::IsButtonHeld(MouseButton::Right))
             {

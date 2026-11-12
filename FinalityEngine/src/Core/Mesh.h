@@ -50,11 +50,15 @@ namespace FINALITY
 
 		glm::vec3 GetBoundsCenter() const { return m_BoundsCenter; }
 		float GetBoundsRadius() const { return m_BoundsRadius; }
+        bool Raycast(const glm::vec3& origin, const glm::vec3& direction, const glm::mat4& world, float& distance) const;
 
 	private:
 		glm::vec3 m_BoundsCenter = glm::vec3(0.0f);
 		float m_BoundsRadius = 0.0f;
+        std::vector<Vertex> m_Vertices;
+        std::vector<uint32_t> m_Indices;
 	protected:
 		void ComputeBounds(const std::vector<Vertex>& vertices);
+        void SetIndices(const std::vector<uint32_t>& indices) { m_Indices = indices; }
 	};
 }

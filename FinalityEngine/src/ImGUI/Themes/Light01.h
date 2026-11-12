@@ -3,9 +3,8 @@
 
 namespace FINALITY
 {
-    static void ApplyLight01()
+    static void ApplyLight01(ImGuiStyle& style = ImGui::GetStyle())
     {
-        ImGuiStyle& style = ImGui::GetStyle();
         ImVec4* colors = style.Colors;
 
         // --- Window & Background Panels ---

@@ -20,6 +20,8 @@
 #include <Assets/AssetManager.h>
 
 #include <ImGUI/ImGUIRenderer.h>
+#include <ImGUI/ImGuizmoApi.h>
+#include <ImGUI/AssetPreview.h>
 
 #define GLM_FORCE_PURE  
 #define GLM_ENABLE_EXPERIMENTAL
@@ -78,9 +80,8 @@ void FINALITY::Application::Initialize(const RendererAPI& api, const WindowSpec&
 	m_ImGUIRenderer = ImGUIRenderer::Create(m_RenderDevice.get());
 	m_ImGUIRenderer->Initialize();
 
-	m_CurrentGame->Init();
-
 	FINALITY::AssetManager::Initialize();
+	m_CurrentGame->Init();
 	//SceneManager::GetInstance().Initialize();
 
 	m_Window->SetCallbacks();
@@ -102,6 +103,13 @@ void FINALITY::Application::Update()
 		lastFrameTime = currentFrameTime;
 
 		m_Window->Update();
+		int framebufferWidth = 0, framebufferHeight = 0;
+		glfwGetFramebufferSize(static_cast<GLFWwindow*>(m_Window->GetNativeHandles().WindowHandle), &framebufferWidth, &framebufferHeight);
+		if (framebufferWidth == 0 || framebufferHeight == 0)
+		{
+			glfwWaitEventsTimeout(0.05);
+			continue;
+		}
 		int newW, newH;
 		if (m_Window->ConsumePendingResize(newW, newH))
 		{
@@ -115,10 +123,13 @@ void FINALITY::Application::Update()
 		}
 
 		m_RenderDevice->BeginFrame();
+        AssetPreview::Flush();
 
 		m_ImGUIRenderer->Update();
 		ImGui::NewFrame();
-		ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
+		ImGuizmo::SetImGuiContext(ImGui::GetCurrentContext());
+		ImGuizmo::BeginFrame();
+		ImGui::DockSpaceOverViewport(0xF1A117, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
 
 		// Frame logic like draw calls here
 		SceneManager::GetInstance().Update(deltaTime);
@@ -137,12 +148,16 @@ void FINALITY::Application::Update()
 
 void FINALITY::Application::Shutdown()
 {
+	m_RenderDevice->WaitIdle();
+	if (m_CurrentGame) m_CurrentGame->Destroy();
+    AssetPreview::Clear();
+    AssetPreview::Flush();
 	SceneManager::GetInstance().Shutdown();
 	FINALITY::AssetManager::Shutdown();
 	FINALITY::Renderer::Shutdown();
 
-	if (m_CurrentGame) m_CurrentGame->Destroy();
 	m_ImGUIRenderer->Destroy();
+	m_ImGUIRenderer.reset();
 
 	if (m_Window)
 	{

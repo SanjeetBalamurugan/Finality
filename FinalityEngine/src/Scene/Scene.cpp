@@ -4,11 +4,12 @@
 #include "Renderer/Renderer.h"
 #include <unordered_map>
 #include <glm/gtc/quaternion.hpp>
-#include <glm/gtc/quaternion.hpp>
-#include <glm/gtc/quaternion.hpp>
+#include <Scene/ScriptRegistry.h>
 
 namespace FINALITY
 {
+    Scene::Scene() = default;
+    Scene::~Scene() = default;
     glm::mat4 Scene::GetWorldTransform(entt::entity entityHandle) const
     {
         auto* transform = m_EntityRegistry.try_get<TransformComponent>(entityHandle);
@@ -49,27 +50,44 @@ namespace FINALITY
         for (entt::entity entityHandle : entities)
         {
             if (!m_EntityRegistry.valid(entityHandle)) continue;
-            auto& storage = m_EntityRegistry.get<ScriptStorage>(entityHandle);
-            for (size_t i = 0; i < storage.Scripts.size(); ++i)
+            auto* storage = m_EntityRegistry.try_get<ScriptStorage>(entityHandle);
+            if (!storage) continue;
+            std::vector<std::shared_ptr<ScriptableComponent>> instances;
+            for (const auto& script : storage->Scripts)
+                if (script.Enabled && script.Instance) instances.push_back(script.Instance);
+            for (const auto& instance : instances)
             {
-                auto& script = storage.Scripts[i];
-
-                if (!script.Instance)
-                    continue;
-
-                if (!script.Started)
+                auto find = [&]() -> ScriptStorage::ScriptInstance*
                 {
-                    script.Instance->Start();
-                    script.Started = true;
+                    if (!m_EntityRegistry.valid(entityHandle)) return nullptr;
+                    auto* current = m_EntityRegistry.try_get<ScriptStorage>(entityHandle);
+                    if (!current) return nullptr;
+                    for (auto& entry : current->Scripts)
+                        if (entry.Instance == instance && entry.Enabled) return &entry;
+                    return nullptr;
+                };
+                auto* script = find();
+                if (!script) continue;
+                if (!script->Awakened)
+                {
+                    script->Awakened = true;
+                    instance->Awake();
                 }
-
-                script.Instance->Update(ts);
+                script = find();
+                if (!script) continue;
+                if (!script->Started)
+                {
+                    script->Started = true;
+                    instance->Start();
+                }
+                if (find()) instance->Update(ts);
             }
         }
     }
 
     void Scene::OnRender()
     {
+        Renderer::SetActiveCamera(nullptr);
         if (!m_TexturesUploaded && Renderer::GetDevice()->IsUploadBatchActive())
         {
             Renderer::GetDevice()->EndAndSubmitTextureBatch();
@@ -83,7 +101,7 @@ namespace FINALITY
             auto& transform = cameraView.get<TransformComponent>(entityHandle);
             (void)transform;
 
-            if (cam.IsPrimary)
+            if (cam.IsPrimary && cam.CameraInstance)
             {
                 const glm::mat4 world = GetWorldTransform(entityHandle);
                 cam.CameraInstance->SetPosition(glm::vec3(world[3]));
@@ -108,18 +126,15 @@ namespace FINALITY
 
     void Scene::OnDestroy()
     {
-        auto view = m_EntityRegistry.view<ScriptStorage>();
-
-        for (auto entityHandle : view)
-        {
-            auto& storage = view.get<ScriptStorage>(entityHandle);
-
-            for (auto& script : storage.Scripts)
-            {
-                if (script.Instance)
-                    script.Instance->OnDestroy();
-            }
-        }
+        std::vector<std::shared_ptr<ScriptableComponent>> instances;
+        for (auto entityHandle : m_EntityRegistry.view<ScriptStorage>())
+            for (auto& script : m_EntityRegistry.get<ScriptStorage>(entityHandle).Scripts)
+                if (script.Instance && script.Awakened)
+                {
+                    script.Awakened = false;
+                    instances.push_back(script.Instance);
+                }
+        for (const auto& instance : instances) instance->OnDestroy();
 
         if (Renderer::GetDevice())
             Renderer::GetDevice()->WaitIdle();
@@ -148,9 +163,11 @@ namespace FINALITY
     void Scene::DestroyEntity(entt::entity entity)
     {
         if (!m_EntityRegistry.valid(entity)) return;
+        if (Renderer::GetDevice()) Renderer::GetDevice()->WaitIdle();
         if (auto* rel = m_EntityRegistry.try_get<RelationshipComponent>(entity))
         {
-            auto child = rel->FirstChild;
+            const auto relationship = *rel;
+            auto child = relationship.FirstChild;
             while (child != entt::null && m_EntityRegistry.valid(child))
             {
                 const auto* nextRel = m_EntityRegistry.try_get<RelationshipComponent>(child);
@@ -158,6 +175,8 @@ namespace FINALITY
                 DestroyEntity(child);
                 child = next;
             }
+            rel = m_EntityRegistry.try_get<RelationshipComponent>(entity);
+            if (!rel) return;
             if (rel->Parent != entt::null && m_EntityRegistry.valid(rel->Parent))
             {
                 if (auto* parent = m_EntityRegistry.try_get<RelationshipComponent>(rel->Parent))
@@ -170,10 +189,111 @@ namespace FINALITY
                 if (auto* next = m_EntityRegistry.try_get<RelationshipComponent>(rel->NextSibling))
                     next->PrevSibling = rel->PrevSibling;
         }
+        std::vector<std::shared_ptr<ScriptableComponent>> instances;
         if (auto* storage = m_EntityRegistry.try_get<ScriptStorage>(entity))
+        {
             for (auto& script : storage->Scripts)
-                if (script.Instance) script.Instance->OnDestroy();
+                if (script.Instance && script.Awakened) instances.push_back(script.Instance);
+            m_EntityRegistry.remove<ScriptStorage>(entity);
+        }
+        for (const auto& instance : instances) instance->OnDestroy();
+        if (!m_EntityRegistry.valid(entity)) return;
         m_EntityRegistry.destroy(entity);
+    }
+
+    Entity Scene::DuplicateEntity(entt::entity handle)
+    {
+        if (!m_EntityRegistry.valid(handle)) return {};
+        auto copy = CreateEntity(m_EntityRegistry.get<TagComponent>(handle).tag + " Copy");
+        const auto target = copy.GetHandle();
+        if (const auto* transform = m_EntityRegistry.try_get<TransformComponent>(handle)) m_EntityRegistry.replace<TransformComponent>(target, *transform);
+        if (const auto* mesh = m_EntityRegistry.try_get<MeshComponent>(handle)) m_EntityRegistry.emplace<MeshComponent>(target, *mesh);
+        if (const auto* material = m_EntityRegistry.try_get<MaterialComponent>(handle)) m_EntityRegistry.emplace<MaterialComponent>(target, *material);
+        if (const auto* camera = m_EntityRegistry.try_get<CameraComponent>(handle)) m_EntityRegistry.emplace<CameraComponent>(target, *camera).IsPrimary = false;
+        if (const auto* storage = m_EntityRegistry.try_get<ScriptStorage>(handle))
+        {
+            struct Copy { std::string Type; bool Enabled; std::map<std::string, ScriptValue> Properties; };
+            std::vector<Copy> scripts;
+            for (const auto& script : storage->Scripts)
+            {
+                if (script.TypeName.empty()) continue;
+                Copy data{script.TypeName, script.Enabled, script.Properties};
+                if (const auto* definition = ScriptRegistry::Find(script.TypeName); definition && script.Instance)
+                    for (const auto& property : definition->Properties) data.Properties[property.Name] = property.Get(*script.Instance);
+                scripts.push_back(std::move(data));
+            }
+            for (const auto& data : scripts)
+            {
+                ScriptRegistry::Attach(*this, target, data.Type);
+                auto& script = m_EntityRegistry.get<ScriptStorage>(target).Scripts.back();
+                script.Enabled = data.Enabled;
+                script.Properties = data.Properties;
+                if (const auto* definition = ScriptRegistry::Find(data.Type); definition && script.Instance)
+                    for (const auto& property : definition->Properties)
+                        if (const auto found = data.Properties.find(property.Name); found != data.Properties.end()) property.Set(*script.Instance, found->second);
+            }
+        }
+        const auto relationship = m_EntityRegistry.get<RelationshipComponent>(handle);
+        if (relationship.Parent != entt::null) copy.SetParent(GetEntity(relationship.Parent));
+        auto child = relationship.FirstChild;
+        while (child != entt::null && m_EntityRegistry.valid(child))
+        {
+            const auto next = m_EntityRegistry.get<RelationshipComponent>(child).NextSibling;
+            auto duplicate = DuplicateEntity(child);
+            duplicate.SetParent(copy);
+            child = next;
+        }
+        return copy;
+    }
+
+    Entity Scene::InstantiateHierarchy(const Scene& source, entt::entity handle)
+    {
+        if (!source.m_EntityRegistry.valid(handle)) return {};
+        auto copy = CreateEntity(source.m_EntityRegistry.get<TagComponent>(handle).tag);
+        const auto target = copy.GetHandle();
+        if (const auto* transform = source.m_EntityRegistry.try_get<TransformComponent>(handle)) m_EntityRegistry.replace<TransformComponent>(target, *transform);
+        if (const auto* mesh = source.m_EntityRegistry.try_get<MeshComponent>(handle)) m_EntityRegistry.emplace<MeshComponent>(target, *mesh);
+        if (const auto* material = source.m_EntityRegistry.try_get<MaterialComponent>(handle))
+        {
+            auto component = *material;
+            if (component.MaterialInstance) component.MaterialInstance = component.MaterialInstance->Clone();
+            m_EntityRegistry.emplace<MaterialComponent>(target, std::move(component));
+        }
+        if (const auto* camera = source.m_EntityRegistry.try_get<CameraComponent>(handle)) m_EntityRegistry.emplace<CameraComponent>(target, *camera).IsPrimary = false;
+        if (const auto* storage = source.m_EntityRegistry.try_get<ScriptStorage>(handle))
+        {
+            struct Copy { std::string Type; bool Enabled; std::map<std::string, ScriptValue> Properties; };
+            std::vector<Copy> scripts;
+            for (const auto& script : storage->Scripts)
+            {
+                if (script.TypeName.empty()) continue;
+                Copy data{script.TypeName, script.Enabled, script.Properties};
+                if (const auto* definition = ScriptRegistry::Find(script.TypeName); definition && script.Instance)
+                    for (const auto& property : definition->Properties) data.Properties[property.Name] = property.Get(*script.Instance);
+                scripts.push_back(std::move(data));
+            }
+            for (const auto& data : scripts)
+            {
+                ScriptRegistry::Attach(*this, target, data.Type);
+                auto& script = m_EntityRegistry.get<ScriptStorage>(target).Scripts.back();
+                script.Enabled = data.Enabled;
+                script.Properties = data.Properties;
+                if (const auto* definition = ScriptRegistry::Find(data.Type); definition && script.Instance)
+                    for (const auto& property : definition->Properties)
+                        if (const auto found = data.Properties.find(property.Name); found != data.Properties.end()) property.Set(*script.Instance, found->second);
+            }
+        }
+        const auto relationship = source.m_EntityRegistry.get<RelationshipComponent>(handle);
+
+        auto child = relationship.FirstChild;
+        while (child != entt::null && source.m_EntityRegistry.valid(child))
+        {
+            const auto next = source.m_EntityRegistry.get<RelationshipComponent>(child).NextSibling;
+            auto duplicate = InstantiateHierarchy(source, child);
+            duplicate.SetParent(copy);
+            child = next;
+        }
+        return copy;
     }
 
     void Scene::CopyScriptsTo(Scene& destination) const
@@ -216,12 +336,12 @@ namespace FINALITY
             const auto& storage = m_EntityRegistry.get<ScriptStorage>(source);
             for (const auto& item : storage.Scripts)
             {
+                if (!item.TypeName.empty()) continue;
                 if (!item.Factory) continue;
                 auto script = item.Factory();
                 if (!script) continue;
                 script->m_EntityHandle = found->second;
                 script->m_CurrentScene = &destination;
-                script->Awake();
                 destinationStorage.Scripts.emplace_back(std::move(script), false, item.Factory);
             }
         }

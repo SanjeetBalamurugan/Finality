@@ -28,6 +28,7 @@ namespace FINALITY
 		glm::vec3 Scale{ 1.0f };
 
 		glm::mat4 Matrix{ 1.0f };
+        glm::mat4 Basis{ 1.0f };
 
 		TransformComponent() = default;
 		TransformComponent(const TransformComponent&) = default;
@@ -49,7 +50,7 @@ namespace FINALITY
 
 			transform = glm::scale(transform, Scale);
 
-			return transform;
+			return transform * Basis;
 		}
 	};
 

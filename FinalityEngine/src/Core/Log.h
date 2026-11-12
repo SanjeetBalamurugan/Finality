@@ -10,8 +10,6 @@
 #include <mutex>
 #include <string>
 
-template class FAPI std::shared_ptr<spdlog::logger>;
-
 namespace FINALITY
 {
 	struct LogEntry
@@ -41,7 +39,6 @@ namespace FINALITY
 		static constexpr size_t s_MaxEntries = 1000;
 	};
 
-	template class FAPI std::shared_ptr<FINALITY::ConsoleSink>;
 	class FAPI Logger
 	{
 	public:

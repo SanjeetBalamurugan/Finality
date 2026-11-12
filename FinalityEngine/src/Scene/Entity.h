@@ -35,7 +35,7 @@ namespace FINALITY
         void RemoveComponent();
 
         entt::entity GetHandle() const { return m_EntityHandle; }
-        bool IsValid() const { return m_EntityHandle != entt::null; }
+        bool IsValid() const { return m_CurrentScene && m_CurrentScene->GetRegistry().valid(m_EntityHandle); }
 
         void SetParent(Entity parent);
 

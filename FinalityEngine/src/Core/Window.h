@@ -2,6 +2,8 @@
 #include "Core.h"
 
 #include <string>
+#include <vector>
+#include <utility>
 
 namespace FINALITY
 {
@@ -40,5 +42,9 @@ namespace FINALITY
 
 		virtual WindowSpec GetSpecifications() const = 0;
 		virtual NativeWindowHandle GetNativeHandles() const = 0;
+        void QueueDroppedPath(const std::string& path) { m_DroppedPaths.push_back(path); }
+        std::vector<std::string> ConsumeDroppedPaths() { return std::exchange(m_DroppedPaths, {}); }
+    private:
+        std::vector<std::string> m_DroppedPaths;
 	};
 }

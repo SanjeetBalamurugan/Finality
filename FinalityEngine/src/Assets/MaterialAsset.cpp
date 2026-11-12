@@ -5,18 +5,59 @@
 #include <Core/RenderDevice.h>
 #include <Renderer/Renderer.h>
 #include <Renderer/ShaderCompiler.h>
+#include <Renderer/ShaderReflection.h>
 #include <Utils/Serializers/MaterialSerializer.h>
 
 #include <filesystem>
 #include <stdexcept>
 #include <utility>
+#include <algorithm>
 
 namespace
 {
+    void ReflectProperties(FINALITY::MaterialDefinition& definition, const std::string& vertex, const std::string& fragment)
+    {
+        using namespace FINALITY;
+        for (const auto& shader : {vertex, fragment})
+            for (const auto& uniform : ShaderReflection::Reflect(shader))
+            {
+                if (uniform.Storage == "Texture" && uniform.Set == 1 && uniform.Binding == 0 && definition.TextureBinding.empty())
+                    definition.TextureBinding = uniform.Name;
+                if (!uniform.Editable) continue;
+                const auto type = uniform.Type == "float" ? MaterialParameterType::Float :
+                    uniform.Type == "float4" ? MaterialParameterType::Vec4 : MaterialParameterType::Mat4;
+                const auto existing = std::find_if(definition.Properties.begin(), definition.Properties.end(),
+                    [&](const auto& property) { return property.Name == uniform.Name; });
+                if (existing != definition.Properties.end())
+                {
+                    if (existing->Type != type || existing->Offset != uniform.Offset)
+                        throw std::runtime_error("Material field disagrees with shader layout: " + uniform.Name);
+                    continue;
+                }
+                const bool overlaps = std::any_of(definition.Properties.begin(), definition.Properties.end(), [&](const auto& property)
+                {
+                    const uint32_t size = property.Type == MaterialParameterType::Float ? 4 : property.Type == MaterialParameterType::Vec4 ? 16 : 64;
+                    return uniform.Offset < property.Offset + size && property.Offset < uniform.Offset + uniform.Size;
+                });
+                if (overlaps) throw std::runtime_error("Shader field overlaps a declared material field: " + uniform.Name);
+                MaterialParameterDefinition property;
+                property.Name = uniform.Name;
+                property.Type = type;
+                property.Offset = uniform.Offset;
+                if (type == MaterialParameterType::Vec4) property.Default = {1, 1, 1, 1};
+                if (type == MaterialParameterType::Mat4)
+                    for (int diagonal = 0; diagonal < 4; ++diagonal) property.Default[diagonal * 5] = 1;
+                definition.Properties.push_back(property);
+            }
+    }
+
     std::string ResolvePath(const std::string& referencedPath, const std::string& materialPath)
     {
         namespace fs = std::filesystem;
         fs::path path(referencedPath);
+        const fs::path projectPath(FINALITY::AssetRegistry::Resolve(referencedPath));
+        if (!projectPath.empty() && fs::is_regular_file(projectPath))
+            return projectPath.string();
         if (fs::exists(path))
             return path.lexically_normal().string();
 
@@ -52,9 +93,12 @@ std::shared_ptr<FINALITY::MaterialAsset> FINALITY::MaterialAsset::Create(
         asset->m_FragmentShaderPath = ResolvePath(asset->m_Definition.FragmentShader, filePath);
         config.VertexShader = Shader::Create(asset->m_VertexShaderPath, device);
         config.FragmentShader = Shader::Create(asset->m_FragmentShaderPath, device);
+        asset->m_Definition.VertexShader = AssetRegistry::Reference(asset->m_VertexShaderPath);
+        asset->m_Definition.FragmentShader = AssetRegistry::Reference(asset->m_FragmentShaderPath);
 
         if (!config.VertexShader || !config.FragmentShader)
             throw std::runtime_error("Unable to load one or more shaders");
+        ReflectProperties(asset->m_Definition, asset->m_VertexShaderPath, asset->m_FragmentShaderPath);
 
         config.EnableBlending = asset->m_Definition.EnableBlending;
         config.Culling = asset->m_Definition.Culling;
@@ -71,6 +115,8 @@ std::shared_ptr<FINALITY::MaterialAsset> FINALITY::MaterialAsset::Create(
             if (!asset->m_Texture)
                 throw std::runtime_error("Unable to load material texture");
         }
+        else if (!asset->m_Definition.TextureBinding.empty())
+            asset->m_Texture = AssetManager::CreateAsset<Texture>("builtin://white");
 
         return asset;
     }
@@ -147,13 +193,42 @@ bool FINALITY::MaterialAsset::ReloadShadersIfChanged(bool force)
         config.FragmentShader = Shader::Create(m_FragmentShaderPath, device);
         if (!config.VertexShader || !config.FragmentShader)
             return false;
+        auto definition = m_Definition;
+        ReflectProperties(definition, m_VertexShaderPath, m_FragmentShaderPath);
         config.EnableBlending = m_Definition.EnableBlending;
         config.Culling = m_Definition.Culling;
 
         auto newPipeline = Pipeline::Create(config);
         if (!newPipeline) return false;
+        std::vector<std::pair<std::shared_ptr<Material>, std::shared_ptr<Material>>> updated;
+        for (const auto& weak : m_Instances)
+        {
+            const auto instance = weak.lock();
+            if (!instance) continue;
+            auto candidate = instance->Clone();
+            for (const auto& property : definition.Properties)
+            {
+                if (candidate->GetUniforms().contains(property.Name)) continue;
+                const uint32_t size = property.Type == MaterialParameterType::Float ? 4 : property.Type == MaterialParameterType::Vec4 ? 16 : 64;
+                if (!candidate->RegisterUniform(property.Name, property.Offset, size))
+                    throw std::runtime_error("Shader uniform cannot be added: " + property.Name);
+                if (property.Type == MaterialParameterType::Float) candidate->SetUniform1f(property.Name, property.Default[0]);
+                else if (property.Type == MaterialParameterType::Vec4)
+                    candidate->SetUniformVec4(property.Name, {property.Default[0], property.Default[1], property.Default[2], property.Default[3]});
+                else
+                {
+                    glm::mat4 value(1);
+                    for (int column = 0; column < 4; ++column)
+                        for (int row = 0; row < 4; ++row) value[column][row] = property.Default[column * 4 + row];
+                    candidate->SetUniformMat4(property.Name, value);
+                }
+            }
+            updated.emplace_back(instance, std::move(candidate));
+        }
         device->WaitIdle();
+        m_Definition = std::move(definition);
         m_Pipeline = std::move(newPipeline);
+        for (const auto& [instance, candidate] : updated) *instance = *candidate;
         for (auto it = m_Instances.begin(); it != m_Instances.end(); )
         {
             if (auto instance = it->lock())

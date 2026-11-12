@@ -19,6 +19,8 @@ namespace FINALITY
         std::shared_ptr<Shader> VertexShader;
         std::shared_ptr<Shader> FragmentShader;
         bool EnableBlending = false;
+        bool DepthTest = true;
+        bool DepthWrite = true;
 
         CullMode Culling = CullMode::Back;
     };

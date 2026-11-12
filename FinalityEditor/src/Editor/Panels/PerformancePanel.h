@@ -4,9 +4,9 @@
 
 namespace FINALITY 
 {
-	static void DrawPerformancePanel(float uiFps, int historyOffset, const float* frameTimeHistory, float uiAvgFrameTimeMs)
+	static void DrawPerformancePanel(float uiFps, int historyOffset, const float* frameTimeHistory, float uiAvgFrameTimeMs, bool* open = nullptr)
 	{
-		FINALITY::ImGUIPanel perfPanel("Performance Overlay");
+		FINALITY::ImGUIPanel perfPanel("Performance Overlay", open);
 		perfPanel.Text("System Benchmarks");
 		perfPanel.Text("FPS: %.1f", uiFps);
 

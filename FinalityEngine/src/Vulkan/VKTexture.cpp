@@ -42,13 +42,22 @@ namespace FINALITY
         VkDeviceSize imageSize = 0;
         const void* pixelsToCopy = nullptr;
         bool isCompressed = false;
+        bool ownsPixels = false;
+        static const unsigned char white[] = {255,255,255,255};
         gli::texture gliTex;
 
         std::filesystem::path path(filePath);
         std::string ext = path.extension().string();
         std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return std::tolower(c); });
 
-        if (ext == ".dds" || ext == ".ktx" || ext == ".ktx2")
+        if (filePath == "builtin://white")
+        {
+            m_Width = m_Height = m_MipLevels = 1;
+            imageSize = 4;
+            pixelsToCopy = white;
+            m_Format = VK_FORMAT_R8G8B8A8_UNORM;
+        }
+        else if (ext == ".dds" || ext == ".ktx" || ext == ".ktx2")
         {
             isCompressed = true;
             gliTex = gli::load(filePath);
@@ -72,6 +81,7 @@ namespace FINALITY
             m_MipLevels = 1;
             imageSize = m_Width * m_Height * 4;
             pixelsToCopy = pixels;
+            ownsPixels = true;
             m_Format = VK_FORMAT_R8G8B8A8_UNORM;
         }
 
@@ -103,7 +113,7 @@ namespace FINALITY
         std::memcpy(data, pixelsToCopy, imageSize);
         vkUnmapMemory(m_Device, outStagingMemory);
 
-        if (!isCompressed) stbi_image_free(const_cast<void*>(pixelsToCopy));
+        if (ownsPixels) stbi_image_free(const_cast<void*>(pixelsToCopy));
 
         VkImageCreateInfo imageInfo{};
         imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;

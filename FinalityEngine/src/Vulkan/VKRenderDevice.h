@@ -204,7 +204,12 @@ namespace FINALITY
 
 		VkDescriptorSetLayout m_MaterialDescriptorSetLayout = VK_NULL_HANDLE;
 		VKDescriptorAllocator m_MaterialDescriptorAllocator;
-		std::unordered_map<const Material*, VkDescriptorSet> m_MaterialDescriptorCache;
+        struct CachedMaterialDescriptor
+        {
+            VkDescriptorSet Set = VK_NULL_HANDLE;
+            std::weak_ptr<Texture> TextureReference;
+        };
+		std::unordered_map<const Texture*, CachedMaterialDescriptor> m_MaterialDescriptorCache;
 
 		std::vector<VKDeletionQueue> m_FrameDeletionQueues;
 		std::shared_ptr<Framebuffer> m_PostProcessingFramebuffer = nullptr;

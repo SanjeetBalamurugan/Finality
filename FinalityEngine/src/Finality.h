@@ -31,6 +31,11 @@
 // ASSETS
 #include "Assets/AssetManager.h"
 #include "Assets/MaterialAsset.h"
+#include "Assets/AssetRegistry.h"
+#include "Assets/ModelAsset.h"
+#include "Project/Project.h"
+#include "Scene/ScriptRegistry.h"
+#include "Scene/ScriptModule.h"
 
 // UTILS
 #include "Utils/UUID.h"

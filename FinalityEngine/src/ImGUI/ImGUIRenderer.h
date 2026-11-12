@@ -12,7 +12,7 @@ namespace FINALITY
 	public:
 		ImGUIRenderer(WindowSpec spec, RenderDevice* device)
 			: m_Specification(spec), m_Device(device){};
-		~ImGUIRenderer() {};
+		virtual ~ImGUIRenderer() = default;
 
 		void InitImGUI();
 		void ShutDown();

@@ -1,9 +1,9 @@
 project "ImGui"
-	kind "StaticLib"
+	kind "SharedLib"
 	language "C++"
     staticruntime "off"
 
-	targetdir ("bin/" .. outputdir .. "/%{prj.name}")
+	targetdir ("../bin/" .. outputdir)
 	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
 
 	includedirs
@@ -30,8 +30,6 @@ project "ImGui"
     local vulkan = GetVulkanSDK()
     if vulkan then
         files {
-            "../vendor/imgui/backends/imgui_impl_glfw.cpp",
-            "../vendor/imgui/backends/imgui_impl_vulkan.cpp",
             "../vendor/imgui/backends/imgui_impl_glfw.h",
             "../vendor/imgui/backends/imgui_impl_vulkan.h"
         }
@@ -50,6 +48,7 @@ project "ImGui"
     end
 
 	filter "system:windows"
+		defines { "IMGUI_API=__declspec(dllexport)" }
 		systemversion "latest"
 		cppdialect "C++17"
 

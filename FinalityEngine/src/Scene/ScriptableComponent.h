@@ -5,30 +5,52 @@
 #include <functional>
 #include <entt.hpp>
 #include <Core/Core.h>
+#include <string>
+#include <map>
+#include <variant>
+#include <glm/glm.hpp>
+#include <Assets/AssetRegistry.h>
+
+#ifdef FINALITY_REFLECTION_SCAN
+#define FISerializeField friend struct ::FINALITY::ScriptFieldAccess; [[clang::annotate("finality.serialize")]]
+#else
+#define FISerializeField friend struct ::FINALITY::ScriptFieldAccess;
+#endif
 
 namespace FINALITY
 {
+    struct ScriptFieldAccess;
     class Entity;
     class Scene;
 
     class ScriptableComponent;
 
+    struct ScriptAssetReference
+    {
+        ProjectAssetType Type = ProjectAssetType::Unknown;
+        std::string Reference;
+    };
+
+    using ScriptValue = std::variant<bool, int, float, std::string, glm::vec3, ScriptAssetReference>;
+
     struct ScriptStorage
     {
         struct ScriptInstance
         {
-            std::unique_ptr<ScriptableComponent> Instance;
+            std::shared_ptr<void> ModuleLease;
+            std::shared_ptr<ScriptableComponent> Instance;
             bool Started = false;
+            bool Awakened = false;
+            bool Enabled = true;
+            std::string TypeName;
+            std::map<std::string, ScriptValue> Properties;
             std::function<std::unique_ptr<ScriptableComponent>()> Factory;
 
-            ScriptInstance(std::unique_ptr<ScriptableComponent> instance, bool started,
-                std::function<std::unique_ptr<ScriptableComponent>()> factory = {})
-                : Instance(std::move(instance)), Started(started), Factory(std::move(factory))
-            {
-            }
+            FAPI ScriptInstance(std::unique_ptr<ScriptableComponent> instance, bool started,
+                std::function<std::unique_ptr<ScriptableComponent>()> factory = {}, std::shared_ptr<void> moduleLease = {});
 
             ScriptInstance(ScriptInstance&&) noexcept = default;
-            ScriptInstance& operator=(ScriptInstance&&) noexcept = default;
+            FAPI ScriptInstance& operator=(ScriptInstance&& other) noexcept;
 
             ScriptInstance(const ScriptInstance&) = delete;
             ScriptInstance& operator=(const ScriptInstance&) = delete;
@@ -72,6 +94,7 @@ namespace FINALITY
 
         friend class Scene;
         friend class Entity;
+        friend class ScriptRegistry;
     };
 }
 

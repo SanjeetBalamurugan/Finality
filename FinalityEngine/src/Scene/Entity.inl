@@ -31,8 +31,6 @@ namespace FINALITY
                     return nullptr;
             });
 
-        ptr->Awake();
-
         return *ptr;
     }
 
@@ -57,7 +55,7 @@ namespace FINALITY
     template<typename T>
     bool Entity::HasComponent() const
     {
-        return m_CurrentScene->m_EntityRegistry.all_of<T>(m_EntityHandle);
+        return IsValid() && m_CurrentScene->m_EntityRegistry.all_of<T>(m_EntityHandle);
     }
 
     template<typename T>
@@ -70,6 +68,8 @@ namespace FINALITY
 
 	inline void Entity::SetParent(Entity parent)
 	{
+		if (!IsValid()) return;
+		if (parent.m_EntityHandle != entt::null && !parent.IsValid()) return;
 		auto& registry = m_CurrentScene->m_EntityRegistry;
 		auto& rel = registry.get<RelationshipComponent>(m_EntityHandle);
 
@@ -87,6 +87,7 @@ namespace FINALITY
             const auto* ancestor = registry.try_get<RelationshipComponent>(cursor);
             cursor = ancestor ? ancestor->Parent : entt::null;
         }
+        if (cursor != entt::null) return;
         }
 		if (rel.Parent != entt::null)
 		{

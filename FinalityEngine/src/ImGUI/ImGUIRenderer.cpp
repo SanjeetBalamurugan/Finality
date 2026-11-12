@@ -11,6 +11,7 @@
 #include "Fonts/Inter/Inter.h"
 #include "Themes/Light01.h"
 #include "Themes/Dark01.h"
+#include "EditorTheme.h"
 
 #include "Themes/Catppuccin/CatppuccinLatte.h"
 #include "Themes/Catppuccin/CatppuccinFrappe.h"
@@ -40,7 +41,8 @@ void FINALITY::ImGUIRenderer::InitImGUI()
 	ImFont* interRegular = io.Fonts->AddFontFromMemoryCompressedBase85TTF(Inter_18pt_Regular_compressed_data_base85, 18);
 	if (interRegular != nullptr) io.FontDefault = interRegular;
 
-	FINALITY::ApplyDark01();
+    std::string themeError;
+    EditorTheme::Apply("Dark01", {}, {}, themeError);
 
 	m_ActiveAPI = this->m_Device->GetActiveApi();
 

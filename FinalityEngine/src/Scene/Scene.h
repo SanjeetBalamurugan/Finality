@@ -11,8 +11,9 @@ namespace FINALITY
 	class FAPI Scene
 	{
 	public:
+        Scene();
         glm::mat4 GetWorldTransform(entt::entity entityHandle) const;
-		virtual ~Scene() = default;
+		virtual ~Scene();
 
 		virtual void OnInit() = 0;
 		virtual void OnUpdate(float ts);
@@ -20,6 +21,8 @@ namespace FINALITY
 		virtual void OnDestroy();
 
 		Entity CreateEntity(const std::string& name = std::string());
+        Entity DuplicateEntity(entt::entity handle);
+        Entity InstantiateHierarchy(const Scene& source, entt::entity handle);
         Entity GetEntity(entt::entity handle);
 		void DestroyEntity(entt::entity entity);
         void CopyScriptsTo(Scene& destination) const;

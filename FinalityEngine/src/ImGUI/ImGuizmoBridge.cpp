@@ -2,13 +2,20 @@
 #include "ImGuizmoBridge.h"
 
 #include <imgui.h>
-#include <ImGuizmo.h>
+#include "ImGuizmoApi.h"
 #include <glm/gtc/type_ptr.hpp>
+#include <Scene/Components.h>
+#include <cmath>
+
+bool FINALITY::ImGuizmoBridge::IsActive()
+{
+    return ImGuizmo::IsOver() || ImGuizmo::IsUsing();
+}
 
 bool FINALITY::ImGuizmoBridge::Manipulate(const glm::mat4& view,
     const glm::mat4& projection,
     int operation,
-    glm::mat4& worldTransform)
+    glm::mat4& worldTransform, bool local)
 {
     if (ImGui::GetCurrentContext() == nullptr)
         return false;
@@ -32,7 +39,7 @@ bool FINALITY::ImGuizmoBridge::Manipulate(const glm::mat4& view,
     glm::mat4 editedTransform = worldTransform;
     const bool changed = ImGuizmo::Manipulate(
         glm::value_ptr(view), glm::value_ptr(projection),
-        gizmoOperation, ImGuizmo::WORLD,
+        gizmoOperation, local ? ImGuizmo::LOCAL : ImGuizmo::WORLD,
         glm::value_ptr(editedTransform));
 
     if (!changed || !ImGuizmo::IsUsing())
@@ -53,4 +60,22 @@ void FINALITY::ImGuizmoBridge::DecomposeTransform(
         glm::value_ptr(position),
         glm::value_ptr(rotationDegrees),
         glm::value_ptr(scale));
+}
+
+void FINALITY::ImGuizmoBridge::SetLocalTransform(TransformComponent& component, const glm::mat4& local)
+{
+    component.Basis = glm::mat4(1);
+    if (std::abs(glm::determinant(glm::mat3(local))) > 1.0e-8f)
+    {
+        DecomposeTransform(local,component.Position,component.Rotation,component.Scale);
+        component.Basis = glm::inverse(component.GetTransformMatrix()) * local;
+    }
+    else
+    {
+        component.Position = glm::vec3(local[3]);
+        component.Rotation = glm::vec3(0);
+        component.Scale = glm::vec3(1);
+        component.Basis = glm::translate(glm::mat4(1),-component.Position) * local;
+    }
+    component.Matrix = local;
 }

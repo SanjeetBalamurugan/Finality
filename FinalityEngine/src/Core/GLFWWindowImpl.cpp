@@ -93,6 +93,11 @@ bool FINALITY::GLFWWindowImpl::ShouldClose() const
 void FINALITY::GLFWWindowImpl::SetCallbacks()
 {
 	glfwSetWindowUserPointer(m_Window, this);
+    glfwSetDropCallback(m_Window, [](GLFWwindow* window, int count, const char** paths)
+    {
+        auto* self = static_cast<GLFWWindowImpl*>(glfwGetWindowUserPointer(window));
+        if (self) for (int index = 0; index < count; ++index) self->QueueDroppedPath(paths[index]);
+    });
 
 	glfwSetFramebufferSizeCallback(m_Window, [](GLFWwindow* w, int width, int height)
 		{

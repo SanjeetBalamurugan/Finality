@@ -1,3 +1,5 @@
+newoption { trigger = "build-suffix", value = "NAME", description = "Use an isolated output directory for verification builds" }
+
 workspace "Finality"  
     architecture "x64"
     startproject "FinalityEditor"
@@ -5,11 +7,12 @@ workspace "Finality"
     cppdialect "C++20"
 
     filter "action:vs*"
-        buildoptions { "/utf-8" }
+        buildoptions { "/utf-8", "/MP4" }
 
     configurations { "Debug", "Release" }
 
     outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
+    if _OPTIONS["build-suffix"] then outputdir = outputdir .. "-" .. _OPTIONS["build-suffix"] end
 
     targetdir ("bin/" .. outputdir)
     objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
@@ -40,6 +43,7 @@ workspace "Finality"
     -- Tools
     group "Tools"
         include "FIShaderCompiler"
+
     group ""
 
     -- Scripts
