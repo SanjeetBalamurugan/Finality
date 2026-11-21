@@ -5,6 +5,7 @@
 
 namespace FINALITY
 {
+    /** @todo TODO: Document LavaMaterialLayout struct semantics, ownership and usage. */
     struct LavaMaterialLayout
     {
         float Time;
@@ -13,6 +14,7 @@ namespace FINALITY
         float GlowIntensity;
     };
 
+    /** @todo TODO: Document LavaScript class semantics, ownership and usage. */
     class LavaScript : public FINALITY::ScriptableComponent
     {
     public:

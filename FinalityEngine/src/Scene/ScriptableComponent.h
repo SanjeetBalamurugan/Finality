@@ -1,3 +1,13 @@
+/**
+ * @file
+ * @ingroup scene
+ * @brief Defines native script ownership, lifecycle and Inspector field annotations.
+ *
+ * Scene binds each attached script to its entity and controls its callbacks. Public mutable supported fields are exposed automatically. FISerializeField opts private fields into generated access; it does not convert arbitrary unsupported C++ types into Inspector values.
+ *
+ * @par Usage
+ * Override the needed lifecycle callbacks. Initial activation runs Awake, OnEnable and Start. Re-enabling repeats OnEnable; active destruction dispatches OnDisable before OnDestroy. Use GetEntity for scene operations.
+ */
 #pragma once
 
 #include <memory>
@@ -23,24 +33,38 @@ namespace FINALITY
     class Entity;
     class Scene;
 
+    /**
+     * @ingroup scene
+     * @brief Defines native script ownership, lifecycle and Inspector field annotations.
+     *
+     * Scene binds each attached script to its entity and controls its callbacks. Public mutable supported fields are exposed automatically. FISerializeField opts private fields into generated access; it does not convert arbitrary unsupported C++ types into Inspector values.
+     *
+     * @par Usage
+     * Override the needed lifecycle callbacks. Initial activation runs Awake, OnEnable and Start. Re-enabling repeats OnEnable; active destruction dispatches OnDisable before OnDestroy. Use GetEntity for scene operations.
+     */
     class ScriptableComponent;
 
+    /** @brief Typed Inspector asset reference stored as a registry reference or path. */
     struct ScriptAssetReference
     {
         ProjectAssetType Type = ProjectAssetType::Unknown;
         std::string Reference;
     };
 
+    /** @todo TODO: Document ScriptValue alias semantics, ownership and usage. */
     using ScriptValue = std::variant<bool, int, float, std::string, glm::vec3, ScriptAssetReference>;
 
+    /** @brief Attached native script instances and their authored property values for one entity. */
     struct ScriptStorage
     {
+        /** @brief Script instance state and its module lease; keeps native code alive while the instance exists. */
         struct ScriptInstance
         {
             std::shared_ptr<void> ModuleLease;
             std::shared_ptr<ScriptableComponent> Instance;
             bool Started = false;
             bool Awakened = false;
+            bool Active = false;
             bool Enabled = true;
             std::string TypeName;
             std::map<std::string, ScriptValue> Properties;
@@ -67,6 +91,7 @@ namespace FINALITY
         ScriptStorage& operator=(const ScriptStorage&) = delete;
     };
 
+    /** @todo TODO: Document ScriptableComponent class semantics, ownership and usage. */
     class FAPI ScriptableComponent
     {
     public:
@@ -85,11 +110,16 @@ namespace FINALITY
     protected:
         entt::entity m_EntityHandle{ entt::null };
         Scene* m_CurrentScene = nullptr;
+        std::weak_ptr<void> m_Lifetime;
 
     private:
         virtual void Awake() {}
         virtual void Start() {}
+        virtual void OnEnable() {}
+        virtual void OnDisable() {}
+        virtual void FixedUpdate(float dt) {}
         virtual void Update(float dt) {}
+        virtual void LateUpdate(float dt) {}
         virtual void OnDestroy() {}
 
         friend class Scene;

@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup tools
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for ImGUIRenderer.h.
+ */
 #pragma once
 #include <memory>
 #include <Core/RenderDevice.h>
@@ -6,6 +11,7 @@
 
 namespace FINALITY
 {
+	/** @todo TODO: Document ImGUIRenderer class semantics, ownership and usage. */
 	class ImGUIRenderer
 	{
 	private:

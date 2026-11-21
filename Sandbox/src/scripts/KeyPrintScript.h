@@ -5,6 +5,7 @@
 
 namespace FINALITY
 {
+    /** @todo TODO: Document KeyPrintScript class semantics, ownership and usage. */
     class KeyPrintScript : public FINALITY::ScriptableComponent
     {
     public:

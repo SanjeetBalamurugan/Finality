@@ -1,0 +1,12 @@
+/.Finality/
+/.vs/
+/*.sln
+/*.slnx
+/*.code-workspace
+*.user
+*.suo
+*.VC.db
+*.VC.opendb
+*.obj
+*.pdb
+*.log

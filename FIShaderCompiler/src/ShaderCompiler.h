@@ -2,6 +2,7 @@
 
 #include <string>
 
+/** @todo TODO: Document ShaderCompiler class semantics, ownership and usage. */
 class ShaderCompiler
 {
 public:

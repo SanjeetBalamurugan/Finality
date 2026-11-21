@@ -21,12 +21,16 @@ bool FINALITY::Project::Create(const std::filesystem::path& location, const std:
             throw std::runtime_error("Choose an empty project directory");
         for (const auto* directory : {"Assets/Scenes", "Assets/Scripts", "Assets/Materials", "Assets/Shaders", "Assets/Textures", "Assets/Models", "Settings", ".Finality"})
             fs::create_directories(root / directory);
+        std::ofstream(root / ".gitignore") << "/.Finality/\n/.vs/\n/*.sln\n/*.slnx\n/*.code-workspace\n*.user\n*.suo\n*.VC.db\n*.VC.opendb\n*.obj\n*.pdb\n*.log\n";
         if (!templateAssets.empty() && fs::is_directory(templateAssets))
         {
             if (starterTemplate)
             {
-                for (const auto* directory : {"shaders", "textures", "materials"})
+                for (const auto* directory : {"textures", "materials"})
                     if (fs::is_directory(templateAssets / directory)) fs::copy(templateAssets / directory, root / "Assets" / directory, fs::copy_options::recursive | fs::copy_options::skip_existing);
+                for (const auto* shader : {"shader.vert", "shader.frag", "imported_model.vert", "imported_model.frag"})
+                    if (fs::is_regular_file(templateAssets / "shaders" / shader))
+                        fs::copy_file(templateAssets / "shaders" / shader, root / "Assets/Shaders" / shader, fs::copy_options::skip_existing);
             }
             else
                 for (const auto* resource : {"shaders/shader.vert", "shaders/shader.frag", "textures/test.png", "materials/Default.fmat"})

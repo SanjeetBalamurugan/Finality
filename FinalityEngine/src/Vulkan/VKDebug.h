@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup vulkan
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for VKDebug.h.
+ */
 #pragma once
 #include "VKCore.h"
 

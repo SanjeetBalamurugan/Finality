@@ -19,6 +19,7 @@ void FINALITY::VKImGUIRenderer::Initialize()
 	this->InitImGUI();
 
 	VKRenderDevice* vkDevice = static_cast<VKRenderDevice*>(this->GetRenderDevice());
+    vkDevice->SetOverlayRenderer(this);
 	VkFormat ColorFormat = vkDevice->GetSwapChain()->GetVKFormat();
 
 	VkPipelineRenderingCreateInfoKHR createInfo{};
@@ -88,6 +89,7 @@ VkCommandBuffer FINALITY::VKImGUIRenderer::PrepareCommandBuffer(int image)
 void FINALITY::VKImGUIRenderer::Destroy()
 {
 	VKRenderDevice* vkDevice = static_cast<VKRenderDevice*>(this->GetRenderDevice());
+    vkDevice->SetOverlayRenderer(nullptr);
 	vkDevice->FreeCommandBuffers((uint32_t)m_CMDBufs.size(), m_CMDBufs.data());
 
 	ImGui_ImplVulkan_Shutdown();

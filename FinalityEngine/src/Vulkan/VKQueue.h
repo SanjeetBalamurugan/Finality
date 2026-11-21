@@ -1,9 +1,15 @@
+/**
+ * @file
+ * @ingroup vulkan
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for VKQueue.h.
+ */
 #pragma once
 #include "VKCore.h"
 #include <vector>
 
 namespace FINALITY
 {
+	/** @todo TODO: Document VKQueue class semantics, ownership and usage. */
 	class VKQueue
 	{
 	private:
@@ -16,6 +22,7 @@ namespace FINALITY
 
 		void SubmitSync(VkCommandBuffer cmdBuf);
 		void SubmitASync(VkCommandBuffer cmdBuf, uint32_t imageIndex, bool isFirst, bool isLast);
+        void SubmitFrame(const std::vector<VkCommandBuffer>& commands, uint32_t imageIndex);
 
 		uint32_t AcquireNextImage(bool& outNeedsRecreate);
 		bool Present(uint32_t imageIndex);

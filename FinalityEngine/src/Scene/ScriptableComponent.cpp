@@ -12,7 +12,7 @@ FINALITY::ScriptStorage::ScriptInstance& FINALITY::ScriptStorage::ScriptInstance
     if (this == &other) return *this;
     auto oldLease = ModuleLease;
     Factory = std::move(other.Factory); Instance = std::move(other.Instance);
-    Started = other.Started; Awakened = other.Awakened; Enabled = other.Enabled;
+    Started = other.Started; Awakened = other.Awakened; Active = other.Active; Enabled = other.Enabled;
     TypeName = std::move(other.TypeName); Properties = std::move(other.Properties);
     ModuleLease = std::move(other.ModuleLease);
     return *this;
@@ -23,11 +23,13 @@ namespace FINALITY
 {
     Entity ScriptableComponent::GetEntity()
     {
+        if (m_Lifetime.expired()) return {};
         return Entity{ m_EntityHandle, m_CurrentScene };
     }
 
     const Entity ScriptableComponent::GetEntity() const
     {
+        if (m_Lifetime.expired()) return {};
         return Entity{ m_EntityHandle, m_CurrentScene };
     }
 }

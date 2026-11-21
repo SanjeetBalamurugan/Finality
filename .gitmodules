@@ -19,3 +19,7 @@
 [submodule "vendor/assimp"]
 	path = vendor/assimp
 	url = https://github.com/assimp/assimp.git
+[submodule "vendor/llvm-project"]
+	path = vendor/llvm-project
+	url = https://github.com/llvm/llvm-project.git
+	shallow = true

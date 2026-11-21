@@ -1,3 +1,13 @@
+/**
+ * @file
+ * @ingroup scene
+ * @brief Registers script factories and editable property descriptors.
+ *
+ * ScriptDefinition connects a type name, factory, source location and property accessors. Module replacement updates the definitions used for attachment and transfers authored property values through the supported ScriptValue representation.
+ *
+ * @par Usage
+ * Use Find to locate a registered type and Attach to add it to a scene entity. Keep module leases with definitions and instances; do not retain a raw definition pointer across a module replacement.
+ */
 #pragma once
 
 #include "ScriptableComponent.h"
@@ -9,6 +19,7 @@
 
 namespace FINALITY
 {
+    /** @brief Named property accessor pair with member identity used by the Inspector and persistence. */
     struct ScriptProperty
     {
         std::string Name;
@@ -18,6 +29,7 @@ namespace FINALITY
         std::function<bool(const std::any&)> MatchesMember;
     };
 
+    /** @brief Registered script factory, source location and editable property descriptors with a module lease. */
     struct ScriptDefinition
     {
         std::shared_ptr<void> ModuleLease;
@@ -30,11 +42,26 @@ namespace FINALITY
             : Name(std::move(name)), Factory(std::move(factory)), Properties(std::move(properties)) {}
     };
 
+    /**
+     * @ingroup scene
+     * @brief Registers script factories and editable property descriptors.
+     *
+     * ScriptDefinition connects a type name, factory, source location and property accessors. Module replacement updates the definitions used for attachment and transfers authored property values through the supported ScriptValue representation.
+     *
+     * @par Usage
+     * Use Find to locate a registered type and Attach to add it to a scene entity. Keep module leases with definitions and instances; do not retain a raw definition pointer across a module replacement.
+     */
     class FAPI ScriptRegistry
     {
     public:
         static bool Register(const ScriptDefinition& definition);
         static const std::map<std::string, ScriptDefinition>& GetDefinitions();
+        /**
+         * @brief Looks up a script definition by its registered type name.
+         * @param name Registered name, including its namespace when present.
+         * @return Borrowed definition pointer, or null if the type is not registered.
+         * Do not retain this pointer across registration changes or a module replacement.
+         */
         static const ScriptDefinition* Find(const std::string& name);
         static bool Attach(Scene& scene, entt::entity entity, const std::string& name);
         static void Remove(Scene& scene, entt::entity entity, size_t index);

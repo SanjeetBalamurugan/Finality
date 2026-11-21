@@ -7,7 +7,7 @@
 void FINALITY::EditorLayer::ApplyProjectSettings()
 {
     m_ThemePending = true;
-    const auto& settings = m_Project.Settings;
+    const auto& settings = m_Session.ProjectData.Settings;
     m_ShowGrid = settings.Grid;
     m_SceneTarget->ClearColor = settings.SceneBackground;
     m_EditorCameraScene->ConfigureNavigation(settings.CameraSpeed,settings.CameraSprint,settings.CameraSensitivity);
@@ -22,14 +22,15 @@ void FINALITY::EditorLayer::ApplyProjectSettings()
 
 void FINALITY::EditorLayer::DrawProjectSettings()
 {
-    if (!m_ShowProjectSettings) { m_SettingsInitialized = false; return; }
+    if (!m_ShowProjectSettings) { m_SettingsInitialized = false; m_ShortcutCapture = -1; return; }
+    if (m_SettingsCategory != 6) m_ShortcutCapture = -1;
     if (!m_SettingsInitialized)
     {
-        m_SettingsDraft = m_Project.Settings; m_SettingsName = m_Project.GetName(); m_SettingsStartup = m_Project.StartupScene;
+        m_SettingsDraft = m_Session.ProjectData.Settings; m_SettingsName = m_Session.ProjectData.GetName(); m_SettingsStartup = m_Session.ProjectData.StartupScene;
         m_SettingsInitialized = true;
     }
     ImGui::SetNextWindowSize({960,640},ImGuiCond_FirstUseEver);
-    if (!ImGui::Begin("Project Settings",&m_ShowProjectSettings)) { ImGui::End(); return; }
+    if (!ImGui::Begin("Preferences / Project Settings",&m_ShowProjectSettings)) { ImGui::End(); return; }
     ImGui::SetNextItemWidth(-1);
     EditText("##Search Settings",m_SettingsSearch);
     if (!ImGui::IsItemActive() && m_SettingsSearch.empty())
@@ -39,21 +40,23 @@ void FINALITY::EditorLayer::DrawProjectSettings()
         ImGui::GetWindowDrawList()->AddText({origin.x + padding.x,origin.y + padding.y},ImGui::GetColorU32(ImGuiCol_TextDisabled),"Search settings");
     }
     ImGui::Separator();
-    const char* categories[] = {"Project","Editor","Assets","Native Scripts","Rendering","External Tools"};
+    const char* categories[] = {"Project","Editor","Assets","Native Scripts","Rendering","External Tools","Keymaps","Player"};
     const char* keywords[] = {
         "Project Name | Startup Scene | Location",
         "Theme | TOML | Appearance | Camera Move Speed | Camera Sprint Multiplier | Camera Look Sensitivity | Save Window Layout",
         "Model Scale | Generate Missing Normals | Flip Model UVs | Assign Imported Materials | Thumbnail Render Resolution | Rendered Thumbnail Cache | Automatically Reimport Changed Assets | Asset Scan Interval",
         "Build Project Scripts | Reload Compiled Module | Automatically Build and Reload Scripts | Script Build Delay | Build Diagnostics | Source Directory",
         "Show Scene Grid | Grid Spacing | Grid Fade Distance | Scene Background | Vulkan",
-        "External Tools | Visual Studio | Script Editor | Regenerate Solution"
+        "External Tools | Visual Studio | Visual Studio Code | Script Editor | Regenerate Solution",
+        "Keymaps | Delete | Duplicate | Rename | Keyboard | Preferences",
+        "Player | Company Name | Product Name | Version | Resolution | Fullscreen"
     };
     const auto matches = [&](int index) { return m_SettingsSearch.empty() || MatchesSearch(std::string(categories[index]) + " " + keywords[index],m_SettingsSearch); };
     if (!matches(m_SettingsCategory))
-        for (int index = 0; index < 6; ++index)
+        for (int index = 0; index < 8; ++index)
             if (matches(index)) { m_SettingsCategory = index; break; }
     ImGui::BeginChild("Settings Categories",{190,-45},ImGuiChildFlags_Borders);
-    for (int i = 0; i < 6; ++i)
+    for (int i = 0; i < 8; ++i)
     {
         if (!matches(i)) continue;
         if (ImGui::Selectable(categories[i],m_SettingsCategory == i)) m_SettingsCategory = i;
@@ -77,24 +80,39 @@ void FINALITY::EditorLayer::DrawProjectSettings()
     { if (show(label)) ImGui::DragFloat(field(label).c_str(),&value,step,minimum,maximum,"%.3f",ImGuiSliderFlags_AlwaysClamp); };
     auto toggle = [&](const char* label, bool& value) { if (show(label)) ImGui::Checkbox(field(label).c_str(),&value); };
     auto& draft = m_SettingsDraft;
-    if (m_SettingsCategory == 0)
+    if(m_SettingsCategory == 7) m_BuildPanel.PlayerProperties(m_Session.ProjectData);
+    else if (m_SettingsCategory == 0)
     {
+        if (ImGui::Button("Choose Project Thumbnail..."))
+        {
+            const auto image = FileDialogs::OpenFile("Images\0*.png;*.jpg;*.jpeg\0\0");
+            if (!image.empty())
+            {
+                const auto target = m_Session.ProjectData.GetDirectory() / "Settings/ProjectThumbnail.png";
+                std::error_code error;
+                if (!std::filesystem::equivalent(image,target,error))
+                    std::filesystem::copy_file(image, target,std::filesystem::copy_options::overwrite_existing,error);
+                if (error) m_ThemeMessage = error.message();
+                AssetManager::InvalidateAssetPath(target.string());
+                AssetPreview::Clear();
+            }
+        }
         if (show("Project Name")) EditText(field("Project Name").c_str(),m_SettingsName);
         if (show("Startup Scene"))
         {
             ImGui::TextWrapped("Startup Scene: %s",m_SettingsStartup.c_str());
             if (ImGui::Button("Select Startup Scene"))
                 m_AssetPicker.Open(ProjectAssetType::Scene,AssetRegistry::Reference(m_SettingsStartup),[this](const std::string& reference)
-                { m_SettingsStartup = reference.empty() ? "" : std::filesystem::path(AssetRegistry::Resolve(reference)).lexically_relative(m_Project.GetDirectory()).generic_string(); });
+                { m_SettingsStartup = reference.empty() ? "" : std::filesystem::path(AssetRegistry::Resolve(reference)).lexically_relative(m_Session.ProjectData.GetDirectory()).generic_string(); });
         }
-        ImGui::TextWrapped("Project: %s",m_Project.GetPath().string().c_str());
-        ImGui::TextWrapped("Assets: %s",m_Project.GetAssetsDirectory().string().c_str());
+        ImGui::TextWrapped("Project: %s",m_Session.ProjectData.GetPath().string().c_str());
+        ImGui::TextWrapped("Assets: %s",m_Session.ProjectData.GetAssetsDirectory().string().c_str());
     }
     else if (m_SettingsCategory == 1)
     {
         if (show("Theme"))
         {
-            const auto choices = EditorTheme::List(m_EngineAssets, m_Project.GetDirectory());
+            const auto choices = EditorTheme::List(m_EngineAssets, m_Session.ProjectData.GetDirectory());
             const auto currentTheme = std::find_if(choices.begin(), choices.end(), [&](const auto& choice) { return choice.ID == draft.Theme; });
             const auto& themeLabel = currentTheme == choices.end() ? draft.Theme : currentTheme->Name;
             if (ImGui::BeginCombo(field("Theme").c_str(), themeLabel.c_str()))
@@ -106,17 +124,17 @@ void FINALITY::EditorLayer::DrawProjectSettings()
             if (ImGui::Button("Reload Selected Theme"))
             {
                 ImGuiStyle candidate;
-                if (EditorTheme::Load(draft.Theme, m_EngineAssets, m_Project.GetDirectory(), candidate, m_ThemeMessage))
+                if (EditorTheme::Load(draft.Theme, m_EngineAssets, m_Session.ProjectData.GetDirectory(), candidate, m_ThemeMessage))
                 {
-                    m_Project.Settings.Theme = draft.Theme;
+                    m_Session.ProjectData.Settings.Theme = draft.Theme;
                     m_ThemePending = true;
-                    m_Project.SaveSettings();
+                    m_Session.ProjectData.SaveSettings();
                 }
             }
             ImGui::SameLine();
             if (ImGui::Button("Export Theme as TOML"))
             {
-                const auto destination = m_Project.GetDirectory() / "Settings/Themes/Custom.toml";
+                const auto destination = m_Session.ProjectData.GetDirectory() / "Settings/Themes/Custom.toml";
                 if (EditorTheme::Export(destination, "Custom", m_ThemeMessage))
                     m_ThemeMessage = "Saved Settings/Themes/Custom.toml";
             }
@@ -133,6 +151,7 @@ void FINALITY::EditorLayer::DrawProjectSettings()
         if (ImGui::CollapsingHeader("Model Import",ImGuiTreeNodeFlags_DefaultOpen))
         {
             number("Model Scale",draft.Models.Scale,0.01f,0.0001f,10000);
+            toggle("Convert FBX Units To Metres",draft.Models.ConvertUnits);
             toggle("Generate Missing Normals",draft.Models.GenerateNormals);
             toggle("Flip Model UVs",draft.Models.FlipUVs);
             toggle("Assign Imported Materials",draft.Models.ImportMaterials);
@@ -149,68 +168,72 @@ void FINALITY::EditorLayer::DrawProjectSettings()
     }
     else if (m_SettingsCategory == 3)
     {
-        ImGui::TextWrapped("%s",m_ProjectScripts.GetStatus().c_str());
-        ImGui::Text("Loaded generation: %llu",static_cast<unsigned long long>(m_ProjectScripts.GetGeneration()));
+        ImGui::TextWrapped("%s",m_Session.Scripts.GetStatus().c_str());
+        ImGui::Text("Loaded generation: %llu",static_cast<unsigned long long>(m_Session.Scripts.GetGeneration()));
         ImGui::TextWrapped("Source directory: %s",draft.ScriptDirectory.c_str());
         toggle("Automatically Build and Reload Scripts",draft.AutoBuildScripts);
         number("Script Build Delay",draft.ScriptBuildDelay,0.05f,0.1f,10);
-        ImGui::BeginDisabled(m_ProjectScripts.IsBuilding());
-        if (ImGui::Button("Build Project Scripts")) m_ProjectScripts.Build();
-        ImGui::SameLine(); if (ImGui::Button("Reload Compiled Module")) m_ProjectScripts.Reload();
+        ImGui::BeginDisabled(m_Session.Scripts.IsBuilding());
+        if (ImGui::Button("Build Project Scripts")) m_Session.Scripts.Build();
+        ImGui::SameLine(); if (ImGui::Button("Reload Compiled Module")) m_Session.Scripts.Reload();
         ImGui::EndDisabled();
         ImGui::TextWrapped("Successful builds replace script types in Edit mode and preserve registered fields. Builds completed during Play wait until Stop.");
         if (ImGui::CollapsingHeader("Build Diagnostics"))
         {
             ImGui::BeginChild("Build Output",{0,220},ImGuiChildFlags_Borders,ImGuiWindowFlags_HorizontalScrollbar);
-            const auto& diagnostics = m_ProjectScripts.GetDiagnostics();
+            const auto& diagnostics = m_Session.Scripts.GetDiagnostics();
             ImGui::TextUnformatted(diagnostics.data(),diagnostics.data() + diagnostics.size());
             ImGui::EndChild();
         }
     }
+    else if (m_SettingsCategory == 6)
+    {
+        DrawShortcutSettings();
+    }
     else if (m_SettingsCategory == 5)
     {
-        ImGui::TextWrapped("Script Editor: %s", ExternalTools::Executable.c_str());
-        if (ImGui::BeginCombo("Detected Visual Studio", ExternalTools::Executable.c_str()))
+        ImGui::TextWrapped("Script Editor: %s", m_Session.Tools.Executable.c_str());
+        if (ImGui::BeginCombo("Detected Script Editors", m_Session.Tools.Executable.c_str()))
         {
-            for (const auto& executable : ExternalTools::Installations)
-                if (ImGui::Selectable(executable.c_str(), executable == ExternalTools::Executable))
-                { ExternalTools::Executable = executable; ExternalTools::Save(); }
+            for (const auto& executable : m_Session.Tools.Installations)
+                if (ImGui::Selectable(executable.c_str(), executable == m_Session.Tools.Executable))
+                { m_Session.Tools.Executable = executable; m_Session.Tools.Save(); }
             ImGui::EndCombo();
         }
         if (ImGui::Button("Browse Editor..."))
         {
             const auto executable = FileDialogs::OpenFile("Applications\0*.exe\0All Files\0*.*\0\0");
-            if (!executable.empty()) { ExternalTools::Executable = executable; ExternalTools::Save(); }
+            if (!executable.empty()) { m_Session.Tools.Executable = executable; m_Session.Tools.Save(); }
         }
         ImGui::SameLine();
-        if (ImGui::SmallButton("Detect")) ExternalTools::Detect();
+        if (ImGui::SmallButton("Detect")) m_Session.Tools.Detect();
         static std::future<ProcessResult> generation;
         static std::string diagnostics;
         if (generation.valid() && generation.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
         { const auto result = generation.get(); diagnostics = result.ExitCode == 0 ? "Solution regenerated" : result.Output; }
-        ImGui::BeginDisabled(generation.valid() || m_ProjectScripts.IsBuilding());
+        ImGui::BeginDisabled(generation.valid() || m_Session.Scripts.IsBuilding());
         if (ImGui::SmallButton("Regenerate Solution"))
         {
             auto engine = m_EngineAssets;
-            while (!engine.empty() && !std::filesystem::exists(engine / "Scripts/NativeModule.ps1"))
+            while (!engine.empty() && !std::filesystem::exists(engine / "Scripts/Templates/ProjectScripts.lua"))
             { const auto parent = engine.parent_path(); if (parent == engine) { engine.clear(); break; } engine = parent; }
-            const auto project = m_Project.GetDirectory();
+            const auto project = m_Session.ProjectData.GetDirectory();
             const auto bin = Process::ExecutablePath().parent_path();
-            const auto scripts = m_Project.Settings.ScriptDirectory;
-            generation = std::async(std::launch::async, [engine,project,bin,scripts]
+            const auto scripts = m_Session.ProjectData.Settings.ScriptDirectory;
+            const auto projectName=m_Session.ProjectData.GetName();
+            generation = std::async(std::launch::async, [engine,project,bin,scripts,projectName]
             {
 #ifdef NDEBUG
                 const std::wstring configuration = L"Release";
 #else
                 const std::wstring configuration = L"Debug";
 #endif
-                return Process::Run({L"powershell.exe",L"-NoProfile",L"-NonInteractive",L"-ExecutionPolicy",L"RemoteSigned",L"-File",
-                    (engine / "Scripts/NativeModule.ps1").wstring(),L"-ProjectRoot",project.wstring(),L"-EngineRoot",engine.wstring(),
-                    L"-EngineBin",bin.wstring(),L"-ScriptDirectory",std::filesystem::path(scripts).wstring(),L"-Configuration",configuration,L"-GenerateOnly"},project);
+                return Process::Run({(bin / "FIBuild.exe").wstring(),L"native",L"--project",project.wstring(),L"--name",std::filesystem::path(projectName).wstring(),L"--engine",engine.wstring(),
+                    L"--bin",bin.wstring(),L"--source",std::filesystem::path(scripts).wstring(),L"--configuration",configuration,L"--generate-only"},project);
             });
         }
         ImGui::EndDisabled();
-        ImGui::TextWrapped("%s", ExternalTools::Status.c_str());
+        ImGui::TextWrapped("%s", m_Session.Tools.Status.c_str());
         ImGui::TextWrapped("%s", diagnostics.c_str());
     }
     else
@@ -229,14 +252,14 @@ void FINALITY::EditorLayer::DrawProjectSettings()
         if (!m_SettingsName.empty())
         {
             ImGuiStyle candidate;
-            if (EditorTheme::Load(draft.Theme, m_EngineAssets, m_Project.GetDirectory(), candidate, m_ThemeMessage))
+            if (EditorTheme::Load(draft.Theme, m_EngineAssets, m_Session.ProjectData.GetDirectory(), candidate, m_ThemeMessage))
             {
-                m_Project.Settings = draft; m_Project.SetName(m_SettingsName); m_Project.StartupScene = m_SettingsStartup;
-                if (m_Project.Save()) { ApplyProjectSettings(); AssetPreview::Clear(); AssetRegistry::Scan(); }
+                m_Session.ProjectData.Settings = draft; m_Session.ProjectData.SetName(m_SettingsName); m_Session.Tools.ProjectName=ExternalTools::SafeName(m_SettingsName); m_Session.ProjectData.StartupScene = m_SettingsStartup;
+                if (m_Session.ProjectData.Save()) { ApplyProjectSettings(); AssetPreview::Clear(); AssetRegistry::Scan(); }
             }
         }
     }
     ImGui::SameLine();
-    if (ImGui::Button("Revert")) { m_SettingsDraft = m_Project.Settings; m_SettingsName = m_Project.GetName(); m_SettingsStartup = m_Project.StartupScene; }
+    if (ImGui::Button("Revert")) { m_SettingsDraft = m_Session.ProjectData.Settings; m_SettingsName = m_Session.ProjectData.GetName(); m_SettingsStartup = m_Session.ProjectData.StartupScene; }
     ImGui::End();
 }

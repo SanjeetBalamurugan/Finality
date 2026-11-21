@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup core
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for Mesh.h.
+ */
 #pragma once
 
 #include <vector>
@@ -9,6 +14,7 @@
 
 namespace FINALITY
 {
+	/** @todo TODO: Document Vertex struct semantics, ownership and usage. */
 	struct Vertex
 	{
 		glm::vec3 Position;
@@ -18,6 +24,7 @@ namespace FINALITY
         glm::vec4 Tangent{1.0f, 0.0f, 0.0f, 1.0f};
 	};
 
+	/** @todo TODO: Document MeshPushConstants struct semantics, ownership and usage. */
 	struct MeshPushConstants
 	{
 		glm::mat4 MVP;
@@ -28,6 +35,7 @@ namespace FINALITY
 		float Padding = 0.0f;
 	};
 
+	/** @todo TODO: Document Mesh class semantics, ownership and usage. */
 	class FAPI Mesh
 	{
 	public:
@@ -50,6 +58,8 @@ namespace FINALITY
 
 		glm::vec3 GetBoundsCenter() const { return m_BoundsCenter; }
 		float GetBoundsRadius() const { return m_BoundsRadius; }
+        const std::vector<Vertex>& GetVertices() const { return m_Vertices; }
+        const std::vector<uint32_t>& GetIndices() const { return m_Indices; }
         bool Raycast(const glm::vec3& origin, const glm::vec3& direction, const glm::mat4& world, float& distance) const;
 
 	private:

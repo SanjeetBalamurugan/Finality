@@ -1,3 +1,13 @@
+/**
+ * @file
+ * @ingroup assets
+ * @brief Loads imported model data and instantiates preserved model hierarchies.
+ *
+ * ModelData retains nodes, submeshes, material slots, dependencies, diagnostics and bounds. ModelAsset applies import settings and supplies both scene instantiation and preview render packets.
+ *
+ * @par Usage
+ * Configure engine assets first. Load a model reference, inspect diagnostics, then Instantiate into a scene. SaveImportOptions persists per-model adjustments; ExtractMaterials writes editable material assets.
+ */
 #pragma once
 
 #include <Core/Core.h>
@@ -12,6 +22,7 @@ namespace FINALITY
     class Entity;
     struct RenderPacket;
 
+    /** @brief One imported submesh, with geometry and an index into ModelData::Materials. */
     struct ModelMesh
     {
         std::string Name;
@@ -20,6 +31,7 @@ namespace FINALITY
         MeshGeometry Geometry;
     };
 
+    /** @brief Imported material appearance, texture reference and extracted asset mapping. */
     struct ModelMaterial
     {
         std::string Name;
@@ -30,6 +42,7 @@ namespace FINALITY
         std::map<std::string,std::string> Properties;
     };
 
+    /** @brief One hierarchy node with a parent index, local transform and attached mesh indices. A parent of -1 identifies a root. */
     struct ModelNode
     {
         std::string Name;
@@ -38,6 +51,7 @@ namespace FINALITY
         std::vector<uint32_t> Meshes;
     };
 
+    /** @brief Imported nodes, submeshes, materials, dependencies, diagnostics and model-space bounds. */
     struct ModelData
     {
         std::vector<ModelMesh> Meshes;
@@ -48,6 +62,15 @@ namespace FINALITY
         glm::vec3 Minimum{0}, Maximum{0};
     };
 
+    /**
+     * @ingroup assets
+     * @brief Loads imported model data and instantiates preserved model hierarchies.
+     *
+     * ModelData retains nodes, submeshes, material slots, dependencies, diagnostics and bounds. ModelAsset applies import settings and supplies both scene instantiation and preview render packets.
+     *
+     * @par Usage
+     * Configure engine assets first. Load a model reference, inspect diagnostics, then Instantiate into a scene. SaveImportOptions persists per-model adjustments; ExtractMaterials writes editable material assets.
+     */
     class FAPI ModelAsset
     {
     public:
@@ -60,5 +83,8 @@ namespace FINALITY
         static std::vector<RenderPacket> BuildPreview(const std::string& reference);
         static void Clear();
         static bool Supports(const std::filesystem::path& path);
+        static ModelImportOptions GetImportOptions(const std::string& reference);
+        static bool SaveImportOptions(const std::string& reference, const ModelImportOptions& options, std::string& error);
+        static bool ExtractMaterials(const std::string& reference, const std::filesystem::path& directory, std::string& error);
     };
 }

@@ -4,6 +4,7 @@
 #include <ImGUI/AssetPreview.h>
 #include <fstream>
 #include <Renderer/ShaderReflection.h>
+#include <Assets/TextureImportSettings.h>
 
 void FINALITY::AssetInspector::Clear()
 {
@@ -12,11 +13,13 @@ void FINALITY::AssetInspector::Clear()
     m_Material = MaterialComponent();
     m_Source.clear();
     m_EntityCount = 0;
+    m_ModelImport = {};
+    m_TextureImportError.clear();
 }
 
-void FINALITY::AssetInspector::Draw(uint64_t selected, AssetPicker& picker, bool* open)
+void FINALITY::AssetInspector::Draw(uint64_t selected, AssetPicker& picker, ExternalTools& tools, bool* open)
 {
-    ImGui::Begin("Inspector", open);
+    if (!ImGui::Begin("Inspector", open)) { ImGui::End(); return; }
     const auto* record = AssetRegistry::Find(selected);
     if (!record)
     {
@@ -81,6 +84,32 @@ void FINALITY::AssetInspector::Draw(uint64_t selected, AssetPicker& picker, bool
         DrawMaterialProperties(m_Material, picker, [this,selected]() -> MaterialComponent* { return m_Selected == selected && AssetRegistry::Find(selected) ? &m_Material : nullptr; });
     else if (asset.Type == ProjectAssetType::Texture)
     {
+        try
+        {
+            const auto previousSpace = ReadTextureColorSpace(path);
+            int colorSpace = static_cast<int>(previousSpace);
+            const char* choices[] = {"Automatic (color / source format)","sRGB (color)","Linear (normal / mask / data)"};
+            if (ImGui::Combo("Color Space",&colorSpace,choices,3))
+            {
+                std::string error;
+                if (!SaveTextureColorSpace(path,static_cast<TextureColorSpace>(colorSpace),error)) throw std::runtime_error(error);
+                std::shared_ptr<Texture> replacement;
+                try { replacement = AssetManager::ReloadTexture(reference); if (!replacement) throw std::runtime_error("Texture reload failed"); }
+                catch (...) { SaveTextureColorSpace(path,previousSpace,error); throw; }
+                if (auto* scene = SceneManager::GetInstance().GetActiveScene())
+                    for (auto entity : scene->GetRegistry().view<MaterialComponent>())
+                        if (auto material = scene->GetRegistry().get<MaterialComponent>(entity).MaterialInstance)
+                        {
+                            const auto textures = material->GetTextures();
+                            for (const auto& [name,texture] : textures)
+                                if (texture && texture->Handle == replacement->Handle) material->SetTexture(name,replacement);
+                        }
+                m_TextureImportError.clear();
+                AssetPreview::Clear();
+            }
+        }
+        catch (const std::exception& failure) { m_TextureImportError = failure.what(); }
+        if (!m_TextureImportError.empty()) ImGui::TextWrapped("%s",m_TextureImportError.c_str());
         if (auto texture = AssetManager::CreateAsset<Texture>(reference))
         {
             ImGui::Text("Dimensions: %u x %u", texture->GetWidth(), texture->GetHeight());
@@ -97,10 +126,11 @@ void FINALITY::AssetInspector::Draw(uint64_t selected, AssetPicker& picker, bool
     {
         try
         {
+            m_ModelImport.Draw(reference,tools);
             const auto model = ModelAsset::Load(reference);
             ImGui::Text("%zu nodes, %zu submeshes, %zu material slots",model->Nodes.size(),model->Meshes.size(),model->Materials.size());
             const auto bounds = model->Maximum - model->Minimum;
-            ImGui::Text("Size: %.3f, %.3f, %.3f",bounds.x,bounds.y,bounds.z);
+            ImGui::Text("Imported size (m): %.3f, %.3f, %.3f",bounds.x,bounds.y,bounds.z);
             if (ImGui::CollapsingHeader("Submeshes"))
                 for (const auto& mesh : model->Meshes)
                     ImGui::BulletText("%s: %zu triangles, %s",mesh.Name.c_str(),mesh.Geometry.Indices.size()/3,
@@ -147,10 +177,10 @@ void FINALITY::AssetInspector::Draw(uint64_t selected, AssetPicker& picker, bool
         if (asset.Type == ProjectAssetType::Shader && ShaderCompiler::IsSourceShader(path) && ImGui::Button("Compile Shader")) ShaderCompiler::EnsureCompiled(path, true);
         if (asset.Type == ProjectAssetType::Script)
         {
-            if (ImGui::Button("Open Script")) ExternalTools::OpenScript(path);
+            if (ImGui::Button("Open Script")) tools.OpenScript(path);
             if (ImGui::BeginPopupContextWindow("Script Actions", ImGuiPopupFlags_MouseButtonRight))
             {
-                if (ImGui::MenuItem("Open Script")) ExternalTools::OpenScript(path);
+                if (ImGui::MenuItem("Open Script")) tools.OpenScript(path);
                 ImGui::EndPopup();
             }
             ImGui::TextWrapped("Native source must be compiled and registered before its component can be attached. Registered fields appear on the attached component.");

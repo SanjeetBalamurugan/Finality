@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup tools
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for ImGuizmoBridge.h.
+ */
 
 #pragma once
 
@@ -8,9 +13,11 @@ namespace FINALITY
 {
     struct TransformComponent;
 
+    /** @todo TODO: Document ImGuizmoBridge class semantics, ownership and usage. */
     class FAPI ImGuizmoBridge
     {
     public:
+        static void BeginFrame();
         static bool IsActive();
         static bool Manipulate(const glm::mat4& view,
             const glm::mat4& projection,

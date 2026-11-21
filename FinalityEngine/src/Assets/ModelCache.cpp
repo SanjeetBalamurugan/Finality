@@ -112,10 +112,16 @@ void FINALITY::ModelPipeline::PrepareMaterials(ModelData& model, const std::file
     if (project.empty() || engineAssets.empty()) return;
     for (auto& dependency : model.Dependencies)
         if (std::filesystem::path(dependency).is_absolute()) dependency = std::filesystem::path(dependency).lexically_relative(project).generic_string();
-    const auto shaders = project / "Assets/Imported/FinalityShaders";
+    const bool runtime = AssetRegistry::GetCacheDirectory() != project / ".Finality";
+    const auto shaders = runtime ? AssetRegistry::GetCacheDirectory() / "Shaders" : project / "Assets/Imported/FinalityShaders";
     fs::create_directories(shaders);
     for (const auto* name : {"imported_model.vert","imported_model.frag"})
-        if (!fs::exists(shaders / name)) fs::copy_file(engineAssets / "shaders" / name, shaders / name);
+        if (runtime)
+        {
+            const auto binary = shaders / (std::string(name) + ".spv");
+            if (!fs::exists(binary)) fs::copy_file(engineAssets / "shaders" / (std::string(name) + ".spv"), binary);
+        }
+        else if (!fs::exists(shaders / name)) fs::copy_file(engineAssets / "shaders" / name, shaders / name);
     for (size_t index = 0; index < model.Materials.size(); ++index)
     {
         auto& source = model.Materials[index];

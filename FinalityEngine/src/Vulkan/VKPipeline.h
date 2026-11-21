@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup vulkan
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for VKPipeline.h.
+ */
 #pragma once
 
 #include <Core/Pipeline.h>
@@ -8,6 +13,7 @@
 
 namespace FINALITY
 {
+    /** @todo TODO: Document VKPipeline class semantics, ownership and usage. */
     class VKPipeline : public Pipeline
     {
     public:

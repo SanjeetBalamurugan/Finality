@@ -2,11 +2,47 @@
 #include <ImGUI/ImGuizmoBridge.h>
 #include <limits>
 #include <cmath>
+#include "ScenePlacement.h"
+#include "Prefab.h"
+
+void FINALITY::EditorLayer::PlaceSceneAsset(uint64_t id, const glm::vec3& position)
+{
+    const auto* record = AssetRegistry::Find(id);
+    auto* scene = SceneManager::GetInstance().GetActiveScene();
+    if (!record || !scene || m_Session.State != EditorState::Edit) return;
+    const auto reference = "asset://"+std::to_string(id);
+    try
+    {
+        Entity entity;
+        if (record->Type == ProjectAssetType::Model) entity = ModelAsset::Instantiate(*scene,reference);
+        else if (record->Type == ProjectAssetType::Prefab) entity = InstantiatePrefab(*scene,AssetRegistry::Resolve(reference));
+        if (!entity.IsValid()) return;
+        entity.GetComponent<TransformComponent>().Position = position;
+        m_Session.SelectEntity(entity.GetHandle());
+        m_Session.Checkpoint.Request();
+    }
+    catch (const std::exception& error) { FI_CLIENT_ERROR("Cannot place asset: {}",error.what()); }
+}
+
+void FINALITY::EditorLayer::FrameSelected()
+{
+    auto* scene = SceneManager::GetInstance().GetActiveScene();
+    if (!scene || !scene->GetRegistry().valid(m_Session.SelectedEntity)) return;
+    glm::vec3 minimum, maximum;
+    const bool bounds = HierarchyBounds(*scene,m_Session.SelectedEntity,minimum,maximum);
+    const auto center = bounds ? (minimum+maximum)*0.5f : glm::vec3(scene->GetWorldTransform(m_Session.SelectedEntity)[3]);
+    const float radius = bounds ? std::max(0.25f,glm::length(maximum-minimum)*0.5f) : 1;
+    const auto* camera = m_EditorCameraScene->GetCamera();
+    const float vertical = std::atan(1/std::abs(camera->GetProjection()[1][1]));
+    const float horizontal = std::atan(1/std::abs(camera->GetProjection()[0][0]));
+    const float distance = radius/std::sin(std::min(vertical,horizontal))*1.15f;
+    m_EditorCameraScene->SetPosition(center-camera->GetForward()*distance);
+}
 
 void FINALITY::EditorLayer::InitializeSceneTools()
 {
-    const auto vertex = m_EngineAssets / "shaders/editor_grid.vert";
-    const auto fragment = m_EngineAssets / "shaders/editor_grid.frag";
+    const auto vertex = m_EngineAssets / "Editor/Shaders/editor_grid.vert";
+    const auto fragment = m_EngineAssets / "Editor/Shaders/editor_grid.frag";
     if (!std::filesystem::is_regular_file(vertex) || !std::filesystem::is_regular_file(fragment))
     {
         FI_CLIENT_ERROR("Scene grid shader files are missing from {}", m_EngineAssets.string());
@@ -39,7 +75,7 @@ void FINALITY::EditorLayer::AppendSceneGrid(std::vector<RenderPacket>& queue, Ca
     RenderPacket packet;
     packet.MeshData = m_GridMesh;
     packet.PipelineInstance = m_GridMaterial->GetPipeline();
-    packet.MaterialKey = m_GridMaterial.get();
+    packet.MaterialInstance = m_GridMaterial;
     packet.CustomPushData = m_GridMaterial->GetRawDataBuffer();
     packet.Transform = glm::translate(glm::mat4(1), glm::vec3(std::floor(camera.GetPosition().x / 10) * 10,0,std::floor(camera.GetPosition().z / 10) * 10));
     packet.EditorOverlay = true;
@@ -71,6 +107,6 @@ void FINALITY::EditorLayer::PickSceneEntity(const ImVec2& minimum, const ImVec2&
         if (!mesh.MeshData || !material.MaterialInstance || !material.MaterialInstance->GetPipeline()) continue;
         if (mesh.MeshData->Raycast(origin, direction, scene->GetWorldTransform(entity), nearest)) selected = entity;
     }
-    m_SelectedEntity = selected;
-    m_SelectedAsset = 0;
+    m_Session.SelectedEntity = selected;
+    m_Session.SelectedAsset = 0;
 }

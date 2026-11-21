@@ -1,6 +1,12 @@
+/**
+ * @file
+ * @ingroup editor
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for MainScene.h.
+ */
 #pragma once
 #include <Finality.h>
 
+/** @todo TODO: Document MainScene class semantics, ownership and usage. */
 class MainScene : public FINALITY::Scene
 {
 public:

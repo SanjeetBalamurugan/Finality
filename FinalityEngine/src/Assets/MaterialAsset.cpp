@@ -54,17 +54,21 @@ namespace
     std::string ResolvePath(const std::string& referencedPath, const std::string& materialPath)
     {
         namespace fs = std::filesystem;
+        const auto available = [](const fs::path& value) {
+            return fs::is_regular_file(value) || (FINALITY::ShaderCompiler::IsSourceShader(value.string()) &&
+                fs::is_regular_file(value.string() + ".spv"));
+        };
         fs::path path(referencedPath);
         const fs::path projectPath(FINALITY::AssetRegistry::Resolve(referencedPath));
-        if (!projectPath.empty() && fs::is_regular_file(projectPath))
+        if (!projectPath.empty() && available(projectPath))
             return projectPath.string();
-        if (fs::exists(path))
+        if (available(path))
             return path.lexically_normal().string();
 
         if (path.is_relative())
         {
             fs::path besideMaterial = fs::path(materialPath).parent_path() / path;
-            if (fs::exists(besideMaterial))
+            if (available(besideMaterial))
                 return besideMaterial.lexically_normal().string();
         }
 
@@ -101,12 +105,16 @@ std::shared_ptr<FINALITY::MaterialAsset> FINALITY::MaterialAsset::Create(
         ReflectProperties(asset->m_Definition, asset->m_VertexShaderPath, asset->m_FragmentShaderPath);
 
         config.EnableBlending = asset->m_Definition.EnableBlending;
+        config.DepthWrite = !config.EnableBlending;
         config.Culling = asset->m_Definition.Culling;
         asset->m_Pipeline = Pipeline::Create(config);
         if (!asset->m_Pipeline)
             throw std::runtime_error("Unable to create material pipeline");
-        asset->m_VertexTimestamp = std::filesystem::last_write_time(asset->m_VertexShaderPath);
-        asset->m_FragmentTimestamp = std::filesystem::last_write_time(asset->m_FragmentShaderPath);
+        const auto timestamp = [](const std::string& path) {
+            return std::filesystem::last_write_time(std::filesystem::is_regular_file(path) ? path : path + ".spv");
+        };
+        asset->m_VertexTimestamp = timestamp(asset->m_VertexShaderPath);
+        asset->m_FragmentTimestamp = timestamp(asset->m_FragmentShaderPath);
 
         if (!asset->m_Definition.TexturePath.empty())
         {
@@ -196,6 +204,7 @@ bool FINALITY::MaterialAsset::ReloadShadersIfChanged(bool force)
         auto definition = m_Definition;
         ReflectProperties(definition, m_VertexShaderPath, m_FragmentShaderPath);
         config.EnableBlending = m_Definition.EnableBlending;
+        config.DepthWrite = !config.EnableBlending;
         config.Culling = m_Definition.Culling;
 
         auto newPipeline = Pipeline::Create(config);
@@ -276,4 +285,18 @@ void FINALITY::MaterialAsset::UpdateDefaultsFromInstance(const Material& instanc
                         property.Default[col * 4 + row] = value[col][row];
         }
     }
+}
+void FINALITY::MaterialAsset::ReplaceTexture(const std::shared_ptr<Texture>& previous, const std::shared_ptr<Texture>& replacement)
+{
+    if (!previous || !replacement) return;
+    if (m_Texture == previous) m_Texture = replacement;
+    std::erase_if(m_Instances,[&](const std::weak_ptr<Material>& weak)
+    {
+        const auto instance = weak.lock();
+        if (!instance) return true;
+        auto textures = instance->GetTextures();
+        for (const auto& [name,texture] : textures)
+            if (texture == previous) instance->SetTexture(name,replacement);
+        return false;
+    });
 }

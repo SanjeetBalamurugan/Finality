@@ -1,12 +1,14 @@
 #pragma once
 
 #include "ScriptableComponent.h"
+#include <stdexcept>
 
 namespace FINALITY
 {
     template<typename T, typename... Args>
     T& Entity::AddScript(Args&&... args)
     {
+        if (!IsValid()) throw std::logic_error("Cannot attach a script to an expired entity");
         static_assert(std::is_base_of_v<ScriptableComponent, T>,
             "T must inherit from ScriptableComponent");
 
@@ -19,6 +21,7 @@ namespace FINALITY
 
         script->m_EntityHandle = m_EntityHandle;
         script->m_CurrentScene = m_CurrentScene;
+        script->m_Lifetime = m_Lifetime;
 
         T* ptr = script.get();
 
@@ -37,6 +40,7 @@ namespace FINALITY
     template<typename T, typename... Args>
     T& Entity::AddComponent(Args&&... args)
     {
+        if (!IsValid()) throw std::logic_error("Cannot add a component to an expired entity");
         assert(!HasComponent<T>() && "Component already exists!");
 
         return m_CurrentScene->m_EntityRegistry.emplace<T>(
@@ -47,6 +51,7 @@ namespace FINALITY
     template<typename T>
     T& Entity::GetComponent()
     {
+        if (!HasComponent<T>()) throw std::logic_error("Entity is expired or its component is missing");
         assert(HasComponent<T>() && "Component doesn't exist!");
 
         return m_CurrentScene->m_EntityRegistry.get<T>(m_EntityHandle);
@@ -61,6 +66,7 @@ namespace FINALITY
     template<typename T>
     void Entity::RemoveComponent()
     {
+        if (!HasComponent<T>()) return;
         assert(HasComponent<T>() && "Component doesn't exist!");
 
         m_CurrentScene->m_EntityRegistry.remove<T>(m_EntityHandle);

@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup vulkan
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for VKShader.h.
+ */
 #pragma once
 #include "VKCore.h"
 #include <Renderer/Shader.h>
@@ -5,6 +10,7 @@
 
 namespace FINALITY
 {
+    /** @todo TODO: Document VKShader class semantics, ownership and usage. */
     class VKShader : public Shader
     {
     public:

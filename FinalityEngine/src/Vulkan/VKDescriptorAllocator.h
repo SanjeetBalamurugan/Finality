@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup vulkan
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for VKDescriptorAllocator.h.
+ */
 #pragma once
 #include "VKCore.h"
 #include <vector>
@@ -5,6 +10,7 @@
 
 namespace FINALITY
 {
+    /** @todo TODO: Document VKDescriptorAllocator class semantics, ownership and usage. */
     class VKDescriptorAllocator
     {
     public:

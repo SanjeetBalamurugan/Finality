@@ -135,6 +135,7 @@ void FINALITY::SceneSerializer::SerializeEntity(
 		out << YAML::BeginMap;
 
 		out << YAML::Key << "MeshIdentifier" << YAML::Value << mc.MeshIdentifier;
+        out << YAML::Key << "Occluder" << YAML::Value << mc.Occluder;
 
 		out << YAML::EndMap;
 	}
@@ -214,12 +215,33 @@ void FINALITY::SceneSerializer::SerializeEntity(
 
         out << YAML::Key << "CameraComponent" << YAML::Value << YAML::BeginMap;
         out << YAML::Key << "IsPrimary" << YAML::Value << cc.IsPrimary;
+        out << YAML::Key << "OcclusionCulling" << YAML::Value << cc.OcclusionCulling;
         out << YAML::Key << "FOV" << YAML::Value << cc.FOV;
         out << YAML::Key << "AspectRatio" << YAML::Value << cc.AspectRatio;
         out << YAML::Key << "NearClip" << YAML::Value << cc.NearClip;
         out << YAML::Key << "FarClip" << YAML::Value << cc.FarClip;
 		out << YAML::EndMap;
 	}
+
+    if (entity.HasComponent<LODGroupComponent>())
+    {
+        const auto& group = entity.GetComponent<LODGroupComponent>();
+        out << YAML::Key << "LODGroupComponent" << YAML::Value << YAML::BeginMap;
+        out << YAML::Key << "Enabled" << YAML::Value << group.Enabled;
+        out << YAML::Key << "AutoBounds" << YAML::Value << group.AutoBounds;
+        out << YAML::Key << "LocalCenter" << YAML::Value << group.LocalCenter;
+        out << YAML::Key << "LocalSize" << YAML::Value << group.LocalSize;
+        out << YAML::Key << "Hysteresis" << YAML::Value << group.Hysteresis;
+        out << YAML::Key << "Levels" << YAML::Value << YAML::BeginSeq;
+        for (const auto& level : group.Levels)
+        {
+            out << YAML::BeginMap << YAML::Key << "ScreenRelativeHeight" << YAML::Value << level.ScreenRelativeHeight;
+            out << YAML::Key << "Renderers" << YAML::Value << YAML::Flow << YAML::BeginSeq;
+            for (auto id : level.Renderers) out << id;
+            out << YAML::EndSeq << YAML::EndMap;
+        }
+        out << YAML::EndSeq << YAML::EndMap;
+    }
 
     if (entity.HasComponent<ScriptStorage>())
     {
@@ -304,6 +326,7 @@ void FINALITY::SceneSerializer::DeSerializeEntity(
 	if (auto meshNode = entityNode["MeshComponent"])
 	{
 		auto& mc = entity.AddComponent<FINALITY::MeshComponent>();
+        mc.Occluder = meshNode["Occluder"].as<bool>(false);
 
 		if (meshNode["MeshIdentifier"])
 		{
@@ -370,9 +393,35 @@ void FINALITY::SceneSerializer::DeSerializeEntity(
 		float farClip = cameraNode["FarClip"] ? cameraNode["FarClip"].as<float>() : 1000.0f;
 
 		auto& cc = entity.AddComponent<FINALITY::CameraComponent>(fov, aspect, nearClip, farClip);
+        cc.OcclusionCulling = cameraNode["OcclusionCulling"].as<bool>(false);
+        cc.CameraInstance->SetOcclusionCulling(cc.OcclusionCulling);
 		if (cameraNode["IsPrimary"])
 			cc.IsPrimary = cameraNode["IsPrimary"].as<bool>();
 	}
+
+    if (const auto node = entityNode["LODGroupComponent"])
+    {
+        auto& group = entity.AddComponent<LODGroupComponent>();
+        group.Enabled = node["Enabled"].as<bool>(true);
+        group.AutoBounds = node["AutoBounds"].as<bool>(true);
+        if (node["LocalCenter"]) group.LocalCenter = node["LocalCenter"].as<glm::vec3>();
+        group.LocalSize = node["LocalSize"].as<float>(1);
+        group.Hysteresis = node["Hysteresis"].as<float>(0.05f);
+        if (const auto levels = node["Levels"]; levels && levels.IsSequence())
+        {
+            group.Levels.clear();
+            for (const auto& level : levels)
+            {
+                if (group.Levels.size() >= 8) break;
+                LODLevel entry;
+                entry.ScreenRelativeHeight = level["ScreenRelativeHeight"].as<float>(0.1f);
+                if (const auto renderers = level["Renderers"]; renderers && renderers.IsSequence())
+                    for (const auto& renderer : renderers) entry.Renderers.push_back(renderer.as<uint64_t>());
+                group.Levels.push_back(std::move(entry));
+            }
+        }
+        NormalizeLODGroup(group);
+    }
 
     if (entityNode["Scripts"])
         for (const auto& node : entityNode["Scripts"])

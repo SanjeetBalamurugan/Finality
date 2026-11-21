@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup editor
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for AssetPicker.h.
+ */
 #pragma once
 
 #include <Finality.h>
@@ -11,6 +16,7 @@ namespace FINALITY
     void DrawAssetPreview(const AssetRecord& asset, float size = 48.0f);
     void DrawAssetPreviewAt(const AssetRecord& asset, ImVec2 position, float size);
 
+    /** @todo TODO: Document AssetPicker class semantics, ownership and usage. */
     class AssetPicker
     {
     public:

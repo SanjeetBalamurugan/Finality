@@ -1,4 +1,5 @@
 newoption { trigger = "build-suffix", value = "NAME", description = "Use an isolated output directory for verification builds" }
+include "Scripts/NoVisualStudioFilters.lua"
 
 workspace "Finality"  
     architecture "x64"
@@ -39,10 +40,15 @@ workspace "Finality"
        include "FinalityEngine"
        include "Sandbox"
        include "FinalityEditor"
+       include "FinalityPlayer"
     
     -- Tools
     group "Tools"
         include "FIShaderCompiler"
+        include "FIScriptReflect"
+        include "FIBaker"
+        include "FIBuild"
+        include "Documentation"
 
     group ""
 

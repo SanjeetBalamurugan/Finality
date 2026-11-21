@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup tools
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for EditorTheme.h.
+ */
 #pragma once
 
 #include <Core/Core.h>
@@ -8,12 +13,14 @@
 
 namespace FINALITY
 {
+/** @todo TODO: Document ThemeChoice struct semantics, ownership and usage. */
 struct ThemeChoice
 {
     std::string ID;
     std::string Name;
 };
 
+/** @todo TODO: Document EditorTheme class semantics, ownership and usage. */
 class FAPI EditorTheme
 {
   public:

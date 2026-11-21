@@ -6,6 +6,7 @@
 
 namespace FINALITY
 {
+    /** @todo TODO: Document CameraMovementScript class semantics, ownership and usage. */
     class CameraMovementScript : public ScriptableComponent
     {
     public:

@@ -1,9 +1,15 @@
+/**
+ * @file
+ * @ingroup core
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for Mouse.h.
+ */
 #pragma once
 #include <Core/Core.h>
 #include <utility>
 
 namespace FINALITY
 {
+    /** @todo TODO: Document MouseCode alias semantics, ownership and usage. */
     using MouseCode = uint8_t;
 
     namespace MouseButton
@@ -23,6 +29,7 @@ namespace FINALITY
         };
     }
 
+    /** @todo TODO: Document Mouse class semantics, ownership and usage. */
     class FAPI Mouse
     {
     public:

@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup vulkan
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for VKSwapChain.h.
+ */
 #pragma once
 #include "VKCore.h"
 
@@ -6,6 +11,7 @@
 
 namespace FINALITY
 {
+    /** @todo TODO: Document VKSwapChain class semantics, ownership and usage. */
     class VKSwapChain : public SwapChain
     {
     public:

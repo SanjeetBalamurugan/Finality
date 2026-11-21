@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup assets
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for AssetManager.h.
+ */
 #pragma once
 #include <Assets/Asset.h>
 #include <unordered_map>
@@ -9,6 +14,8 @@
 
 namespace FINALITY
 {
+    class Texture;
+    /** @todo TODO: Document AssetManager class semantics, ownership and usage. */
     class FAPI AssetManager
     {
     public:
@@ -45,6 +52,7 @@ namespace FINALITY
         static bool HasAsset(UUID handle);
         static size_t ReloadMaterialShaders(bool force = false);
         static void InvalidateAssetPath(const std::string& filePath);
+        static std::shared_ptr<Texture> ReloadTexture(const std::string& filePath);
 
     private:
         static std::unordered_map<UUID, std::shared_ptr<Asset>> s_LoadedAssets;

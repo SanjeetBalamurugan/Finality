@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup tools
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for SceneSerializer.h.
+ */
 #pragma once
 
 #define YAML_CPP_STATIC_DEFINE
@@ -13,6 +18,7 @@ namespace FINALITY
 {
 	class Scene;
 
+	/** @todo TODO: Document SceneSerializer class semantics, ownership and usage. */
 	class FAPI SceneSerializer
 	{
 	private:

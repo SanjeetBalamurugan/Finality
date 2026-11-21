@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup project
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for ProjectSettings.h.
+ */
 #pragma once
 
 #include <Assets/ModelImportOptions.h>
@@ -6,6 +11,7 @@
 
 namespace FINALITY
 {
+    /** @todo TODO: Document ProjectSettings struct semantics, ownership and usage. */
     struct ProjectSettings
     {
         float CameraSpeed = 4.0f;

@@ -1,9 +1,15 @@
+/**
+ * @file
+ * @ingroup vulkan
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for VKFramebuffer.h.
+ */
 #pragma once
 #include <Core/Framebuffer.h>
 #include "VKCore.h"
 
 namespace FINALITY
 {
+    /** @todo TODO: Document VKFramebuffer class semantics, ownership and usage. */
     class VKFramebuffer : public Framebuffer
     {
     public:

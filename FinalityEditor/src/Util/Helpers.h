@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup editor
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for Helpers.h.
+ */
 #pragma once
 
 #include <string_view>

@@ -5,10 +5,11 @@
 
 void FINALITY::EditorLayer::DrawHierarchy()
 {
-    ImGui::Begin("Hierarchy", &m_ShowHierarchy);
+    if (!ImGui::Begin("Hierarchy", &m_ShowHierarchy)) { ImGui::End(); return; }
     auto* scene = SceneManager::GetInstance().GetActiveScene();
     if (!scene) { ImGui::End(); return; }
     auto& registry = scene->GetRegistry();
+    if (m_FocusSearch == "Hierarchy") { ImGui::SetKeyboardFocusHere(); m_FocusSearch.clear(); }
     EditText("Search", m_HierarchySearch);
     if (ImGui::Button("Create Entity")) ImGui::OpenPopup("Create");
     if (ImGui::BeginPopup("Create")) { DrawCreateMenu(); ImGui::EndPopup(); }
@@ -23,14 +24,14 @@ void FINALITY::EditorLayer::DrawHierarchy()
         const auto firstChild = relationship ? relationship->FirstChild : entt::null;
         ImGui::PushID(static_cast<int>(entity));
         auto flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
-        if (entity == m_SelectedEntity) flags |= ImGuiTreeNodeFlags_Selected;
+        if (entity == m_Session.SelectedEntity) flags |= ImGuiTreeNodeFlags_Selected;
         if (firstChild == entt::null) flags |= ImGuiTreeNodeFlags_Leaf;
         if (!m_HierarchySearch.empty()) ImGui::SetNextItemOpen(true);
         const bool visible = m_HierarchySearch.empty() || MatchesSearch(tag->tag, m_HierarchySearch) || firstChild != entt::null;
         const bool open = visible && ImGui::TreeNodeEx(tag->tag.c_str(), flags);
         if (visible)
         {
-            if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) { m_SelectedEntity = entity; m_SelectedAsset = 0; }
+            if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) { m_Session.SelectEntity(entity); }
             if (ImGui::BeginDragDropSource())
             {
                 ImGui::SetDragDropPayload("FinalityEntity", &entity, sizeof(entity));
@@ -53,8 +54,8 @@ void FINALITY::EditorLayer::DrawHierarchy()
             }
             if (ImGui::BeginPopupContextItem("Entity"))
             {
-                m_SelectedEntity = entity;
-                m_SelectedAsset = 0;
+                m_Session.SelectedEntity = entity;
+                m_Session.SelectedAsset = 0;
                 if (ImGui::MenuItem("Duplicate")) duplicate = entity;
                 if (ImGui::MenuItem("Save as Prefab..."))
                 {
@@ -65,9 +66,9 @@ void FINALITY::EditorLayer::DrawHierarchy()
                 if (ImGui::MenuItem("Delete...")) erase = entity;
                 if (ImGui::BeginMenu("Create Child"))
                 {
-                    const auto previous = m_SelectedEntity;
+                    const auto previous = m_Session.SelectedEntity;
                     DrawCreateMenu();
-                    if (m_SelectedEntity != previous) { moved = m_SelectedEntity; parent = entity; }
+                    if (m_Session.SelectedEntity != previous) { moved = m_Session.SelectedEntity; parent = entity; }
                     ImGui::EndMenu();
                 }
                 ImGui::EndPopup();
@@ -94,12 +95,18 @@ void FINALITY::EditorLayer::DrawHierarchy()
         if (!relationship || !registry.valid(relationship->Parent)) roots.push_back(entity);
     }
     for (auto entity : roots) draw(draw, entity);
+    if (ImGui::BeginPopup("Rename Entity"))
+    {
+        if (registry.valid(m_Session.SelectedEntity)) EditText("Name",registry.get<TagComponent>(m_Session.SelectedEntity).tag);
+        if (ImGui::Button("Done")) { m_Session.Checkpoint.Request(); ImGui::CloseCurrentPopup(); }
+        ImGui::EndPopup();
+    }
     if (ImGui::BeginPopupContextWindow("Hierarchy Actions", ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems))
     {
         DrawCreateMenu();
         ImGui::EndPopup();
     }
-    if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) m_SelectedEntity = entt::null;
+    if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) m_Session.SelectedEntity = entt::null;
     if (moved != entt::null && registry.valid(moved))
     {
         auto world = scene->GetWorldTransform(moved);
@@ -111,13 +118,13 @@ void FINALITY::EditorLayer::DrawHierarchy()
             ImGuizmoBridge::SetLocalTransform(transform,world);
         }
     }
-    if (duplicate != entt::null) m_SelectedEntity = scene->DuplicateEntity(duplicate).GetHandle();
+    if (duplicate != entt::null) m_Session.SelectedEntity = scene->DuplicateEntity(duplicate).GetHandle();
     static entt::entity pendingDelete = entt::null;
     if (erase != entt::null) { pendingDelete = erase; ImGui::OpenPopup("Delete Entity?"); }
     if (ImGui::BeginPopupModal("Delete Entity?", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
     {
         ImGui::TextUnformatted("Delete the entity and its children?");
-        if (ImGui::Button("Delete")) { scene->DestroyEntity(pendingDelete); m_SelectedEntity = entt::null; ImGui::CloseCurrentPopup(); }
+        if (ImGui::Button("Delete")) { scene->DestroyEntity(pendingDelete); m_Session.SelectedEntity = entt::null; ImGui::CloseCurrentPopup(); }
         ImGui::SameLine();
         if (ImGui::Button("Cancel")) ImGui::CloseCurrentPopup();
         ImGui::EndPopup();

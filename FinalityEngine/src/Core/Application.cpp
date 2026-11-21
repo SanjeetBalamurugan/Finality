@@ -20,8 +20,6 @@
 #include <Assets/AssetManager.h>
 
 #include <ImGUI/ImGUIRenderer.h>
-#include <ImGUI/ImGuizmoApi.h>
-#include <ImGUI/AssetPreview.h>
 
 #define GLM_FORCE_PURE  
 #define GLM_ENABLE_EXPERIMENTAL
@@ -123,13 +121,10 @@ void FINALITY::Application::Update()
 		}
 
 		m_RenderDevice->BeginFrame();
-        AssetPreview::Flush();
 
 		m_ImGUIRenderer->Update();
 		ImGui::NewFrame();
-		ImGuizmo::SetImGuiContext(ImGui::GetCurrentContext());
-		ImGuizmo::BeginFrame();
-		ImGui::DockSpaceOverViewport(0xF1A117, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
+
 
 		// Frame logic like draw calls here
 		SceneManager::GetInstance().Update(deltaTime);
@@ -150,11 +145,10 @@ void FINALITY::Application::Shutdown()
 {
 	m_RenderDevice->WaitIdle();
 	if (m_CurrentGame) m_CurrentGame->Destroy();
-    AssetPreview::Clear();
-    AssetPreview::Flush();
 	SceneManager::GetInstance().Shutdown();
 	FINALITY::AssetManager::Shutdown();
 	FINALITY::Renderer::Shutdown();
+    m_RenderDevice->FlushRetiredResources();
 
 	m_ImGUIRenderer->Destroy();
 	m_ImGUIRenderer.reset();

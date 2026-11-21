@@ -1,4 +1,5 @@
 #include "EntityInspector.h"
+#include "LODGroupInspector.h"
 #include <Editor/ExternalTools.h>
 #include <ImGUI/AssetPreview.h>
 #include <algorithm>
@@ -347,7 +348,7 @@ namespace
         }
     }
 
-    void DrawScriptProperties(Scene* scene, entt::entity entity, ScriptStorage::ScriptInstance& script, AssetPicker& picker)
+    void DrawScriptProperties(Scene* scene, entt::entity entity, ScriptStorage::ScriptInstance& script, AssetPicker& picker, ExternalTools& tools)
     {
         const auto* definition = ScriptRegistry::Find(script.TypeName);
         if (BeginProperties("Script Properties"))
@@ -356,7 +357,7 @@ namespace
             ReadOnlyValue(script.TypeName);
             if (definition && !definition->SourceFile.empty() && ImGui::BeginPopupContextItem("Script Source Actions"))
             {
-                if (ImGui::MenuItem("Open Script")) ExternalTools::OpenScript(definition->SourceFile);
+                if (ImGui::MenuItem("Open Script")) tools.OpenScript(definition->SourceFile);
                 ImGui::EndPopup();
             }
             if (definition && script.Instance)
@@ -489,6 +490,7 @@ namespace
             entry("Mesh", "M", registry.all_of<MeshComponent>(entity), [&] { registry.emplace<MeshComponent>(entity); });
             entry("Material", "M", registry.all_of<MaterialComponent>(entity), [&] { registry.emplace<MaterialComponent>(entity); });
             entry("Camera", "C", registry.all_of<CameraComponent>(entity), [&] { registry.emplace<CameraComponent>(entity); });
+            entry("LOD Group", "L", registry.all_of<LODGroupComponent>(entity), [&] { registry.emplace<LODGroupComponent>(entity); });
             const auto* storage = registry.try_get<ScriptStorage>(entity);
             for (const auto& [name, definition] : ScriptRegistry::GetDefinitions())
             {
@@ -519,10 +521,11 @@ void FINALITY::ClearInspectorClipboard()
     Clipboard<MeshComponent>().reset();
     Clipboard<MaterialComponent>().reset();
     Clipboard<CameraComponent>().reset();
+    Clipboard<LODGroupComponent>().reset();
     Clipboard<TransformComponent>().reset();
 }
 
-void FINALITY::DrawEntityInspector(Scene* scene, entt::entity selected, AssetPicker& picker, bool* open)
+void FINALITY::DrawEntityInspector(Scene* scene, entt::entity selected, AssetPicker& picker, ExternalTools& tools, bool* open)
 {
     if (!ImGui::Begin("Inspector", open))
     {
@@ -575,6 +578,9 @@ void FINALITY::DrawEntityInspector(Scene* scene, entt::entity selected, AssetPic
             mesh->MeshIdentifier = reference;
             mesh->MeshData = std::move(data);
         });
+        PropertyRow("Occluder");
+        ImGui::Checkbox("##Occluder",&mesh.Occluder);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Use only solid opaque meshes without shader displacement or alpha cutouts. Cameras with occlusion enabled can use this mesh to hide objects behind it.");
         ImGui::EndTable();
     }
     ImGui::PopID();
@@ -593,8 +599,16 @@ void FINALITY::DrawEntityInspector(Scene* scene, entt::entity selected, AssetPic
         PropertyRow("Far Clip");
         changed |= ImGui::DragFloat("##FarClip", &camera.FarClip, 1, camera.NearClip + 0.01f, 100000, "%.6g");
         if (changed) { Renderer::SetActiveCamera(nullptr); camera.RebuildCamera(); }
+        PropertyRow("Occlusion Culling");
+        if (ImGui::Checkbox("##OcclusionCulling",&camera.OcclusionCulling) && camera.CameraInstance)
+            camera.CameraInstance->SetOcclusionCulling(camera.OcclusionCulling);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Conservative software occlusion using meshes marked Occluder. No GPU readback. Scene view stays unoccluded for editing.");
         ImGui::EndTable();
     }
+    ImGui::PopID();
+    ImGui::PushID("LODGroup");
+    if (registry.all_of<LODGroupComponent>(selected) && ComponentHeader<LODGroupComponent>(*scene,selected,"LOD Group","L"))
+        DrawLODGroupProperties(*scene,selected);
     ImGui::PopID();
     ImGui::PushID("Scripts");
     if (auto* storage = registry.try_get<ScriptStorage>(selected))
@@ -609,12 +623,12 @@ void FINALITY::DrawEntityInspector(Scene* scene, entt::entity selected, AssetPic
             {
                 const auto* definition = ScriptRegistry::Find(script.TypeName);
                 if (ImGui::MenuItem("Open Script", nullptr, false, definition && !definition->SourceFile.empty()))
-                    ExternalTools::OpenScript(definition->SourceFile);
+                    tools.OpenScript(definition->SourceFile);
                 remove = ImGui::MenuItem("Remove");
                 ImGui::EndPopup();
             }
             if (open && !remove)
-                DrawScriptProperties(scene, selected, script, picker);
+                DrawScriptProperties(scene, selected, script, picker, tools);
             ImGui::PopID();
             if (remove) { ScriptRegistry::Remove(*scene, selected, index); break; }
         }

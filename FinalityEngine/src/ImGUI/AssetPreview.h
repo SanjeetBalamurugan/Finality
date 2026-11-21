@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup tools
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for AssetPreview.h.
+ */
 #pragma once
 
 #include <Core/Core.h>
@@ -6,6 +11,7 @@
 
 namespace FINALITY
 {
+    /** @todo TODO: Document AssetPreview class semantics, ownership and usage. */
     class FAPI AssetPreview
     {
     public:

@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup vulkan
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for VKTexture.h.
+ */
 #pragma once
 #include <Core/Application.h>
 
@@ -8,6 +13,7 @@
 
 namespace FINALITY
 {
+	/** @todo TODO: Document VKTexture class semantics, ownership and usage. */
 	class VKTexture : public Texture
 	{
 	public:
@@ -41,6 +47,7 @@ namespace FINALITY
 		uint32_t m_Height = 0;
 		uint32_t m_MipLevels = 1;
 		VkFormat m_Format = VK_FORMAT_UNDEFINED;
+        float m_Anisotropy = 1;
 
 		VkImage m_TextureImage = VK_NULL_HANDLE;
 		VkDeviceMemory m_TextureImageMemory = VK_NULL_HANDLE;

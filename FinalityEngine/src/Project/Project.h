@@ -1,3 +1,13 @@
+/**
+ * @file
+ * @ingroup project
+ * @brief Owns project identity, paths and saved configuration.
+ *
+ * A project descriptor connects the project name, project directory, startup scene and settings used by editor workflows. Generated IDE files belong to the project root while transient native build files remain in .Finality.
+ *
+ * @par Usage
+ * Open or create a project before invoking project asset workflows. Save authored settings explicitly. Project naming feeds the generated solution and external-editor workspace names.
+ */
 #pragma once
 
 #include <Core/Core.h>
@@ -7,6 +17,15 @@
 
 namespace FINALITY
 {
+    /**
+     * @ingroup project
+     * @brief Owns project identity, paths and saved configuration.
+     *
+     * A project descriptor connects the project name, project directory, startup scene and settings used by editor workflows. Generated IDE files belong to the project root while transient native build files remain in .Finality.
+     *
+     * @par Usage
+     * Open or create a project before invoking project asset workflows. Save authored settings explicitly. Project naming feeds the generated solution and external-editor workspace names.
+     */
     class FAPI Project
     {
     public:

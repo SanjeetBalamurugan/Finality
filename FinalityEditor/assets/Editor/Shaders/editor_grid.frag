@@ -14,7 +14,8 @@ float gridLine(vec2 position, float spacing)
     vec2 coordinate = position / spacing;
     vec2 width = max(fwidth(coordinate), vec2(0.0001));
     vec2 line = abs(fract(coordinate - 0.5) - 0.5) / width;
-    return 1.0 - min(min(line.x, line.y), 1.0);
+    vec2 coverage = (1.0-min(line,vec2(1.0))) * (1.0-smoothstep(vec2(0.25),vec2(1.0),width));
+    return max(coverage.x,coverage.y);
 }
 
 void main()

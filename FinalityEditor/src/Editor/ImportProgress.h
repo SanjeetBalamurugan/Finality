@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup editor
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for ImportProgress.h.
+ */
 #pragma once
 #include <Assets/AssetRegistry.h>
 #include <imgui.h>
@@ -7,22 +12,25 @@
 
 namespace FINALITY
 {
+    /** @todo TODO: Document ImportProgress class semantics, ownership and usage. */
     class ImportProgress
     {
-        inline static std::deque<std::pair<std::string, std::function<void()>>> Jobs;
-        inline static int Frames = 0;
+        std::deque<std::pair<std::string, std::function<void()>>> Jobs;
+        int Frames = 0;
     public:
-        static void Queue(std::string name, std::function<void()> work) { Jobs.emplace_back(std::move(name), std::move(work)); }
-        static void Import(const std::filesystem::path& source, const std::filesystem::path& destination)
+        bool IsBusy() const { return !Jobs.empty(); }
+        void Clear() { Jobs.clear(); Frames = 0; }
+        void Queue(std::string name, std::function<void()> work) { Jobs.emplace_back(std::move(name), std::move(work)); }
+        void Import(const std::filesystem::path& source, const std::filesystem::path& destination)
         { Queue(source.filename().string(), [source,destination] { AssetRegistry::Import(source,destination); }); }
-        static void Update()
+        void Update()
         {
             if (Jobs.empty()) { Frames = 0; return; }
             if (++Frames < 3) return;
             auto job = std::move(Jobs.front()); Jobs.pop_front(); Frames = 0;
             try { job.second(); } catch (const std::exception& error) { Logger::GetClientLogger()->error("Import failed: {}", error.what()); }
         }
-        static void Draw(bool compiling, const std::string& compilation)
+        void Draw(bool compiling, const std::string& compilation)
         {
             const bool importing = !Jobs.empty();
             const char* title = importing ? "Importing Assets" : "Compiling Scripts";

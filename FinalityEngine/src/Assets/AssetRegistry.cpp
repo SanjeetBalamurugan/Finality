@@ -15,6 +15,7 @@
 namespace
 {
     std::filesystem::path s_ProjectDirectory;
+    std::filesystem::path s_RuntimeCache;
     std::map<uint64_t, FINALITY::AssetRecord> s_Records;
 
     std::string PathKey(const std::filesystem::path& path)
@@ -54,7 +55,8 @@ void FINALITY::AssetRegistry::Open(const std::filesystem::path& projectDirectory
     s_ProjectDirectory = std::filesystem::absolute(projectDirectory).lexically_normal();
     try
     {
-        const auto database = s_ProjectDirectory / ".Finality/Assets.yaml";
+        auto database = GetCacheDirectory() / "Assets.yaml";
+        if (!std::filesystem::exists(database)) database = s_ProjectDirectory / ".Finality/Assets.yaml";
         if (std::filesystem::exists(database))
             for (const auto& node : YAML::LoadFile(database.string())["Assets"])
             {
@@ -92,6 +94,29 @@ void FINALITY::AssetRegistry::Scan()
     {
         for (const auto& entry : fs::recursive_directory_iterator(s_ProjectDirectory / "Assets", fs::directory_options::skip_permission_denied))
         {
+            if (!s_RuntimeCache.empty() && entry.is_regular_file() && entry.path().extension() == ".spv")
+            {
+                auto logical = entry.path();
+                logical.replace_extension();
+                if (ShaderCompiler::IsSourceShader(logical.string()) && !fs::exists(logical))
+                {
+                    uint64_t id = 0;
+                    const auto metadata = logical.string() + ".fmeta";
+                    if (fs::is_regular_file(metadata)) id = YAML::LoadFile(metadata)["ID"].as<uint64_t>(0);
+                    const auto path = logical.lexically_relative(s_ProjectDirectory).generic_string();
+                    if (!id)
+                        for (const auto& [knownID, known] : s_Records)
+                            if (known.Path == path) { id = knownID; break; }
+                    if (!id) id = static_cast<uint64_t>(UUID());
+                    auto& record = s_Records[id];
+                    record.ID = id;
+                    record.Path = path;
+                    record.Type = ProjectAssetType::Shader;
+                    record.Modified = fs::last_write_time(entry.path()).time_since_epoch().count();
+                    record.Status = ShaderCompiler::EnsureCompiled(logical.string()) ? "Ready" : "Error";
+                    seen.insert(id);
+                }
+            }
             if (!entry.is_regular_file() || entry.path().extension() == ".fmeta" || entry.path().extension() == ".spv" || entry.path().extension() == ".ini") continue;
             if (!InsideProject(entry.path())) continue;
             const std::string path = entry.path().lexically_relative(s_ProjectDirectory).generic_string();
@@ -196,7 +221,7 @@ void FINALITY::AssetRegistry::Reimport(uint64_t id)
 bool FINALITY::AssetRegistry::Save()
 {
     if (s_ProjectDirectory.empty()) return false;
-    std::filesystem::create_directories(s_ProjectDirectory / ".Finality");
+    std::filesystem::create_directories(GetCacheDirectory());
     YAML::Emitter out;
     out << YAML::BeginMap << YAML::Key << "Version" << YAML::Value << 1;
     out << YAML::Key << "Assets" << YAML::Value << YAML::BeginSeq;
@@ -214,7 +239,7 @@ bool FINALITY::AssetRegistry::Save()
         out << YAML::EndMap;
     }
     out << YAML::EndSeq << YAML::EndMap;
-    std::ofstream stream(s_ProjectDirectory / ".Finality/Assets.yaml");
+    std::ofstream stream(GetCacheDirectory() / "Assets.yaml");
     stream << out.c_str();
     return stream.good();
 }
@@ -300,3 +325,13 @@ std::string FINALITY::AssetRegistry::Reference(const std::filesystem::path& path
     return path.generic_string();
 }
 const std::filesystem::path& FINALITY::AssetRegistry::GetProjectDirectory() { return s_ProjectDirectory; }
+
+void FINALITY::AssetRegistry::SetRuntimeCacheDirectory(const std::filesystem::path& directory)
+{
+    s_RuntimeCache = directory;
+}
+
+std::filesystem::path FINALITY::AssetRegistry::GetCacheDirectory()
+{
+    return s_RuntimeCache.empty() ? s_ProjectDirectory / ".Finality" : s_RuntimeCache;
+}

@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup editor
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for CameraMovementScript.h.
+ */
 #pragma once
 
 #include <Finality.h>
@@ -6,6 +11,7 @@
 
 namespace FINALITY
 {
+    /** @todo TODO: Document CameraMovementScript class semantics, ownership and usage. */
     class CameraMovementScript : public ScriptableComponent
     {
     public:

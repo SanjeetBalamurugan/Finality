@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup assets
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for Asset.h.
+ */
 #pragma once
 #include <Utils/UUID.h>
 #include <string>
@@ -5,6 +10,7 @@
 
 namespace FINALITY
 {
+    /** @todo TODO: Document AssetType enum semantics, ownership and usage. */
     enum class AssetType : uint16_t
     {
         None = 0,
@@ -15,6 +21,7 @@ namespace FINALITY
         Material
     };
 
+    /** @todo TODO: Document Asset class semantics, ownership and usage. */
     class FAPI Asset
     {
     public:

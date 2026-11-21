@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup core
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for Core.h.
+ */
 #pragma once
 
 #define ENGINE_VERSION_MAJOR 1

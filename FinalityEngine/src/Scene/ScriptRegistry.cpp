@@ -41,6 +41,7 @@ bool FINALITY::ScriptRegistry::Attach(Scene& scene, entt::entity entity, const s
     if (instance)
     {
         instance->m_CurrentScene = &scene;
+        instance->m_Lifetime = scene.GetLifetime();
         instance->m_EntityHandle = entity;
     }
     storage.Scripts.emplace_back(std::move(instance), false, definition ? definition->Factory : nullptr, definition ? definition->ModuleLease : nullptr);
@@ -97,6 +98,7 @@ bool FINALITY::ScriptRegistry::ReplaceModule(const std::vector<ScriptDefinition>
                     if (instance)
                     {
                         instance->m_CurrentScene = scene; instance->m_EntityHandle = entity;
+                        instance->m_Lifetime = scene->GetLifetime();
                         for (const auto& property : definition->Properties)
                             if (const auto value = values.find(property.Name); value != values.end() && property.Get(*instance).index() == value->second.index()) property.Set(*instance,value->second);
                     }
@@ -107,15 +109,20 @@ bool FINALITY::ScriptRegistry::ReplaceModule(const std::vector<ScriptDefinition>
             }
         s_Definitions.swap(candidate);
         s_ModuleNames = std::move(names);
-        std::vector<std::shared_ptr<ScriptableComponent>> retired;
+        std::vector<std::pair<std::shared_ptr<ScriptableComponent>,bool>> retired;
         for (auto& replacement : replacements)
         {
             auto& old = scene->GetRegistry().get<ScriptStorage>(replacement.Entity).Scripts.at(replacement.Index);
-            if (old.Instance && old.Awakened) { old.Awakened = false; retired.push_back(old.Instance); }
+            if (old.Instance && old.Awakened)
+            {
+                old.Awakened = false;
+                retired.emplace_back(old.Instance,old.Active);
+                old.Active = false;
+            }
             std::swap(old,replacement.Value);
         }
-        for (const auto& instance : retired)
-            try { instance->OnDestroy(); }
+        for (const auto& [instance,active] : retired)
+            try { if (active) instance->OnDisable(); instance->OnDestroy(); }
             catch (const std::exception& failure) { FI_CORE_ERROR("Retired script destruction failed: {}",failure.what()); }
         return true;
     }
@@ -126,8 +133,22 @@ void FINALITY::ScriptRegistry::Remove(Scene& scene, entt::entity entity, size_t 
 {
     auto* storage = scene.GetRegistry().try_get<ScriptStorage>(entity);
     if (!storage || index >= storage->Scripts.size()) return;
+    if (scene.IsDispatchingScripts())
+    {
+        storage->Scripts[index].Enabled = false;
+        auto instance = storage->Scripts[index].Instance;
+        auto lease = storage->Scripts[index].ModuleLease;
+        scene.DeferScriptMutation([&scene,entity,instance,lease]()
+        {
+            if (auto* entries = scene.GetRegistry().try_get<ScriptStorage>(entity))
+                for (size_t i = 0; i < entries->Scripts.size(); ++i)
+                    if (entries->Scripts[i].Instance == instance) { Remove(scene,entity,i); break; }
+        });
+        return;
+    }
     auto instance = storage->Scripts[index].Instance;
     const bool awakened = storage->Scripts[index].Awakened;
+    const bool active = storage->Scripts[index].Active;
     storage->Scripts.erase(storage->Scripts.begin() + index);
-    if (instance && awakened) instance->OnDestroy();
+    if (instance && awakened) { if (active) instance->OnDisable(); instance->OnDestroy(); }
 }

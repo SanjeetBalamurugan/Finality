@@ -1,9 +1,15 @@
+/**
+ * @file
+ * @ingroup render
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for Frustum.h.
+ */
 #pragma once
 
 #include <glm/glm.hpp>
 
 namespace FINALITY
 {
+	/** @todo TODO: Document Frustum class semantics, ownership and usage. */
 	class Frustum
 	{
 	public:

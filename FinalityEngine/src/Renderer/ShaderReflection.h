@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup render
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for ShaderReflection.h.
+ */
 #pragma once
 
 #include <Core/Core.h>
@@ -7,6 +12,7 @@
 
 namespace FINALITY
 {
+/** @todo TODO: Document ShaderUniform struct semantics, ownership and usage. */
 struct ShaderUniform
 {
     std::string Name;
@@ -20,6 +26,7 @@ struct ShaderUniform
     bool Editable = false;
 };
 
+/** @todo TODO: Document ShaderReflection class semantics, ownership and usage. */
 class FAPI ShaderReflection
 {
   public:

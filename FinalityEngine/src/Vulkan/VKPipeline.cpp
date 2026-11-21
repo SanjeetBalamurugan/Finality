@@ -20,6 +20,10 @@ namespace FINALITY
     VKPipeline::VKPipeline(VkDevice device, VkRenderPass renderPass, const PipelineConfig& config, VkDescriptorSetLayout globalLayout, VkDescriptorSetLayout materialLayout)
         : m_Device(device)
     {
+        m_Transparent = config.EnableBlending;
+        m_DepthWrite = config.DepthWrite;
+        m_DepthTest = config.DepthTest;
+        m_Culling = config.Culling;
         auto vertShader = static_cast<VKShader*>(config.VertexShader.get());
         auto fragShader = static_cast<VKShader*>(config.FragmentShader.get());
 

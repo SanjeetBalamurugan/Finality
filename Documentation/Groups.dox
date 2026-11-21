@@ -1,0 +1,15 @@
+/** @defgroup core Application and platform services */
+
+/** @defgroup scene Scenes and native scripts */
+
+/** @defgroup assets Assets and import */
+
+/** @defgroup render Rendering and visibility */
+
+/** @defgroup project Projects */
+
+/** @defgroup editor Editor workflows */
+
+/** @defgroup vulkan Vulkan backend */
+
+/** @defgroup tools Build and reflection tools */

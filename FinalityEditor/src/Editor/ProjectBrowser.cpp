@@ -16,6 +16,8 @@ void FINALITY::EditorLayer::DrawContentBrowser(entt::entity selectedEntity)
         return;
     }
     static int typeFilter = 0;
+    m_ContentBrowserVisible = true;
+    m_ContentBrowserFocused = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
     auto browserMenu = [&]()
     {
         if (ImGui::BeginMenu("Create"))
@@ -38,7 +40,7 @@ void FINALITY::EditorLayer::DrawContentBrowser(entt::entity selectedEntity)
             {
                 auto path = fs::path(m_ContentDirectory) / "New Material.fmat";
                 for (int index = 1; fs::exists(path); ++index) path = fs::path(m_ContentDirectory) / ("New Material " + std::to_string(index) + ".fmat");
-                const auto source = m_Project.GetAssetsDirectory() / "materials/Default.fmat";
+                const auto source = m_Session.ProjectData.GetAssetsDirectory() / "materials/Default.fmat";
                 if (fs::exists(source)) fs::copy_file(source,path);
                 AssetRegistry::Scan();
             }
@@ -49,9 +51,9 @@ void FINALITY::EditorLayer::DrawContentBrowser(entt::entity selectedEntity)
         if (ImGui::MenuItem("Import New Asset..."))
         {
             const auto path = FileDialogs::OpenFile("All Files\0*.*\0\0");
-            if (!path.empty()) ImportProgress::Import(path,fs::path(m_ContentDirectory).lexically_relative(m_Project.GetDirectory()));
+            if (!path.empty()) m_Session.Imports.Import(path,fs::path(m_ContentDirectory).lexically_relative(m_Session.ProjectData.GetDirectory()));
         }
-        if (ImGui::MenuItem("Refresh")) ImportProgress::Queue("Refreshing asset database", [] { AssetRegistry::Scan(); });
+        if (ImGui::MenuItem("Refresh")) m_Session.Imports.Queue("Refreshing asset database", [] { AssetRegistry::Scan(); });
     };
     if (ImGui::BeginPopupContextWindow("Browser Actions", ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems))
     {
@@ -72,7 +74,7 @@ void FINALITY::EditorLayer::DrawContentBrowser(entt::entity selectedEntity)
             if (!path.empty())
             {
                 AssetPreview::Clear();
-                ImportProgress::Import(path, fs::path(m_ContentDirectory).lexically_relative(m_Project.GetDirectory()));
+                m_Session.Imports.Import(path, fs::path(m_ContentDirectory).lexically_relative(m_Session.ProjectData.GetDirectory()));
             }
         }
         if (ImGui::MenuItem("Folder..."))
@@ -81,7 +83,7 @@ void FINALITY::EditorLayer::DrawContentBrowser(entt::entity selectedEntity)
             if (!path.empty())
             {
                 AssetPreview::Clear();
-                ImportProgress::Import(path, fs::path(m_ContentDirectory).lexically_relative(m_Project.GetDirectory()));
+                m_Session.Imports.Import(path, fs::path(m_ContentDirectory).lexically_relative(m_Session.ProjectData.GetDirectory()));
             }
         }
         ImGui::EndPopup();
@@ -96,7 +98,7 @@ void FINALITY::EditorLayer::DrawContentBrowser(entt::entity selectedEntity)
     if (ImGui::Button("New Material"))
     {
         const auto destination = fs::path(m_ContentDirectory) / "New Material.fmat";
-        const auto source = m_Project.GetAssetsDirectory() / "materials/Default.fmat";
+        const auto source = m_Session.ProjectData.GetAssetsDirectory() / "materials/Default.fmat";
         if (!fs::exists(destination) && fs::is_regular_file(source))
             fs::copy_file(source, destination);
         AssetRegistry::Scan();
@@ -110,6 +112,7 @@ void FINALITY::EditorLayer::DrawContentBrowser(entt::entity selectedEntity)
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Thumbnail size");
     ImGui::SetNextItemWidth(std::max(100.0f, ImGui::GetContentRegionAvail().x - 140));
+    if (m_FocusSearch == "Content Browser") { ImGui::SetKeyboardFocusHere(); m_FocusSearch.clear(); }
     EditText("##Search Assets", m_AssetSearch);
     if (!ImGui::IsItemActive() && m_AssetSearch.empty())
     {
@@ -121,7 +124,7 @@ void FINALITY::EditorLayer::DrawContentBrowser(entt::entity selectedEntity)
     ImGui::SameLine();
     ImGui::SetNextItemWidth(-1);
     ImGui::Combo("##Type", &typeFilter, types, 8);
-    const auto root = m_Project.GetAssetsDirectory();
+    const auto root = m_Session.ProjectData.GetAssetsDirectory();
     fs::path directory(m_ContentDirectory);
     if (!fs::is_directory(directory))
     {
@@ -150,6 +153,25 @@ void FINALITY::EditorLayer::DrawContentBrowser(entt::entity selectedEntity)
     static uint64_t renameID = 0;
     static std::string renamePath;
     static uint64_t deleteID = 0;
+    if (m_Session.State == EditorState::Edit && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+        !ImGui::GetIO().WantTextInput && !ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId))
+    {
+        if (const auto* asset = AssetRegistry::Find(m_Session.SelectedAsset))
+        {
+            if (m_Session.Preferences.Pressed(EditorAction::Delete)) deleteID = asset->ID;
+            if (m_Session.Preferences.Pressed(EditorAction::Duplicate)) duplicateID = asset->ID;
+            if (m_Session.Preferences.Pressed(EditorAction::Rename))
+            { renameID = moveID = asset->ID; renamePath = asset->Path; }
+            if (m_Session.Preferences.Pressed(EditorAction::OpenAsset))
+            {
+                const auto path = m_Session.ProjectData.GetDirectory()/asset->Path;
+                if (asset->Type == ProjectAssetType::Scene) openScene = path.string();
+                else if (asset->Type == ProjectAssetType::Model || asset->Type == ProjectAssetType::Prefab) instantiateID = asset->ID;
+                else if (asset->Type == ProjectAssetType::Script) m_Session.Tools.OpenScript(path);
+            }
+        }
+        if (m_Session.Preferences.Pressed(EditorAction::ParentFolder) && directory != root) m_ContentDirectory = directory.parent_path().string();
+    }
     if (ImGui::BeginTable("Content Layout", 2, ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersInnerV))
     {
         ImGui::TableSetupColumn("Folders", ImGuiTableColumnFlags_WidthFixed, 150);
@@ -179,6 +201,16 @@ void FINALITY::EditorLayer::DrawContentBrowser(entt::entity selectedEntity)
                 const bool open = ImGui::TreeNodeEx(path == root ? "Assets" : path.filename().string().c_str(), flags);
                 if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
                     m_ContentDirectory = path.string();
+                if (ImGui::BeginDragDropTarget())
+                {
+                    if (const auto* payload = ImGui::AcceptDragDropPayload("FinalityAsset"); payload && payload->DataSize == sizeof(uint64_t))
+                    {
+                        const auto id = *static_cast<const uint64_t*>(payload->Data);
+                        if (const auto* asset = AssetRegistry::Find(id))
+                            AssetRegistry::Move(id, (path / fs::path(asset->Path).filename()).lexically_relative(m_Session.ProjectData.GetDirectory()));
+                    }
+                    ImGui::EndDragDropTarget();
+                }
                 if (open)
                 {
                     for (const auto &child : children)
@@ -218,11 +250,21 @@ void FINALITY::EditorLayer::DrawContentBrowser(entt::entity selectedEntity)
                         const bool clicked = ImGui::Selectable("##Folder Tile", m_SelectedContentFolder == folder.string(),
                             ImGuiSelectableFlags_AllowDoubleClick, {width, height});
                         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", folder.filename().string().c_str());
+                        if (ImGui::BeginDragDropTarget())
+                        {
+                            if (const auto* payload = ImGui::AcceptDragDropPayload("FinalityAsset"); payload && payload->DataSize == sizeof(uint64_t))
+                            {
+                                const auto id = *static_cast<const uint64_t*>(payload->Data);
+                                if (const auto* asset = AssetRegistry::Find(id))
+                                    AssetRegistry::Move(id, (folder / fs::path(asset->Path).filename()).lexically_relative(m_Session.ProjectData.GetDirectory()));
+                            }
+                            ImGui::EndDragDropTarget();
+                        }
                         if (clicked)
                         {
                             m_SelectedContentFolder = folder.string();
-                            m_SelectedAsset = 0;
-                            m_SelectedEntity = entt::null;
+                            m_Session.SelectedAsset = 0;
+                            m_Session.SelectedEntity = entt::null;
                             if (!m_ContentGrid || ImGui::IsMouseDoubleClicked(0)) m_ContentDirectory = folder.string();
                         }
                         if (m_ContentGrid)
@@ -254,7 +296,7 @@ void FINALITY::EditorLayer::DrawContentBrowser(entt::entity selectedEntity)
                     const auto id = asset.ID;
                     if (!MatchesSearch(asset.Path, m_AssetSearch))
                         continue;
-                    if (m_AssetSearch.empty() && (m_Project.GetDirectory() / asset.Path).parent_path() != directory)
+                    if (m_AssetSearch.empty() && (m_Session.ProjectData.GetDirectory() / asset.Path).parent_path() != directory)
                         continue;
                     if (typeFilter && static_cast<int>(asset.Type) != typeFilter)
                         continue;
@@ -265,7 +307,7 @@ void FINALITY::EditorLayer::DrawContentBrowser(entt::entity selectedEntity)
                     const float size = m_ContentGrid ? m_ContentThumbnailSize : 26;
                     const float statusHeight = asset.Status == "Ready" ? 0.0f : ImGui::GetTextLineHeightWithSpacing();
                     const float height = (m_ContentGrid ? size + ImGui::GetTextLineHeight() + 12 : 34) + statusHeight;
-                    const bool rowClicked = ImGui::Selectable("##Asset Tile", m_SelectedAsset == id,
+                    const bool rowClicked = ImGui::Selectable("##Asset Tile", m_Session.SelectedAsset == id,
                         ImGuiSelectableFlags_AllowDoubleClick, {width, height});
                     const bool hovered = ImGui::IsItemHovered();
                     auto drag = [&]() {
@@ -278,17 +320,17 @@ void FINALITY::EditorLayer::DrawContentBrowser(entt::entity selectedEntity)
                     };
                     if (rowClicked)
                     {
-                        m_SelectedAsset = id;
+                        m_Session.SelectedAsset = id;
                         m_SelectedContentFolder.clear();
-                        m_SelectedEntity = entt::null;
+                        m_Session.SelectedEntity = entt::null;
                         const auto reference = "asset://" + std::to_string(id);
                         if (asset.Type == ProjectAssetType::Prefab && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
                         {
                             if (auto* scene = SceneManager::GetInstance().GetActiveScene())
-                                m_SelectedEntity = InstantiatePrefab(*scene, AssetRegistry::Resolve(reference)).GetHandle();
+                                m_Session.SelectedEntity = InstantiatePrefab(*scene, AssetRegistry::Resolve(reference)).GetHandle();
                         }
                         if (asset.Type == ProjectAssetType::Script && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-                            ExternalTools::OpenScript(AssetRegistry::Resolve(reference));
+                            m_Session.Tools.OpenScript(AssetRegistry::Resolve(reference));
                         if (asset.Type == ProjectAssetType::Scene && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
                             openScene = AssetRegistry::Resolve(reference);
                         if (asset.Type == ProjectAssetType::Model && asset.Status == "Ready" &&
@@ -302,7 +344,7 @@ void FINALITY::EditorLayer::DrawContentBrowser(entt::entity selectedEntity)
                     if (ImGui::BeginPopupContextItem("Asset Actions"))
                     {
                         const auto assetPath = fs::path(AssetRegistry::Resolve("asset://" + std::to_string(id)));
-                        if (asset.Type == ProjectAssetType::Script && ImGui::MenuItem("Open Script")) ExternalTools::OpenScript(assetPath);
+                        if (asset.Type == ProjectAssetType::Script && ImGui::MenuItem("Open Script")) m_Session.Tools.OpenScript(assetPath);
                         if (ImGui::MenuItem("Show in Explorer")) ShellExecuteW(nullptr,L"open",assetPath.parent_path().c_str(),nullptr,nullptr,SW_SHOWNORMAL);
                         if (ImGui::MenuItem("Copy Path")) ImGui::SetClipboardText(assetPath.string().c_str());
                         ImGui::Separator();
@@ -384,7 +426,7 @@ void FINALITY::EditorLayer::DrawContentBrowser(entt::entity selectedEntity)
             if (const auto *asset = AssetRegistry::Find(deleteID))
             {
                 AssetPreview::Clear();
-                const auto path = m_Project.GetDirectory() / asset->Path;
+                const auto path = m_Session.ProjectData.GetDirectory() / asset->Path;
                 fs::remove(path, error);
                 fs::remove(path.string() + ".fmeta", error);
                 AssetRegistry::Scan();
@@ -403,7 +445,7 @@ void FINALITY::EditorLayer::DrawContentBrowser(entt::entity selectedEntity)
     if (duplicateID)
         if (const auto *asset = AssetRegistry::Find(duplicateID))
         {
-            const auto source = m_Project.GetDirectory() / asset->Path;
+            const auto source = m_Session.ProjectData.GetDirectory() / asset->Path;
             auto destination = source.parent_path() / (source.stem().string() + " Copy" + source.extension().string());
             if (!fs::exists(destination))
             {
@@ -415,10 +457,10 @@ void FINALITY::EditorLayer::DrawContentBrowser(entt::entity selectedEntity)
     {
         AssetPreview::Clear();
         m_AssetInspector.Clear();
-        ImportProgress::Queue("Reimporting asset", [reimportID] { AssetRegistry::Reimport(reimportID); });
+        m_Session.Imports.Queue("Reimporting asset", [reimportID] { AssetRegistry::Reimport(reimportID); });
     }
     if (instantiateID)
-        CreatePrimitive("Model", "asset://" + std::to_string(instantiateID));
+        PlaceSceneAsset(instantiateID,glm::vec3(0));
     if (!openScene.empty())
         OpenScene(openScene);
     ImGui::End();

@@ -1,7 +1,13 @@
+/**
+ * @file
+ * @ingroup core
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for KeyCodes.h.
+ */
 #pragma once
 
 namespace FINALITY {
 
+    /** @todo TODO: Document KeyCode alias semantics, ownership and usage. */
     using KeyCode = unsigned int;
 
     namespace Key {

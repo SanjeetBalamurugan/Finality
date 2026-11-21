@@ -58,7 +58,7 @@ project "FinalityEngine"
 
     dependson
     {
-        "FIShaderCompiler"
+        "FIShaderCompiler", "FIBuild"
     } -- Move this to editor project if i actually make it
 
     -- Importing Vulkan
@@ -80,6 +80,7 @@ project "FinalityEngine"
     end
 
     filter "system:windows"
+        postbuildcommands { '"%{cfg.targetdir}/FIBuild.exe" info --engine "' .. path.getabsolute('..') .. '" --bin "%{cfg.targetdir}" --compiler-version "$(VCToolsVersion)" --toolset "$(PlatformToolset)" --sdk-version "$(WindowsTargetPlatformVersion)" --configuration "%{cfg.buildcfg}"' }
         defines { "IMGUI_API=__declspec(dllimport)", "IMGUI_IMPL_API=" }
         systemversion "latest"
 

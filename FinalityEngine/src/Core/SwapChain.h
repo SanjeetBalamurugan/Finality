@@ -1,8 +1,14 @@
+/**
+ * @file
+ * @ingroup core
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for SwapChain.h.
+ */
 #pragma once
 #include "Window.h"
 
 namespace FINALITY
 {
+    /** @todo TODO: Document SwapChain class semantics, ownership and usage. */
     class SwapChain
     {
     public:

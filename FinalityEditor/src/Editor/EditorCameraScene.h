@@ -1,9 +1,15 @@
+/**
+ * @file
+ * @ingroup editor
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for EditorCameraScene.h.
+ */
 #pragma once
 #include <Finality.h>
 #include <Scripts/CameraMovementScript.h>
 
 namespace FINALITY
 {
+	/** @todo TODO: Document EditorCameraScene class semantics, ownership and usage. */
 	class EditorCameraScene : public Scene
 	{
 	public:
@@ -47,6 +53,11 @@ namespace FINALITY
 		}
         void ConfigureNavigation(float speed, float sprint, float sensitivity)
         { if (m_Navigation) m_Navigation->Configure(speed,sprint,sensitivity); }
+        void SetPosition(const glm::vec3& position)
+        {
+            m_CameraEntity.GetComponent<TransformComponent>().Position = position;
+            GetCamera()->SetPosition(position);
+        }
 
 	private:
 		Entity m_CameraEntity;

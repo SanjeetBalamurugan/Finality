@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup assets
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for ModelPipeline.h.
+ */
 #pragma once
 
 #include "ModelAsset.h"

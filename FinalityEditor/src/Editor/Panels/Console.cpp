@@ -1,12 +1,14 @@
 #include "Console.h"
 #include <Finality.h>
 #include <Editor/AssetPicker.h>
+#include <imgui_internal.h>
 
 namespace FINALITY
 {
 	void DrawConsole(bool* open)
 	{
 		FINALITY::ImGUIPanel panel("Console", open);
+        if (ImGui::GetCurrentWindow()->SkipItems) return;
         if (ImGui::BeginPopupContextWindow("Console Actions", ImGuiPopupFlags_MouseButtonRight))
         {
             if (ImGui::MenuItem("Clear Console")) Logger::GetConsoleSink()->Clear();

@@ -2,6 +2,8 @@
 #include <stdexcept>
 #include <cstring>
 #include <algorithm>
+#include <cmath>
+#include "VKTextureMipmaps.h"
 
 #ifndef GLM_CONFIG_HIJACK
 #define GLM_CONFIG_HIJACK
@@ -13,6 +15,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 #include <gli/gli.hpp>
+#include "VKTextureFormats.h"
 #include <filesystem>
 
 namespace FINALITY
@@ -42,7 +45,7 @@ namespace FINALITY
         VkDeviceSize imageSize = 0;
         const void* pixelsToCopy = nullptr;
         bool isCompressed = false;
-        bool ownsPixels = false;
+        std::unique_ptr<stbi_uc,decltype(&stbi_image_free)> decoded(nullptr,&stbi_image_free);
         static const unsigned char white[] = {255,255,255,255};
         gli::texture gliTex;
 
@@ -62,28 +65,46 @@ namespace FINALITY
             isCompressed = true;
             gliTex = gli::load(filePath);
             if (gliTex.empty()) throw std::runtime_error("Failed to load compressed texture via GLI: " + filePath);
+            if (gliTex.target() != gli::TARGET_2D || gliTex.layers() != 1 || gliTex.faces() != 1)
+                throw std::runtime_error("Only two-dimensional, single-layer textures are supported");
 
             m_Width = static_cast<uint32_t>(gliTex.extent().x);
             m_Height = static_cast<uint32_t>(gliTex.extent().y);
             m_MipLevels = static_cast<uint32_t>(gliTex.levels());
             imageSize = gliTex.size();
             pixelsToCopy = gliTex.data();
-            m_Format = static_cast<VkFormat>(gliTex.format());
+            m_Format = TextureFormat(gliTex.format());
         }
         else
         {
             int texWidth, texHeight, texChannels;
             stbi_uc* pixels = stbi_load(filePath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
             if (!pixels) throw std::runtime_error("Failed to decode uncompressed texture via STB: " + filePath);
+            decoded.reset(pixels);
 
             m_Width = static_cast<uint32_t>(texWidth);
             m_Height = static_cast<uint32_t>(texHeight);
             m_MipLevels = 1;
-            imageSize = m_Width * m_Height * 4;
+            imageSize = VkDeviceSize(m_Width) * m_Height * 4;
             pixelsToCopy = pixels;
-            ownsPixels = true;
             m_Format = VK_FORMAT_R8G8B8A8_UNORM;
         }
+
+        const auto colorSpace = filePath.starts_with("builtin://") ? TextureColorSpace::Linear : ReadTextureColorSpace(filePath);
+        if (!isCompressed && colorSpace == TextureColorSpace::Automatic && !filePath.starts_with("builtin://")) m_Format = VK_FORMAT_R8G8B8A8_SRGB;
+        m_Format = TextureColorFormat(m_Format,colorSpace);
+        VkFormatProperties properties{};
+        vkGetPhysicalDeviceFormatProperties(physicalDevice,m_Format,&properties);
+        const auto required = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT | VK_FORMAT_FEATURE_TRANSFER_DST_BIT;
+        if ((properties.optimalTilingFeatures & required) != required) throw std::runtime_error("Texture format is unsupported on this graphics device");
+        const auto blitFeatures = VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT;
+        if (!isCompressed && (properties.optimalTilingFeatures & blitFeatures) == blitFeatures)
+            m_MipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(m_Width,m_Height))))+1;
+        VkPhysicalDeviceProperties deviceProperties{};
+        vkGetPhysicalDeviceProperties(physicalDevice,&deviceProperties);
+        m_Anisotropy = std::min(16.0f,deviceProperties.limits.maxSamplerAnisotropy);
+        if (!m_Width || !m_Height || m_Width > deviceProperties.limits.maxImageDimension2D || m_Height > deviceProperties.limits.maxImageDimension2D)
+            throw std::runtime_error("Texture dimensions exceed device limits");
 
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -113,7 +134,7 @@ namespace FINALITY
         std::memcpy(data, pixelsToCopy, imageSize);
         vkUnmapMemory(m_Device, outStagingMemory);
 
-        if (ownsPixels) stbi_image_free(const_cast<void*>(pixelsToCopy));
+        decoded.reset();
 
         VkImageCreateInfo imageInfo{};
         imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -127,6 +148,7 @@ namespace FINALITY
         imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
         imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        if (!isCompressed && m_MipLevels > 1) imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 
@@ -184,7 +206,8 @@ namespace FINALITY
         vkCmdCopyBufferToImage(sharedCmd, outStagingBuffer, m_TextureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             static_cast<uint32_t>(bufferCopyRegions.size()), bufferCopyRegions.data());
 
-        TransitionImageLayout(sharedCmd, m_TextureImage, m_Format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        if (!isCompressed && m_MipLevels > 1) GenerateTextureMipmaps(sharedCmd,m_TextureImage,m_Width,m_Height,m_MipLevels);
+        else TransitionImageLayout(sharedCmd, m_TextureImage, m_Format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     }
 
     void VKTexture::CreateTextureImageView()
@@ -216,7 +239,7 @@ namespace FINALITY
         samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         samplerInfo.anisotropyEnable = VK_TRUE;
-        samplerInfo.maxAnisotropy = 16.0f;
+        samplerInfo.maxAnisotropy = m_Anisotropy;
         samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
         samplerInfo.unnormalizedCoordinates = VK_FALSE;
         samplerInfo.compareEnable = VK_FALSE;

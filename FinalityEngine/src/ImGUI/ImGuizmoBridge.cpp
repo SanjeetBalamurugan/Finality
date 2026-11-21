@@ -7,6 +7,12 @@
 #include <Scene/Components.h>
 #include <cmath>
 
+void FINALITY::ImGuizmoBridge::BeginFrame()
+{
+    ImGuizmo::SetImGuiContext(ImGui::GetCurrentContext());
+    ImGuizmo::BeginFrame();
+}
+
 bool FINALITY::ImGuizmoBridge::IsActive()
 {
     return ImGuizmo::IsOver() || ImGuizmo::IsUsing();

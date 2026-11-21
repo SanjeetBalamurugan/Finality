@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup scene
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for SceneManager.h.
+ */
 #pragma once
 #include <Core/Core.h>
 #include <memory>
@@ -5,6 +10,7 @@
 
 namespace FINALITY
 {
+	/** @todo TODO: Document SceneManager class semantics, ownership and usage. */
 	class FAPI SceneManager
 	{
 	public:
@@ -20,8 +26,8 @@ namespace FINALITY
 		}
 
 		void Initialize() const;
-		void Update(float ts) const;
-		void Shutdown() const;
+        void Update(float ts);
+		void Shutdown();
 
 		void SetScene(std::unique_ptr<Scene> scene);
 		void ChangeScene();
@@ -43,5 +49,6 @@ namespace FINALITY
 		std::unique_ptr<Scene> m_NextScene = nullptr;
         std::unique_ptr<Scene> m_EditorScene;
 		bool m_SimulationEnabled = true;
+        bool m_Updating = false, m_Applying = false, m_ChangeRequested = false, m_ExitRequested = false;
 	};
 }

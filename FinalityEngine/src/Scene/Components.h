@@ -1,3 +1,13 @@
+/**
+ * @file
+ * @ingroup scene
+ * @brief Defines authored entity components shared by scene and rendering systems.
+ *
+ * Components hold scene data such as transforms and render configuration. Serialization, cloning, prefabs and the Inspector must agree on the meaning and persistence of these fields.
+ *
+ * @par Usage
+ * When changing component layout, rebuild all native consumers against the matching engine. When adding a field, update serialization and cloning behavior deliberately.
+ */
 #pragma once
 #include <string>
 #include <memory>
@@ -7,9 +17,11 @@
 #include <Core/Pipeline.h>
 #include <Renderer/Camera.h>
 #include <Renderer/Material.h>
+#include "LODGroup.h"
 
 namespace FINALITY
 {
+	/** @todo TODO: Document TagComponent struct semantics, ownership and usage. */
 	struct TagComponent
 	{
 		std::string tag;
@@ -21,6 +33,7 @@ namespace FINALITY
 			: tag(tag), uuid(UUID()) {}
 	};
 
+	/** @todo TODO: Document TransformComponent struct semantics, ownership and usage. */
 	struct TransformComponent
 	{
 		glm::vec3 Position{ 0.0f };
@@ -54,6 +67,7 @@ namespace FINALITY
 		}
 	};
 
+	/** @todo TODO: Document MaterialComponent struct semantics, ownership and usage. */
 	struct MaterialComponent
 	{
 		std::shared_ptr<Material> MaterialInstance;
@@ -78,10 +92,12 @@ namespace FINALITY
 			: MaterialInstance(instance), MaterialIdentifier(identifier) {}
 	};
 
+	/** @todo TODO: Document MeshComponent struct semantics, ownership and usage. */
 	struct MeshComponent
 	{
 		std::shared_ptr<Mesh> MeshData;
 		std::string MeshIdentifier;
+        bool Occluder = false;
 
 		MeshComponent() = default;
 		MeshComponent(const MeshComponent&) = default;
@@ -93,10 +109,12 @@ namespace FINALITY
 			: MeshData(Mesh::Create(identifier)), MeshIdentifier(identifier) {}
 	};
 
+	/** @todo TODO: Document CameraComponent struct semantics, ownership and usage. */
 	struct CameraComponent
 	{
 		std::unique_ptr<Camera> CameraInstance;
 		bool IsPrimary = true;
+        bool OcclusionCulling = false;
 
 		float FOV = 45.0f;
 		float AspectRatio = 1.778f;
@@ -115,7 +133,7 @@ namespace FINALITY
 		}
 
 		CameraComponent(const CameraComponent& other)
-			: IsPrimary(other.IsPrimary), FOV(other.FOV), AspectRatio(other.AspectRatio), NearClip(other.NearClip), FarClip(other.FarClip)
+			: IsPrimary(other.IsPrimary), OcclusionCulling(other.OcclusionCulling), FOV(other.FOV), AspectRatio(other.AspectRatio), NearClip(other.NearClip), FarClip(other.FarClip)
 		{
 			if (other.CameraInstance)
 				RebuildCamera();
@@ -126,6 +144,7 @@ namespace FINALITY
 			if (this != &other)
 			{
 				IsPrimary = other.IsPrimary;
+                OcclusionCulling = other.OcclusionCulling;
 				FOV = other.FOV;
 				AspectRatio = other.AspectRatio;
 				NearClip = other.NearClip;
@@ -144,6 +163,7 @@ namespace FINALITY
 		void RebuildCamera()
 		{
 			CameraInstance = std::make_unique<Camera>(FOV, AspectRatio, NearClip, FarClip);
+            CameraInstance->SetOcclusionCulling(OcclusionCulling);
 		}
 	};
 }

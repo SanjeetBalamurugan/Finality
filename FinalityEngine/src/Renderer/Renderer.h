@@ -1,3 +1,13 @@
+/**
+ * @file
+ * @ingroup render
+ * @brief Collects scene render packets through the engine rendering facade.
+ *
+ * Renderer connects scene entities to a RenderDevice and maintains the render queue and active camera. Per-view visibility and backend recording are separate from authored scene components.
+ *
+ * @par Usage
+ * Initialize with a live device, begin scene submission, push entities and end submission. Keep device lifetime longer than renderer use and release renderer resources before device shutdown.
+ */
 #pragma once
 
 #include <Core/Core.h>
@@ -12,6 +22,15 @@
 
 namespace FINALITY
 {
+    /**
+     * @ingroup render
+     * @brief Collects scene render packets through the engine rendering facade.
+     *
+     * Renderer connects scene entities to a RenderDevice and maintains the render queue and active camera. Per-view visibility and backend recording are separate from authored scene components.
+     *
+     * @par Usage
+     * Initialize with a live device, begin scene submission, push entities and end submission. Keep device lifetime longer than renderer use and release renderer resources before device shutdown.
+     */
     class FAPI Renderer
     {
     public:
@@ -21,6 +40,11 @@ namespace FINALITY
         Renderer(const Renderer&) = delete;
         Renderer& operator=(const Renderer&) = delete;
 
+        /**
+         * @brief Connects the rendering facade to a graphics backend.
+         * @param device Live graphics device that outlives renderer use.
+         * The pointer is non-owning. Shut down the renderer before destroying its device.
+         */
         static void Initialize(RenderDevice* device);
         static void Shutdown();
 
@@ -29,6 +53,7 @@ namespace FINALITY
 
         static void PushEntity(Entity entity);
         static void PushEntity(Entity entity, const glm::mat4& worldTransform);
+        static void ConfigureLODGroups(const Scene& scene);
         static RenderDevice* GetDevice() { return s_Device; }
 
         static void SetActiveCamera(Camera* camera) { s_ActiveCamera = camera; }
@@ -56,6 +81,7 @@ namespace FINALITY
 
         static uint32_t s_CulledCount;
         static inline bool s_DirectRenderingEnabled = true;
+        static inline ViewVisibilityState s_VisibilityState;
 
     protected:
         static bool TryGetCullingFrustum(const Frustum*& outFrustum);

@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup render
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for Shader.h.
+ */
 #pragma once
 #include <Core/Core.h>
 #include <Core/RenderTypes.h>
@@ -10,6 +15,7 @@
 
 namespace FINALITY
 {
+    /** @todo TODO: Document Shader class semantics, ownership and usage. */
     class FAPI Shader : public Asset
     {
     public:

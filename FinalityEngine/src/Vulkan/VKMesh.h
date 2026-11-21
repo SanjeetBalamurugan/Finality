@@ -1,15 +1,22 @@
+/**
+ * @file
+ * @ingroup vulkan
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for VKMesh.h.
+ */
 #pragma once
 #include "VKCore.h"
 #include <Core/Mesh.h>
+#include "VKGeometryBuffer.h"
 
 namespace FINALITY
 {
+    /** @todo TODO: Document VKMesh class semantics, ownership and usage. */
     class VKMesh : public Mesh
     {
     public:
-        VKMesh(VkDevice device, VkPhysicalDevice physicalDevice, const std::vector<Vertex>& vertices);
-        VKMesh(VkDevice device, VkPhysicalDevice physicalDevice, const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
-        VKMesh(VkDevice device, VkPhysicalDevice physicalDevice, const std::string& meshPath);
+        VKMesh(VKRenderDevice& device, const std::vector<Vertex>& vertices);
+        VKMesh(VKRenderDevice& device, const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
+        VKMesh(VKRenderDevice& device, const std::string& meshPath);
         ~VKMesh() override;
 
         VKMesh(const VKMesh&) = delete;
@@ -28,19 +35,12 @@ namespace FINALITY
         void CreateVertexBuffer(const std::vector<Vertex>& vertices);
         void CreateIndexBuffer(const std::vector<uint32_t>& indices);
 
-        void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
-        uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
-
     private:
-        VkDevice m_Device = nullptr;
-        VkPhysicalDevice m_PhysicalDevice = nullptr;
+        VKRenderDevice& m_Device;
+        std::shared_ptr<VKGeometryBuffer> m_Vertices, m_Indices;
 
-        VkBuffer m_VertexBuffer = VK_NULL_HANDLE;
-        VkDeviceMemory m_VertexBufferMemory = VK_NULL_HANDLE;
         uint32_t m_VertexCount = 0;
 
-        VkBuffer m_IndexBuffer = VK_NULL_HANDLE;
-        VkDeviceMemory m_IndexBufferMemory = VK_NULL_HANDLE;
         uint32_t m_IndexCount = 0;
         bool m_HasIndices = false;
     };

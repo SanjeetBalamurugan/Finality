@@ -37,6 +37,7 @@ bool FINALITY::Project::LoadSettings()
         {
             Settings.Models.Scale = std::clamp(models["Scale"].as<float>(1),0.0001f,10000.0f);
             Settings.Models.GenerateNormals = models["GenerateNormals"].as<bool>(true);
+            Settings.Models.ConvertUnits = models["ConvertUnits"].as<bool>(true);
             Settings.Models.FlipUVs = models["FlipUVs"].as<bool>(false);
             Settings.Models.ImportMaterials = models["ImportMaterials"].as<bool>(true);
         }
@@ -64,7 +65,7 @@ bool FINALITY::Project::SaveSettings() const
         value("AutoReimport", Settings.AutoReimport); value("AssetScanInterval", Settings.AssetScanInterval);
         value("AutoBuildScripts", Settings.AutoBuildScripts); value("ScriptBuildDelay", Settings.ScriptBuildDelay); value("ScriptDirectory", Settings.ScriptDirectory);
         out << YAML::Key << "Models" << YAML::Value << YAML::BeginMap;
-        value("Scale",Settings.Models.Scale); value("GenerateNormals",Settings.Models.GenerateNormals); value("FlipUVs",Settings.Models.FlipUVs); value("ImportMaterials",Settings.Models.ImportMaterials);
+        value("Scale",Settings.Models.Scale); value("ConvertUnits",Settings.Models.ConvertUnits); value("GenerateNormals",Settings.Models.GenerateNormals); value("FlipUVs",Settings.Models.FlipUVs); value("ImportMaterials",Settings.Models.ImportMaterials);
         out << YAML::EndMap << YAML::EndMap;
         const auto target = GetDirectory() / "Settings/Project.yaml";
         const auto temporary = target.string() + ".tmp";

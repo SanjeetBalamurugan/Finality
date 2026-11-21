@@ -1,8 +1,14 @@
+/**
+ * @file
+ * @ingroup vulkan
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for VkPhysicalDevices.h.
+ */
 #pragma once
 #include "VKCore.h"
 
 namespace FINALITY
 {
+	/** @todo TODO: Document PhysicalDevice struct semantics, ownership and usage. */
 	struct PhysicalDevice
 	{
 		VkPhysicalDevice device;
@@ -15,6 +21,7 @@ namespace FINALITY
 		std::vector<VkPresentModeKHR> presentModes;
 	};
 
+	/** @todo TODO: Document VkPhysicalDevices class semantics, ownership and usage. */
 	class VkPhysicalDevices
 	{
 	public:

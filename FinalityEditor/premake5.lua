@@ -4,6 +4,7 @@ project "FinalityEditor"
     language "C++"
     cppdialect "C++20"
     staticruntime "Off"
+    dependson { "FIScriptReflect", "FIBuild", "FIBaker", "FinalityPlayer" }
 
     files {
         "src/**.h",
@@ -23,7 +24,7 @@ project "FinalityEditor"
     links {
         "FinalityEngine",
         "ImGui",
-        "yaml-cpp", "Shell32"
+        "yaml-cpp", "Shell32", "Ole32", "OleAut32"
     }
 
     filter "system:windows"

@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup render
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for Material.h.
+ */
 #pragma once
 
 #include <Core/Core.h>
@@ -15,12 +20,14 @@
 
 namespace FINALITY
 {
+    /** @todo TODO: Document UniformMember struct semantics, ownership and usage. */
     struct UniformMember
     {
         uint32_t Offset = 0;
         uint32_t Size = 0;
     };
 
+    /** @todo TODO: Document Material class semantics, ownership and usage. */
     class FAPI Material
     {
     public:

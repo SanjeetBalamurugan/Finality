@@ -82,6 +82,9 @@ bool FINALITY::ShaderCompiler::EnsureCompiled(const std::string& sourcePath, boo
     const fs::path source(sourcePath);
     if (!fs::exists(source))
     {
+        const fs::path binary(sourcePath + ".spv");
+        if (!force && fs::is_regular_file(binary) && HasReflectionNames(binary))
+            return true;
         FI_CORE_ERROR("Shader source was not found: {}", sourcePath);
         return false;
     }

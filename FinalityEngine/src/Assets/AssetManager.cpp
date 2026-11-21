@@ -1,5 +1,6 @@
 #include "AssetManager.h"
 #include "MaterialAsset.h"
+#include <Renderer/Renderer.h>
 #include <vector>
 
 namespace FINALITY
@@ -52,4 +53,19 @@ void FINALITY::AssetManager::InvalidateAssetPath(const std::string& filePath)
     if (it == s_PathToHandleRegistry.end()) return;
     s_LoadedAssets.erase(it->second);
     s_PathToHandleRegistry.erase(it);
+}
+
+std::shared_ptr<FINALITY::Texture> FINALITY::AssetManager::ReloadTexture(const std::string& filePath)
+{
+    auto previous = CreateAsset<Texture>(filePath);
+    const auto replacement = Texture::Create(AssetRegistry::Resolve(filePath));
+    if (!replacement) return nullptr;
+    const auto* record = AssetRegistry::FindPath(AssetRegistry::Resolve(filePath));
+    replacement->Handle = record ? UUID(record->ID) : previous ? previous->Handle : UUID();
+    s_LoadedAssets[replacement->Handle] = replacement;
+    s_PathToHandleRegistry[AssetRegistry::Resolve(filePath)] = replacement->Handle;
+    for (const auto& [id,asset] : s_LoadedAssets)
+        if (auto material = std::dynamic_pointer_cast<MaterialAsset>(asset)) material->ReplaceTexture(previous,replacement);
+    if (previous && Renderer::GetDevice()) Renderer::GetDevice()->RetireResource([previous]() {});
+    return replacement;
 }

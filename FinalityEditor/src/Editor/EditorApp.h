@@ -1,9 +1,15 @@
+/**
+ * @file
+ * @ingroup editor
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for EditorApp.h.
+ */
 #pragma once
 #include <Finality.h>
 #include "EditorLayer.h"
 
 namespace FINALITY
 {
+    /** @todo TODO: Document EditorApp class semantics, ownership and usage. */
     class EditorApp : public FINALITY::Game
     {
     public:

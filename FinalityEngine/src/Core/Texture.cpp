@@ -54,6 +54,7 @@ std::shared_ptr<FINALITY::Texture> FINALITY::Texture::Create(const std::string& 
         if (isSharedBatch)
         {
             renderDevice->TrackStagingResource(stagingBuffer, stagingMemory);
+            renderDevice->RetainUploadResource(texture);
         }
         else
         {

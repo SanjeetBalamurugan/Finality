@@ -5,12 +5,14 @@
 
 namespace FINALITY
 {
+    /** @todo TODO: Document MaterialCompLayout struct semantics, ownership and usage. */
     struct MaterialCompLayout
     {
         // without includeing glm::mat4 64 bytes
         float Time;
     };
 
+    /** @todo TODO: Document TestScript class semantics, ownership and usage. */
     class TestScript : public FINALITY::ScriptableComponent
     {
     public:
@@ -35,6 +37,7 @@ namespace FINALITY
 
         void Update(float dt) override
         {
+            m_TotalTime += dt;
             m_HelloTimer += dt;
             m_RotationAngle += 50.0f * dt;
 

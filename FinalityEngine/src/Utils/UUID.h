@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup tools
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for UUID.h.
+ */
 #pragma once
 #include <cstdint>
 #include <xhash>
@@ -6,6 +11,7 @@
 
 namespace FINALITY
 {
+    /** @todo TODO: Document UUID class semantics, ownership and usage. */
     class FAPI UUID
     {
     public:

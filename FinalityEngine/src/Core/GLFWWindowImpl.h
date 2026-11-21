@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup core
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for GLFWWindowImpl.h.
+ */
 #pragma once
 #include "Core.h"
 #include "Window.h"
@@ -12,6 +17,7 @@
 
 namespace FINALITY
 {
+	/** @todo TODO: Document GLFWWindowImpl class semantics, ownership and usage. */
 	class GLFWWindowImpl : public Window
 	{
 	public:

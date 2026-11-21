@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup editor
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for EditorLayer.h.
+ */
 #pragma once
 #include <Finality.h>
 #include "EditorCameraScene.h"
@@ -10,12 +15,15 @@
 #include <string>
 #include "AssetPicker.h"
 #include "Panels/AssetInspector.h"
-#include "ProjectScripts.h"
+#include "EditorSession.h"
+#include "GameViewSettings.h"
+#include "Panels/BuildPanel.h"
 
 namespace FINALITY
 {
-	enum class EditorState { Edit, Play, Paused };
 
+
+	/** @todo TODO: Document EditorLayer class semantics, ownership and usage. */
 	class EditorLayer
 	{
 	public:
@@ -40,7 +48,11 @@ namespace FINALITY
 		void OnStop();
         void NewScene();
         bool OpenScene(const std::string& path);
-        void SaveScene();
+        void SaveScene(bool saveAs = false);
+        void HandleShortcuts();
+        void ExecuteEntityCommand(EditorAction action);
+        void DrawEntityCommandDialogs();
+        void DrawShortcutSettings();
         void RecordHistory();
         void RestoreHistory(size_t index);
         void DrawContentBrowser(entt::entity selectedEntityHandle);
@@ -56,7 +68,8 @@ namespace FINALITY
         void InitializeSceneTools();
         void AppendSceneGrid(std::vector<RenderPacket>& queue, Camera& camera);
         void PickSceneEntity(const ImVec2& minimum, const ImVec2& maximum);
-        entt::entity m_SelectedEntity = entt::null;
+        void PlaceSceneAsset(uint64_t id, const glm::vec3& position);
+        void FrameSelected();
 
 	private:
 		std::shared_ptr<RenderTarget> m_SceneTarget;
@@ -64,12 +77,20 @@ namespace FINALITY
 
 		std::unique_ptr<EditorCameraScene> m_EditorCameraScene;
 		bool m_SceneViewActive = false;
+        GameViewSettings m_GameViewSettings;
+        bool m_ShowSceneStats = false;
+        bool m_CameraCaptured = false;
+        bool m_ContentBrowserFocused = false, m_ContentBrowserVisible = false;
+        std::string m_FocusSearch, m_EntityClipboard, m_RenameBuffer, m_ShortcutMessage;
+        entt::entity m_RenameTarget = entt::null;
+        bool m_RenamePending = false;
+        int m_ShortcutCapture = -1;
+        ImVec2 m_SceneImageMinimum{}, m_SceneImageMaximum{};
 
-		EditorState m_State = EditorState::Edit;
-        Project m_Project;
+        EditorSession m_Session;
+        BuildPanel m_BuildPanel;
         AssetPicker m_AssetPicker;
         AssetInspector m_AssetInspector;
-        ProjectScripts m_ProjectScripts;
         ProjectSettings m_SettingsDraft;
         std::string m_SettingsName, m_SettingsStartup, m_SettingsSearch;
         int m_SettingsCategory = 0;
@@ -77,6 +98,7 @@ namespace FINALITY
         bool m_ThemePending = false;
         std::string m_ThemeMessage;
         float m_AssetScanClock = 0;
+        bool m_AssetRefreshPending = false;
         std::string m_InitialProject;
         std::string m_LayoutPath;
         std::filesystem::path m_EngineAssets;
@@ -102,14 +124,13 @@ namespace FINALITY
         std::string m_FocusWindow;
         bool m_UseTemplate = true;
         bool m_LayoutReady = false;
+        bool m_LoadProjectLayout = false;
         bool m_LocalGizmo = false;
+        bool m_SnapToGrid = false;
+        float m_SnapDistance = 1.0f;
         bool m_ShowGrid = true;
         std::shared_ptr<Mesh> m_GridMesh;
         std::shared_ptr<Material> m_GridMaterial;
-        uint64_t m_SelectedAsset = 0;
-        std::vector<std::string> m_History;
-        size_t m_HistoryIndex = 0;
-        std::string m_ScenePath;
         std::string m_ContentDirectory = "assets";
         float m_ShaderReloadClock = 0.0f;
         int m_GizmoOperation = 0;
