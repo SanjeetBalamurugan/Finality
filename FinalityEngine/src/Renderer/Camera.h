@@ -1,3 +1,13 @@
+/**
+ * @file
+ * @ingroup render
+ * @brief Stores camera projection and view configuration.
+ *
+ * Camera state drives view-dependent rendering. The engine uses Vulkan zero-to-one projection depth; visibility tests and rendering must use the same projection convention.
+ *
+ * @par Usage
+ * Keep view and projection matrices current with camera transforms and viewport aspect. Enable optional occlusion only after checking correctness and cost in the intended scene.
+ */
 #pragma once
 
 #include <glm/glm.hpp>
@@ -5,6 +15,15 @@
 
 namespace FINALITY
 {
+    /**
+     * @ingroup render
+     * @brief Stores camera projection and view configuration.
+     *
+     * Camera state drives view-dependent rendering. The engine uses Vulkan zero-to-one projection depth; visibility tests and rendering must use the same projection convention.
+     *
+     * @par Usage
+     * Keep view and projection matrices current with camera transforms and viewport aspect. Enable optional occlusion only after checking correctness and cost in the intended scene.
+     */
     class FAPI Camera
     {
     public:
@@ -59,6 +78,8 @@ namespace FINALITY
         const glm::vec3& GetForward() const { return m_Forward; }
         const glm::vec3& GetRight() const { return m_Right; }
         const glm::vec3& GetUp() const { return m_Up; }
+        void SetOcclusionCulling(bool enabled) { m_OcclusionCulling = enabled; }
+        bool GetOcclusionCulling() const { return m_OcclusionCulling; }
 
         void SetViewportSize(float width, float height)
         {
@@ -69,7 +90,7 @@ namespace FINALITY
     private:
         void UpdateProjection()
         {
-            m_ProjectionMatrix = glm::perspective(glm::radians(m_FOV), m_AspectRatio, m_NearClip, m_FarClip);
+            m_ProjectionMatrix = glm::perspectiveRH_ZO(glm::radians(m_FOV), m_AspectRatio, m_NearClip, m_FarClip);
         }
 
         void UpdateVectors()
@@ -93,6 +114,7 @@ namespace FINALITY
         float m_AspectRatio;
         float m_NearClip;
         float m_FarClip;
+        bool m_OcclusionCulling = false;
 
         glm::mat4 m_ProjectionMatrix{ 1.0f };
 

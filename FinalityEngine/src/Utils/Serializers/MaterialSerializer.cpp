@@ -222,7 +222,7 @@ bool FINALITY::MaterialSerializer::Serialize(const MaterialDefinition& definitio
         }
         out << YAML::EndSeq;
 
-        if (!definition.TexturePath.empty())
+        if (!definition.TextureBinding.empty())
         {
             out << YAML::Key << "Texture" << YAML::Value << YAML::BeginMap;
             out << YAML::Key << "Binding" << YAML::Value << definition.TextureBinding;

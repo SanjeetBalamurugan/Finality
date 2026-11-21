@@ -78,9 +78,8 @@ void FINALITY::Application::Initialize(const RendererAPI& api, const WindowSpec&
 	m_ImGUIRenderer = ImGUIRenderer::Create(m_RenderDevice.get());
 	m_ImGUIRenderer->Initialize();
 
-	m_CurrentGame->Init();
-
 	FINALITY::AssetManager::Initialize();
+	m_CurrentGame->Init();
 	//SceneManager::GetInstance().Initialize();
 
 	m_Window->SetCallbacks();
@@ -102,6 +101,13 @@ void FINALITY::Application::Update()
 		lastFrameTime = currentFrameTime;
 
 		m_Window->Update();
+		int framebufferWidth = 0, framebufferHeight = 0;
+		glfwGetFramebufferSize(static_cast<GLFWwindow*>(m_Window->GetNativeHandles().WindowHandle), &framebufferWidth, &framebufferHeight);
+		if (framebufferWidth == 0 || framebufferHeight == 0)
+		{
+			glfwWaitEventsTimeout(0.05);
+			continue;
+		}
 		int newW, newH;
 		if (m_Window->ConsumePendingResize(newW, newH))
 		{
@@ -118,7 +124,7 @@ void FINALITY::Application::Update()
 
 		m_ImGUIRenderer->Update();
 		ImGui::NewFrame();
-		ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
+
 
 		// Frame logic like draw calls here
 		SceneManager::GetInstance().Update(deltaTime);
@@ -137,12 +143,15 @@ void FINALITY::Application::Update()
 
 void FINALITY::Application::Shutdown()
 {
+	m_RenderDevice->WaitIdle();
+	if (m_CurrentGame) m_CurrentGame->Destroy();
 	SceneManager::GetInstance().Shutdown();
 	FINALITY::AssetManager::Shutdown();
 	FINALITY::Renderer::Shutdown();
+    m_RenderDevice->FlushRetiredResources();
 
-	if (m_CurrentGame) m_CurrentGame->Destroy();
 	m_ImGUIRenderer->Destroy();
+	m_ImGUIRenderer.reset();
 
 	if (m_Window)
 	{

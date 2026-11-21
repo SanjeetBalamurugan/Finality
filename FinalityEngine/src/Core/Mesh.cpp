@@ -6,6 +6,12 @@
 #include <algorithm>
 #include <cmath>
 #include <glm/gtx/norm.hpp>
+#include <Assets/MeshImporter.h>
+#include <Assets/AssetRegistry.h>
+#include <Core/Log.h>
+#include <unordered_map>
+#include <filesystem>
+#include <Assets/ModelAsset.h>
 
 namespace FINALITY
 {
@@ -24,6 +30,7 @@ namespace FINALITY
     {
         std::vector<Vertex> prepared = vertices;
         CalculateNormalsAndTangents(prepared, indices);
+        if (prepared.empty() || indices.empty()) return nullptr;
         switch (Application::GetActiveAPI())
         {
         case RendererAPI::VULKAN:
@@ -35,17 +42,29 @@ namespace FINALITY
 
     std::shared_ptr<Mesh> Mesh::Create(const std::string& meshPath)
     {
-        switch (Application::GetActiveAPI())
+        try
         {
-        case RendererAPI::VULKAN:
-            return Renderer::GetDevice()->CreateMesh(meshPath);
-        default:
-            return nullptr;
+            const auto source = AssetRegistry::Resolve(meshPath.substr(0,meshPath.find('#')));
+            if (!meshPath.starts_with("builtin://") && ModelAsset::Supports(source))
+                return ModelAsset::LoadMesh(meshPath);
+            static std::unordered_map<std::string, std::weak_ptr<Mesh>> cache;
+            const auto path = AssetRegistry::Resolve(meshPath);
+            if (path.empty()) return nullptr;
+            std::string key = path;
+            if (!path.starts_with("builtin://"))
+                key += std::to_string(std::filesystem::last_write_time(path).time_since_epoch().count());
+            if (auto cached = cache[key].lock()) return cached;
+            auto geometry = MeshImporter::Load(path);
+            auto mesh = Renderer::GetDevice()->CreateMesh(geometry.Vertices, geometry.Indices);
+            cache[key] = mesh;
+            return mesh;
         }
+        catch (const std::exception& error) { FI_CORE_ERROR("Mesh load failed '{}': {}", meshPath, error.what()); return nullptr; }
     }
 
     void Mesh::ComputeBounds(const std::vector<Vertex>& vertices)
     {
+        m_Vertices = vertices;
         if (vertices.empty())
         {
             m_BoundsCenter = glm::vec3(0.0f);

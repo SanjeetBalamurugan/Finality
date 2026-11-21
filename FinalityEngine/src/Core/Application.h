@@ -1,3 +1,13 @@
+/**
+ * @file
+ * @ingroup core
+ * @brief Coordinates the engine application lifetime.
+ *
+ * Application hosts the window, layers and engine services used by editor and player programs. Subsystems must be initialized before use and shut down while their dependencies are still alive.
+ *
+ * @par Usage
+ * Keep graphics resource retirement ahead of device destruction. Long-running imports and script compilation should report progress rather than block editor interaction.
+ */
 #pragma once
 #include "Core.h"
 #include "RenderTypes.h"
@@ -11,6 +21,15 @@ namespace FINALITY
 {
 	class ImGUIRenderer;
 
+	/**
+	 * @ingroup core
+	 * @brief Coordinates the engine application lifetime.
+	 *
+	 * Application hosts the window, layers and engine services used by editor and player programs. Subsystems must be initialized before use and shut down while their dependencies are still alive.
+	 *
+	 * @par Usage
+	 * Keep graphics resource retirement ahead of device destruction. Long-running imports and script compilation should report progress rather than block editor interaction.
+	 */
 	class FAPI Application
 	{
 	public:

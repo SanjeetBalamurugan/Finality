@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup tools
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for ImGUIPanel.h.
+ */
 #pragma once
 #include <Core/Core.h>
 #include <string>
@@ -6,6 +11,7 @@
 
 namespace FINALITY
 {
+	/** @todo TODO: Document PanelColor_ enum semantics, ownership and usage. */
 	enum PanelColor_
 	{
 		PanelColor_Text = 0,
@@ -69,8 +75,10 @@ namespace FINALITY
 		PanelColor_ModalWindowDimBg = 58
 	};
 
+	/** @todo TODO: Document PanelColor alias semantics, ownership and usage. */
 	using PanelColor = int;
 
+	/** @todo TODO: Document PanelFlags_ enum semantics, ownership and usage. */
 	enum PanelFlags_
 	{
 		PanelFlags_None = 0,
@@ -86,9 +94,11 @@ namespace FINALITY
 		PanelFlags_NoNav = 1 << 14,
 		PanelFlags_NoDecoration = PanelFlags_NoTitleBar | PanelFlags_NoResize | PanelFlags_NoScrollbar
 	};
+	/** @todo TODO: Document PanelFlags alias semantics, ownership and usage. */
 	using PanelFlags = int;
 
 
+	/** @todo TODO: Document PanelCondition_ enum semantics, ownership and usage. */
 	enum PanelCondition_
 	{
 		PanelCondition_Always = 1 << 0,
@@ -96,8 +106,10 @@ namespace FINALITY
 		PanelCondition_FirstUseEver = 1 << 2,
 		PanelCondition_Appearing = 1 << 3
 	};
+	/** @todo TODO: Document PanelCondition alias semantics, ownership and usage. */
 	using PanelCondition = int;
 
+	/** @todo TODO: Document PanelPopupFlags_ enum semantics, ownership and usage. */
 	enum PanelPopupFlags_
 	{
 		PanelPopupFlags_None = 0,
@@ -112,8 +124,10 @@ namespace FINALITY
 		PanelPopupFlags_AnyPopupLevel = 1 << 8,
 		PanelPopupFlags_AnyPopup = PanelPopupFlags_AnyPopupId | PanelPopupFlags_AnyPopupLevel
 	};
+	/** @todo TODO: Document PanelPopupFlags alias semantics, ownership and usage. */
 	using PanelPopupFlags = int;
 
+	/** @todo TODO: Document ImGUIPanel class semantics, ownership and usage. */
 	class FAPI ImGUIPanel
 	{
 	public:

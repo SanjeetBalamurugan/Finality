@@ -77,6 +77,18 @@ namespace FINALITY
         vkQueueWaitIdle(m_Queue);
     }
 
+    void VKQueue::SubmitFrame(const std::vector<VkCommandBuffer>& commands, uint32_t imageIndex)
+    {
+        const auto available = m_ImageAvailableSemaphores[m_CurrentFrame];
+        const auto finished = m_RenderFinishedSemaphores[imageIndex];
+        const VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT;
+        VkSubmitInfo submit{VK_STRUCTURE_TYPE_SUBMIT_INFO};
+        submit.waitSemaphoreCount = 1; submit.pWaitSemaphores = &available; submit.pWaitDstStageMask = &waitStage;
+        submit.commandBufferCount = static_cast<uint32_t>(commands.size()); submit.pCommandBuffers = commands.data();
+        submit.signalSemaphoreCount = 1; submit.pSignalSemaphores = &finished;
+        CHECK_VK_RESULT(vkQueueSubmit(m_Queue,1,&submit,m_InFlightFences[m_CurrentFrame]), "Cannot submit frame");
+    }
+
     void VKQueue::SubmitSync(VkCommandBuffer cmdBuf)
     {
         VkSubmitInfo submitInfo{};

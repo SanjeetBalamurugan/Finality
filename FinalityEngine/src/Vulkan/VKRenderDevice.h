@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup vulkan
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for VKRenderDevice.h.
+ */
 #pragma once
 
 #include <Core/Core.h>
@@ -10,6 +15,8 @@
 #include "VkQueue.h"
 #include "VKSwapChain.h"
 #include "VKUniformBuffer.h"
+#include "VKTextureUploads.h"
+#include "VKViewportPass.h"
 
 #include <Renderer/Material.h>
 #include "VKDeletionQueue.h"
@@ -23,13 +30,8 @@
 
 namespace FINALITY
 {
-	struct TextureUploadBatchContext {
-		VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
-		std::vector<VkBuffer> stagingBuffers;
-		std::vector<VkDeviceMemory> stagingMemories;
-		bool isActive = false;
-	};
-
+    class VKImGUIRenderer;
+	/** @todo TODO: Document FrameInstanceBuffer struct semantics, ownership and usage. */
 	struct FrameInstanceBuffer {
 		VkBuffer Buffer = VK_NULL_HANDLE;
 		VkDeviceMemory Memory = VK_NULL_HANDLE;
@@ -38,6 +40,7 @@ namespace FINALITY
 		VkDeviceSize CurrentOffset = 0;
 	};
 
+	/** @todo TODO: Document VKRenderDevice class semantics, ownership and usage. */
 	class VKRenderDevice : public RenderDevice
 	{
 	private:
@@ -80,7 +83,7 @@ namespace FINALITY
 			uint8_t*& instanceBufferMapped,
 			VkDeviceSize& instanceBufferCapacity,
 			VkDeviceSize& instanceBufferOffset,
-			const std::vector<RenderPacket>& queue);
+			const std::vector<RenderPacket>& queue, RenderStatistics* statistics = nullptr, const RenderView* view = nullptr);
 
 		VkDescriptorSet GetOrCreateTargetImGuiHandle(const std::shared_ptr<RenderTarget>& target);
 		void CheckTimeQuerySupport();
@@ -95,6 +98,8 @@ namespace FINALITY
 		void PresentFrame() override;
 
 		void WaitIdle() override { vkDeviceWaitIdle(m_Device); }
+        void RetireResource(std::function<void()> release) override { m_FrameDeletionQueues[m_ImageIndex].Push(std::move(release)); }
+        void FlushRetiredResources() override { WaitIdle(); for(auto& queue:m_FrameDeletionQueues) queue.Flush(); }
 		void CreateCommandBuffers(uint32_t count, VkCommandBuffer* cmdBufs) const;
 		void FreeCommandBuffers(uint32_t count, VkCommandBuffer* cmdBufs);
 
@@ -113,10 +118,14 @@ namespace FINALITY
 		std::shared_ptr<Mesh> CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices) override;
 		std::shared_ptr<Mesh> CreateMesh(const std::string& meshPath) override;
 		std::shared_ptr<Pipeline> CreatePipeline(const PipelineConfig& config) override;
+        std::unique_ptr<Shader> CreateShader(const std::string& path) override;
+        std::shared_ptr<Pipeline> CreatePostProcessPipeline(const PipelineConfig& config) override;
+        void SetFrameView(const RenderView& view) override;
+        void SetOverlayRenderer(VKImGUIRenderer* renderer) { m_OverlayRenderer = renderer; }
 
 		std::shared_ptr<RenderTarget> CreateRenderTarget(uint32_t width, uint32_t height) override;
 		void ResizeRenderTarget(const std::shared_ptr<RenderTarget>& target, uint32_t width, uint32_t height) override;
-		void UpdateRenderTargetCamera(const std::shared_ptr<RenderTarget>& target, Camera* camera) override;
+        void SetRenderTargetView(const std::shared_ptr<RenderTarget>& target, const RenderView& view) override;
 		void DestroyRenderTargetGpuResources(RenderTarget& target) override;
 		void RenderSceneToTarget(const std::shared_ptr<RenderTarget>& target, const std::vector<RenderPacket>& queue) override;
 		void* GetRenderTargetTextureHandle(const std::shared_ptr<RenderTarget>& target) override;
@@ -126,13 +135,13 @@ namespace FINALITY
 		void BeginTextureBatch();
 		void EndAndSubmitTextureBatch();
 
-		bool IsUploadBatchActive() const { return m_ActiveUploadBatch.isActive; }
-		VkCommandBuffer GetActiveUploadCommandBuffer() { return m_ActiveUploadBatch.commandBuffer; }
+		bool IsUploadBatchActive() const { return m_Uploads.IsActive(); }
+		VkCommandBuffer GetActiveUploadCommandBuffer() { return m_Uploads.CommandBuffer(); }
 
 		void TrackStagingResource(VkBuffer buffer, VkDeviceMemory memory) {
-			m_ActiveUploadBatch.stagingBuffers.push_back(buffer);
-			m_ActiveUploadBatch.stagingMemories.push_back(memory);
+			m_Uploads.Track(buffer, memory);
 		}
+        void RetainUploadResource(std::shared_ptr<void> resource) { m_Uploads.Retain(std::move(resource)); }
 
 		VkDescriptorSetLayout GetGlobalDescriptorSetLayout() const { return m_GlobalDescriptorSetLayout; }
 		VkDescriptorSet GetGlobalDescriptorSet(uint32_t index) const { return m_GlobalDescriptorSets[index]; }
@@ -153,7 +162,7 @@ namespace FINALITY
 			return static_cast<VKFramebuffer*>(m_PostProcessingFramebuffer.get())->GetVKRenderPass();
 		}
 
-		void SetPostProcessPipeline(std::shared_ptr<Pipeline> pipeline) { m_PostProcessPipeline = pipeline; }
+        void SetPostProcessPipeline(std::shared_ptr<Pipeline> pipeline) override { m_PostProcessPipeline = std::move(pipeline); }
 		VkDescriptorSetLayout GetPostProcessDescriptorSetLayout() { return m_PostProcessDescriptorSetLayout; }
 		VKSwapChain* GetSwapChain() { return m_SwapChain.get(); }
 
@@ -172,6 +181,7 @@ namespace FINALITY
 
 	private:
 		WindowSpec m_Spec;
+        VKImGUIRenderer* m_OverlayRenderer = nullptr;
 		const std::vector<const char*> m_ValidationLayers = {
 			"VK_LAYER_KHRONOS_validation"
 		};
@@ -204,7 +214,13 @@ namespace FINALITY
 
 		VkDescriptorSetLayout m_MaterialDescriptorSetLayout = VK_NULL_HANDLE;
 		VKDescriptorAllocator m_MaterialDescriptorAllocator;
-		std::unordered_map<const Material*, VkDescriptorSet> m_MaterialDescriptorCache;
+        /** @todo TODO: Document CachedMaterialDescriptor struct semantics, ownership and usage. */
+        struct CachedMaterialDescriptor
+        {
+            VkDescriptorSet Set = VK_NULL_HANDLE;
+            std::weak_ptr<Texture> TextureReference;
+        };
+		std::unordered_map<const Texture*, CachedMaterialDescriptor> m_MaterialDescriptorCache;
 
 		std::vector<VKDeletionQueue> m_FrameDeletionQueues;
 		std::shared_ptr<Framebuffer> m_PostProcessingFramebuffer = nullptr;
@@ -215,12 +231,15 @@ namespace FINALITY
 		std::shared_ptr<Pipeline> m_PostProcessPipeline = nullptr;
 		VkSampler m_PostProcessSampler = VK_NULL_HANDLE;
 
-		TextureUploadBatchContext m_ActiveUploadBatch;
+		VKTextureUploads m_Uploads;
 
 		std::vector<FrameInstanceBuffer> m_InstanceBuffers;
 		bool m_PendingSwapchainRecreate = false;
+        RenderView m_FrameView;
 		std::unordered_map<RenderTarget*, VkDescriptorSet> m_TargetImGuiHandles;
 		std::shared_ptr<RenderTarget> m_GameRenderTarget;
+        std::vector<std::vector<std::unique_ptr<VKViewportPass>>> m_ViewportPasses;
+        size_t m_ViewportPassCursor = 0;
 
 		bool m_timeQuerySupported = false;
 		float m_LastGPUTime = 0.0f;

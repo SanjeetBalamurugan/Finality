@@ -10,6 +10,7 @@
 
 #include "MainScene.h"
 
+/** @todo TODO: Document BenchmarkScene class semantics, ownership and usage. */
 class BenchmarkScene : public FINALITY::Scene
 {
 public:

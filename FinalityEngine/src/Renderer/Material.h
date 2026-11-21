@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup render
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for Material.h.
+ */
 #pragma once
 
 #include <Core/Core.h>
@@ -15,12 +20,14 @@
 
 namespace FINALITY
 {
+    /** @todo TODO: Document UniformMember struct semantics, ownership and usage. */
     struct UniformMember
     {
         uint32_t Offset = 0;
         uint32_t Size = 0;
     };
 
+    /** @todo TODO: Document Material class semantics, ownership and usage. */
     class FAPI Material
     {
     public:
@@ -28,7 +35,7 @@ namespace FINALITY
         static constexpr uint32_t SerializedMaterialStart = 64;
 
         explicit Material(std::shared_ptr<Pipeline> pipeline)
-            : m_Pipeline(std::move(pipeline)), m_DataBuffer(PushConstantBytes, 0)
+            : m_Pipeline(std::make_shared<std::shared_ptr<Pipeline>>(std::move(pipeline))), m_DataBuffer(PushConstantBytes, 0)
         {
         }
 
@@ -93,10 +100,11 @@ namespace FINALITY
         void ClearDirtyFlag() { m_MaterialDirty = false; }
 
         const std::vector<uint8_t>& GetRawDataBuffer() const { return m_DataBuffer; }
-        std::shared_ptr<Pipeline> GetPipeline() const { return m_Pipeline; }
+        std::shared_ptr<Pipeline> GetPipeline() const { return *m_Pipeline; }
         std::shared_ptr<Material> Clone() const
         {
-            auto copy = std::make_shared<Material>(m_Pipeline);
+            auto copy = std::make_shared<Material>(*m_Pipeline);
+            copy->m_Pipeline = m_Pipeline;
             copy->m_DataBuffer = m_DataBuffer;
             copy->m_Uniforms = m_Uniforms;
             copy->m_Textures = m_Textures;
@@ -108,7 +116,7 @@ namespace FINALITY
 
         void SetPipeline(std::shared_ptr<Pipeline> pipeline)
         {
-            m_Pipeline = std::move(pipeline);
+            *m_Pipeline = std::move(pipeline);
             m_MaterialDirty = true;
         }
 
@@ -139,7 +147,7 @@ namespace FINALITY
             return true;
         }
 
-        std::shared_ptr<Pipeline> m_Pipeline;
+        std::shared_ptr<std::shared_ptr<Pipeline>> m_Pipeline;
         std::vector<uint8_t> m_DataBuffer;
         std::unordered_map<std::string, UniformMember> m_Uniforms;
         std::unordered_map<std::string, std::shared_ptr<Texture>> m_Textures;

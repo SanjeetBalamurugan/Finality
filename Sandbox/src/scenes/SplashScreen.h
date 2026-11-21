@@ -5,6 +5,7 @@
 #include "MainScene.h"
 #include "BenchmarkScene.h"
 
+/** @todo TODO: Document SplashScreen class semantics, ownership and usage. */
 class SplashScreen : public FINALITY::Scene
 {
 public:

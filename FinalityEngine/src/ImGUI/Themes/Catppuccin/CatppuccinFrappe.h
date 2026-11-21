@@ -3,8 +3,7 @@
 
 namespace FINALITY
 {
-    static void ApplyCatppuccinFrappe() {
-        ImGuiStyle& style = ImGui::GetStyle();
+    static void ApplyCatppuccinFrappe(ImGuiStyle& style = ImGui::GetStyle()) {
         ImVec4* colors = style.Colors;
 
         colors[ImGuiCol_WindowBg] = ImVec4(0.188f, 0.204f, 0.275f, 1.000f);

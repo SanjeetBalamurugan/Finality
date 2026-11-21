@@ -1,9 +1,15 @@
+/**
+ * @file
+ * @ingroup core
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for Framebuffer.h.
+ */
 #pragma once
 #include <memory>
 #include <Core/Core.h>
 
 namespace FINALITY
 {
+    /** @todo TODO: Document FramebufferSpecification struct semantics, ownership and usage. */
     struct FramebufferSpecification
     {
         uint32_t Width = 1280;
@@ -11,6 +17,7 @@ namespace FINALITY
         bool IsSwapChainTarget = false;
     };
 
+    /** @todo TODO: Document Framebuffer class semantics, ownership and usage. */
     class FAPI Framebuffer
     {
     public:

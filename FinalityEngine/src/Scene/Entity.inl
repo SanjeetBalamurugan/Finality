@@ -1,12 +1,14 @@
 #pragma once
 
 #include "ScriptableComponent.h"
+#include <stdexcept>
 
 namespace FINALITY
 {
     template<typename T, typename... Args>
     T& Entity::AddScript(Args&&... args)
     {
+        if (!IsValid()) throw std::logic_error("Cannot attach a script to an expired entity");
         static_assert(std::is_base_of_v<ScriptableComponent, T>,
             "T must inherit from ScriptableComponent");
 
@@ -19,6 +21,7 @@ namespace FINALITY
 
         script->m_EntityHandle = m_EntityHandle;
         script->m_CurrentScene = m_CurrentScene;
+        script->m_Lifetime = m_Lifetime;
 
         T* ptr = script.get();
 
@@ -31,14 +34,13 @@ namespace FINALITY
                     return nullptr;
             });
 
-        ptr->Awake();
-
         return *ptr;
     }
 
     template<typename T, typename... Args>
     T& Entity::AddComponent(Args&&... args)
     {
+        if (!IsValid()) throw std::logic_error("Cannot add a component to an expired entity");
         assert(!HasComponent<T>() && "Component already exists!");
 
         return m_CurrentScene->m_EntityRegistry.emplace<T>(
@@ -49,6 +51,7 @@ namespace FINALITY
     template<typename T>
     T& Entity::GetComponent()
     {
+        if (!HasComponent<T>()) throw std::logic_error("Entity is expired or its component is missing");
         assert(HasComponent<T>() && "Component doesn't exist!");
 
         return m_CurrentScene->m_EntityRegistry.get<T>(m_EntityHandle);
@@ -57,12 +60,13 @@ namespace FINALITY
     template<typename T>
     bool Entity::HasComponent() const
     {
-        return m_CurrentScene->m_EntityRegistry.all_of<T>(m_EntityHandle);
+        return IsValid() && m_CurrentScene->m_EntityRegistry.all_of<T>(m_EntityHandle);
     }
 
     template<typename T>
     void Entity::RemoveComponent()
     {
+        if (!HasComponent<T>()) return;
         assert(HasComponent<T>() && "Component doesn't exist!");
 
         m_CurrentScene->m_EntityRegistry.remove<T>(m_EntityHandle);
@@ -70,6 +74,8 @@ namespace FINALITY
 
 	inline void Entity::SetParent(Entity parent)
 	{
+		if (!IsValid()) return;
+		if (parent.m_EntityHandle != entt::null && !parent.IsValid()) return;
 		auto& registry = m_CurrentScene->m_EntityRegistry;
 		auto& rel = registry.get<RelationshipComponent>(m_EntityHandle);
 
@@ -87,6 +93,7 @@ namespace FINALITY
             const auto* ancestor = registry.try_get<RelationshipComponent>(cursor);
             cursor = ancestor ? ancestor->Parent : entt::null;
         }
+        if (cursor != entt::null) return;
         }
 		if (rel.Parent != entt::null)
 		{

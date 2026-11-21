@@ -1,8 +1,14 @@
+/**
+ * @file
+ * @ingroup core
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for Game.h.
+ */
 #pragma once
 #include "Core.h"
 
 namespace FINALITY
 {
+	/** @todo TODO: Document Game class semantics, ownership and usage. */
 	class FAPI Game
 	{
 	public:

@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup assets
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for MaterialAsset.h.
+ */
 #pragma once
 
 #include <Assets/Asset.h>
@@ -16,6 +21,7 @@ namespace FINALITY
 {
     class RenderDevice;
 
+    /** @todo TODO: Document MaterialParameterType enum semantics, ownership and usage. */
     enum class MaterialParameterType
     {
         Float,
@@ -23,6 +29,7 @@ namespace FINALITY
         Mat4
     };
 
+    /** @todo TODO: Document MaterialParameterDefinition struct semantics, ownership and usage. */
     struct MaterialParameterDefinition
     {
         std::string Name;
@@ -32,6 +39,7 @@ namespace FINALITY
         std::array<float, 16> Default{};
     };
 
+    /** @todo TODO: Document MaterialDefinition struct semantics, ownership and usage. */
     struct MaterialDefinition
     {
         std::string Name = "Untitled Material";
@@ -42,11 +50,12 @@ namespace FINALITY
         CullMode Culling = CullMode::Back;
         std::vector<MaterialParameterDefinition> Properties;
         // Current Vulkan implementation binds one combined image sampler at set=1, binding=0.
-        std::string TextureBinding = "textureSampler";
+        std::string TextureBinding;
         std::string TexturePath;
     };
 
     // Cached shared asset loaded from a .fmat file. Do not animate this definition.
+    /** @todo TODO: Document MaterialAsset class semantics, ownership and usage. */
     class FAPI MaterialAsset : public Asset
     {
     public:
@@ -59,6 +68,7 @@ namespace FINALITY
         std::shared_ptr<Material> CreateInstance() const;
         void UpdateDefaultsFromInstance(const Material& instance);
         bool ReloadShadersIfChanged(bool force = false);
+        void ReplaceTexture(const std::shared_ptr<Texture>& previous, const std::shared_ptr<Texture>& replacement);
 
     private:
         MaterialDefinition m_Definition;

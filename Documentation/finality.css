@@ -1,0 +1,36 @@
+html {
+  --primary-color: #567be7;
+  --primary-dark-color: #395dcc;
+  --primary-light-color: #e7edff;
+  --font-family: "Segoe UI", Inter, system-ui, sans-serif;
+  --font-family-monospace: "Cascadia Code", Consolas, monospace;
+  --page-font-size: 15px;
+  --navigation-font-size: 14px;
+  --border-radius-small: 2px;
+  --border-radius-medium: 3px;
+  --border-radius-large: 4px;
+}
+html.dark-mode {
+  --primary-color: #9ab5ff;
+  --primary-dark-color: #b1c6ff;
+  --primary-light-color: #26395c;
+  --page-background-color: #131820;
+  --page-foreground-color: #dce4ef;
+  --fragment-background: #1a2230;
+}
+body, table, div, p, dl { font-family: var(--font-family); }
+#titlearea { padding: 18px 24px; border-bottom: 1px solid #567be744; }
+#projectname { font-weight: 700; letter-spacing: -.8px; font-size: 29px; }
+#projectbrief { opacity: .72; margin-top: 5px; }
+.contents { max-width: 1150px; padding: 16px 28px 50px; line-height: 1.7; }
+div.header { padding: 14px 25px; background-image: none; }
+div.title { letter-spacing: -.5px; font-size: 25px; }
+.memitem { border-radius: 10px; overflow: hidden; margin: 20px 0; }
+.memproto { padding: 12px 15px; background-image: none; }
+.memdoc { padding: 16px; box-shadow: none; }
+div.fragment { border-radius: 8px; padding: 12px; }
+*, *::before, *::after { box-shadow: none !important; text-shadow: none !important; transition: none !important; }
+#nav-tree, .tabs, .tabs2, .tabs3, .tablist li, .tablist a,
+.memproto, .memdoc, div.header { background-image: none !important; }
+span.label a:hover { background-image: none !important; text-decoration: underline; }
+@media (max-width: 700px) { .contents { padding: 12px; } }

@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup vulkan
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for VKImGUIRenderer.h.
+ */
 #pragma once
 #include <Vulkan/VKCore.h>
 
@@ -6,6 +11,7 @@
 
 namespace FINALITY
 {
+	/** @todo TODO: Document VKImGUIRenderer class semantics, ownership and usage. */
 	class VKImGUIRenderer : public ImGUIRenderer
 	{
 	public:

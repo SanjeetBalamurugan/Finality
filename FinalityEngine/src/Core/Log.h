@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup core
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for Log.h.
+ */
 #pragma once
 
 #include "Core.h"
@@ -10,10 +15,9 @@
 #include <mutex>
 #include <string>
 
-template class FAPI std::shared_ptr<spdlog::logger>;
-
 namespace FINALITY
 {
+	/** @todo TODO: Document LogEntry struct semantics, ownership and usage. */
 	struct LogEntry
 	{
 		std::string Message;
@@ -26,6 +30,7 @@ namespace FINALITY
 		int Count = 1;
 	};	
 
+	/** @todo TODO: Document ConsoleSink class semantics, ownership and usage. */
 	class FAPI ConsoleSink : public spdlog::sinks::base_sink<std::mutex>
 	{
 	public:
@@ -41,7 +46,7 @@ namespace FINALITY
 		static constexpr size_t s_MaxEntries = 1000;
 	};
 
-	template class FAPI std::shared_ptr<FINALITY::ConsoleSink>;
+	/** @todo TODO: Document Logger class semantics, ownership and usage. */
 	class FAPI Logger
 	{
 	public:

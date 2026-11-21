@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup editor
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for resource.h.
+ */
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
 // Used by Resource.rc

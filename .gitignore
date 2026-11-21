@@ -1,4 +1,5 @@
 # Visual-Studio
+*.log
 
 *.sln
 *.slnx
@@ -15,3 +16,9 @@ ipch/
 
 # Compiled Shaders
 *.spv
+
+/TestArtifacts/
+/build-*.log
+/test-*-console.log
+/imgui.ini
+/.tools/

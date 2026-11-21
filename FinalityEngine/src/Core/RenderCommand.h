@@ -1,8 +1,14 @@
+/**
+ * @file
+ * @ingroup core
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for RenderCommand.h.
+ */
 #pragma once
 #include "RenderDevice.h"
 
 namespace FINALITY
 {
+    /** @todo TODO: Document RenderCommand class semantics, ownership and usage. */
     class FAPI RenderCommand
     {
     public:

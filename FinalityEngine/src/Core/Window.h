@@ -1,10 +1,18 @@
+/**
+ * @file
+ * @ingroup core
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for Window.h.
+ */
 #pragma once
 #include "Core.h"
 
 #include <string>
+#include <vector>
+#include <utility>
 
 namespace FINALITY
 {
+	/** @todo TODO: Document WindowSpec struct semantics, ownership and usage. */
 	struct WindowSpec
 	{
 		std::string title;
@@ -13,12 +21,14 @@ namespace FINALITY
 		bool isFullscreen;
 	};
 
+	/** @todo TODO: Document NativeWindowHandle struct semantics, ownership and usage. */
 	struct NativeWindowHandle
 	{
 		void* WindowHandle;		// HWND (Win32), ANativeWindow* (Android), NSWindow*/UIWindow* (Apple) 
 		void* DeviceContext;	// HINSTANCE (Win32), null for others
 	};
 
+	/** @todo TODO: Document Window class semantics, ownership and usage. */
 	class FAPI Window
 	{
 	public:
@@ -40,5 +50,9 @@ namespace FINALITY
 
 		virtual WindowSpec GetSpecifications() const = 0;
 		virtual NativeWindowHandle GetNativeHandles() const = 0;
+        void QueueDroppedPath(const std::string& path) { m_DroppedPaths.push_back(path); }
+        std::vector<std::string> ConsumeDroppedPaths() { return std::exchange(m_DroppedPaths, {}); }
+    private:
+        std::vector<std::string> m_DroppedPaths;
 	};
 }

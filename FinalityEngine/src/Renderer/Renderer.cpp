@@ -1,6 +1,6 @@
 #include "Renderer.h"
-#include <Vulkan/VKRenderDevice.h>
-#include <Vulkan/VKPipeline.h>
+#include <stdexcept>
+#include "ViewVisibility.h"
 
 namespace FINALITY
 {
@@ -22,6 +22,7 @@ namespace FINALITY
         s_RenderQueue.clear();
         s_Device = nullptr;
         s_ActiveCamera = nullptr;
+        s_VisibilityState.LODLevels.clear();
     }
 
     void Renderer::BeginScene()
@@ -41,58 +42,9 @@ namespace FINALITY
 
     void Renderer::PushEntity(Entity entity)
     {
-        if (!entity.HasComponent<MeshComponent>() || !entity.HasComponent<MaterialComponent>())
-        {
-            return;
-        }
-
-        const auto& meshComp = entity.GetComponent<MeshComponent>();
-        if (!meshComp.MeshData)
-        {
-            return;
-        }
-
-        glm::mat4 transform = glm::mat4(1.0f);
-        if (entity.HasComponent<TransformComponent>())
-        {
-            transform = entity.GetComponent<TransformComponent>().GetTransformMatrix();
-        }
-
-        const Frustum* cullingFrustum = nullptr;
-        if (TryGetCullingFrustum(cullingFrustum))
-        {
-            glm::vec3 worldCenter = glm::vec3(transform * glm::vec4(meshComp.MeshData->GetBoundsCenter(), 1.0f));
-
-            glm::vec3 scale;
-            scale.x = glm::length(glm::vec3(transform[0]));
-            scale.y = glm::length(glm::vec3(transform[1]));
-            scale.z = glm::length(glm::vec3(transform[2]));
-            float maxScale = std::max({ scale.x, scale.y, scale.z });
-
-            float worldRadius = meshComp.MeshData->GetBoundsRadius() * maxScale;
-
-            if (!cullingFrustum->IntersectsSphere(worldCenter, worldRadius))
-            {
-                s_CulledCount++;
-                return; // Outside the view frustum, skip entirely.
-            }
-        }
-
-        RenderPacket packet{};
-        packet.MeshData = meshComp.MeshData;
-
-        const auto& mat = entity.GetComponent<MaterialComponent>();
-        if (mat.MaterialInstance)
-        {
-            packet.PipelineInstance = mat.MaterialInstance->GetPipeline();
-            packet.CustomPushData = mat.MaterialInstance->GetRawDataBuffer();
-            packet.Textures = mat.MaterialInstance->GetTextures();
-            packet.MaterialKey = mat.MaterialInstance.get();
-        }
-
-        packet.Transform = transform;
-
-        s_RenderQueue.push_back(packet);
+        glm::mat4 transform(1);
+        if (entity.HasComponent<TransformComponent>()) transform = entity.GetComponent<TransformComponent>().GetTransformMatrix();
+        PushEntity(entity,transform);
     }
 
     void Renderer::PushEntity(Entity entity, const glm::mat4& worldTransform)
@@ -104,28 +56,10 @@ namespace FINALITY
         if (!meshComp.MeshData)
             return;
 
-        const Frustum* cullingFrustum = nullptr;
-        if (TryGetCullingFrustum(cullingFrustum))
-        {
-            glm::vec3 worldCenter = glm::vec3(worldTransform * glm::vec4(meshComp.MeshData->GetBoundsCenter(), 1.0f));
-
-            glm::vec3 scale;
-            scale.x = glm::length(glm::vec3(worldTransform[0]));
-            scale.y = glm::length(glm::vec3(worldTransform[1]));
-            scale.z = glm::length(glm::vec3(worldTransform[2]));
-            float maxScale = std::max({ scale.x, scale.y, scale.z });
-
-            float worldRadius = meshComp.MeshData->GetBoundsRadius() * maxScale;
-
-            if (!cullingFrustum->IntersectsSphere(worldCenter, worldRadius))
-            {
-                s_CulledCount++;
-                return;
-            }
-        }
-
         RenderPacket packet{};
         packet.MeshData = meshComp.MeshData;
+        packet.Occluder = meshComp.Occluder;
+        packet.EntityID = entity.GetComponent<TagComponent>().uuid;
 
         const auto& mat = entity.GetComponent<MaterialComponent>();
         if (mat.MaterialInstance)
@@ -133,7 +67,7 @@ namespace FINALITY
             packet.PipelineInstance = mat.MaterialInstance->GetPipeline();
             packet.CustomPushData = mat.MaterialInstance->GetRawDataBuffer();
             packet.Textures = mat.MaterialInstance->GetTextures();
-            packet.MaterialKey = mat.MaterialInstance.get();
+            packet.MaterialInstance = mat.MaterialInstance;
         }
 
         packet.Transform = worldTransform;
@@ -146,67 +80,26 @@ namespace FINALITY
         if (!s_Device) return;
         if (!s_DirectRenderingEnabled) return;
 
-        s_Device->DrawQueue(s_RenderQueue);
+        if (s_ActiveCamera)
+        {
+            const RenderView view{s_ActiveCamera->GetViewMatrix(), s_ActiveCamera->GetProjection(), s_ActiveCamera->GetOcclusionCulling()};
+            s_Device->SetFrameView(view);
+            RenderStatistics statistics;
+            s_Device->DrawQueue(BuildViewQueue(s_RenderQueue, view, statistics, &s_VisibilityState));
+        }
+        else s_Device->DrawQueue(s_RenderQueue);
     }
 
     void Renderer::SetPostProcessPipeline(std::shared_ptr<Pipeline> pipeline)
     {
-        switch (s_Device->GetActiveApi())
-        {
-        case RendererAPI::NONE:
-        {
-            throw std::runtime_error("Renderer API is currently set to None!");
-            break;
-        }
-        case RendererAPI::VULKAN:
-        {
-            auto* vkDevice = static_cast<VKRenderDevice*>(GetDevice());
-            if (!vkDevice)
-            {
-                throw std::runtime_error("Vulkan Render Device is invalid during post-process setup!");
-            }
-
-            vkDevice->SetPostProcessPipeline(pipeline);
-            break;
-        }
-        default:
-        {
-            throw std::runtime_error("Unknown or unsupported graphics API configuration layer!");
-            break;
-        }
-        }
+        if (!s_Device) throw std::runtime_error("Renderer is not initialized");
+        s_Device->SetPostProcessPipeline(std::move(pipeline));
     }
 
     std::shared_ptr<Pipeline> Renderer::CreatePostProcessPipeline(const PipelineConfig& config)
     {
-        switch (s_Device->GetActiveApi())
-        {
-        case RendererAPI::NONE:
-        {
-            throw std::runtime_error("Renderer API is None during post-process pipeline compilation!");
-            return nullptr;
-        }
-        case RendererAPI::VULKAN:
-        {
-            auto* vkDevice = static_cast<VKRenderDevice*>(GetDevice());
-            if (!vkDevice)
-            {
-                throw std::runtime_error("Vulkan Render Device is invalid during post-process pipeline compilation!");
-            }
-
-            return std::make_shared<VKPipeline>(
-                vkDevice->GetActiveDevice(),
-                vkDevice->GetSwapChain()->GetVKRenderPass(),
-                config,
-                vkDevice->GetPostProcessDescriptorSetLayout()
-            );
-        }
-        default:
-        {
-            throw std::runtime_error("Unknown or unsupported graphics API configuration layer!");
-            return nullptr;
-        }
-        }
+        if (!s_Device) throw std::runtime_error("Renderer is not initialized");
+        return s_Device->CreatePostProcessPipeline(config);
     }
     bool Renderer::TryGetCullingFrustum(const Frustum*& outFrustum)
     {

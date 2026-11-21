@@ -17,7 +17,7 @@ namespace FINALITY
 
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        poolInfo.flags = 0;
+        poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
         poolInfo.maxSets = 64; // Max 64 allocations per individual descriptor page
         poolInfo.poolSizeCount = 2;
         poolInfo.pPoolSizes = poolSizes;
@@ -63,7 +63,16 @@ namespace FINALITY
             throw std::runtime_error("Critical Vulkan Error: Unable to allocate descriptor layout sets across paging pools!");
         }
 
+        m_AllocationPools[descriptorSet] = m_CurrentPool;
         return descriptorSet;
+    }
+
+    void VKDescriptorAllocator::Free(VkDescriptorSet set)
+    {
+        const auto found = m_AllocationPools.find(set);
+        if (found == m_AllocationPools.end()) return;
+        vkFreeDescriptorSets(m_Device, found->second, 1, &set);
+        m_AllocationPools.erase(found);
     }
 
     void VKDescriptorAllocator::ResetPools()
@@ -76,6 +85,7 @@ namespace FINALITY
 
         m_UsedPoolPages.clear();
         m_CurrentPool = VK_NULL_HANDLE;
+        m_AllocationPools.clear();
     }
 
     void VKDescriptorAllocator::Shutdown()
@@ -86,5 +96,6 @@ namespace FINALITY
         m_UsedPoolPages.clear();
         m_FreePoolPages.clear();
         m_CurrentPool = VK_NULL_HANDLE;
+        m_AllocationPools.clear();
     }
 }

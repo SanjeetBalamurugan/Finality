@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup core
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for Texture.h.
+ */
 #pragma once
 #include <string>
 #include <memory>
@@ -6,6 +11,7 @@
 
 namespace FINALITY
 {
+    /** @todo TODO: Document Texture class semantics, ownership and usage. */
     class FAPI Texture : public Asset
     {
     public:

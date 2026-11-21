@@ -3,8 +3,7 @@
 
 namespace FINALITY
 {
-    static void ApplyDark01() {
-        ImGuiStyle& style = ImGui::GetStyle();
+    static void ApplyDark01(ImGuiStyle& style = ImGui::GetStyle()) {
         ImVec4* colors = style.Colors;
 
         colors[ImGuiCol_WindowBg] = ImVec4(0.118f, 0.118f, 0.118f, 1.000f);

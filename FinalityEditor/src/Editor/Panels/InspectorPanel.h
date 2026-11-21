@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @ingroup editor
+ * @todo TODO: Document responsibilities, ownership, public API contracts, failure behavior and usage for InspectorPanel.h.
+ */
 #pragma once
 #include <Finality.h>
 #include <Editor/EditorCameraScene.h>
@@ -223,6 +228,7 @@ namespace FINALITY
 					panel.PopItemWidth();
 					panel.Separator();
 
+					/** @todo TODO: Document MeshOption struct semantics, ownership and usage. */
 					struct MeshOption
 					{
 						std::string Name;
@@ -467,6 +473,7 @@ namespace FINALITY
 			panel.PopItemWidth();
 			panel.Separator();
 
+			/** @todo TODO: Document ComponentEntry struct semantics, ownership and usage. */
 			struct ComponentEntry
 			{
 				std::string Name;

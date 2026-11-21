@@ -20,6 +20,10 @@ namespace FINALITY
     VKPipeline::VKPipeline(VkDevice device, VkRenderPass renderPass, const PipelineConfig& config, VkDescriptorSetLayout globalLayout, VkDescriptorSetLayout materialLayout)
         : m_Device(device)
     {
+        m_Transparent = config.EnableBlending;
+        m_DepthWrite = config.DepthWrite;
+        m_DepthTest = config.DepthTest;
+        m_Culling = config.Culling;
         auto vertShader = static_cast<VKShader*>(config.VertexShader.get());
         auto fragShader = static_cast<VKShader*>(config.FragmentShader.get());
 
@@ -116,8 +120,8 @@ namespace FINALITY
 
         VkPipelineDepthStencilStateCreateInfo depthStencil{};
         depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-        depthStencil.depthTestEnable = VK_TRUE;
-        depthStencil.depthWriteEnable = VK_TRUE;
+        depthStencil.depthTestEnable = config.DepthTest ? VK_TRUE : VK_FALSE;
+        depthStencil.depthWriteEnable = config.DepthWrite ? VK_TRUE : VK_FALSE;
         depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
         depthStencil.depthBoundsTestEnable = VK_FALSE;
         depthStencil.stencilTestEnable = VK_FALSE;

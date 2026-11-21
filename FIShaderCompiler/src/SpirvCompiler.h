@@ -4,6 +4,7 @@
 
 #include <shaderc/shaderc.hpp>
 
+/** @todo TODO: Document SpirvCompiler class semantics, ownership and usage. */
 class SpirvCompiler : public ShaderCompiler
 {
 public:

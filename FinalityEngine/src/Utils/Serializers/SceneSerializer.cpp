@@ -11,9 +11,7 @@
 #include <Assets/AssetManager.h>
 #include <Assets/MaterialAsset.h>
 #include <Renderer/Renderer.h>
-#include <Assets/AssetManager.h>
-#include <Assets/MaterialAsset.h>
-#include <Renderer/Renderer.h>
+#include <Scene/ScriptRegistry.h>
 
 namespace YAML
 {
@@ -122,6 +120,9 @@ void FINALITY::SceneSerializer::SerializeEntity(
 		out << YAML::Key << "Position" << YAML::Value << tc.Position;
 		out << YAML::Key << "Rotation" << YAML::Value << tc.Rotation;
 		out << YAML::Key << "Scale" << YAML::Value << tc.Scale;
+        out << YAML::Key << "Basis" << YAML::Value << YAML::Flow << YAML::BeginSeq;
+        for (int c = 0; c < 4; ++c) for (int r = 0; r < 4; ++r) out << tc.Basis[c][r];
+        out << YAML::EndSeq;
 
 		out << YAML::EndMap;
 	}
@@ -134,6 +135,7 @@ void FINALITY::SceneSerializer::SerializeEntity(
 		out << YAML::BeginMap;
 
 		out << YAML::Key << "MeshIdentifier" << YAML::Value << mc.MeshIdentifier;
+        out << YAML::Key << "Occluder" << YAML::Value << mc.Occluder;
 
 		out << YAML::EndMap;
 	}
@@ -144,6 +146,19 @@ void FINALITY::SceneSerializer::SerializeEntity(
 		out << YAML::Key << "MaterialComponent";
 		out << YAML::BeginMap;
 		out << YAML::Key << "MaterialIdentifier" << YAML::Value << material.MaterialIdentifier;
+        if (material.MaterialInstance)
+        {
+            out << YAML::Key << "Textures" << YAML::Value << YAML::BeginSeq;
+            for (const auto& [name, texture] : material.MaterialInstance->GetTextures())
+            {
+                if (!texture) continue;
+                const auto* record = AssetRegistry::Find(static_cast<uint64_t>(texture->Handle));
+                if (!record) continue;
+                out << YAML::BeginMap << YAML::Key << "Name" << YAML::Value << name;
+                out << YAML::Key << "Asset" << YAML::Value << "asset://" + std::to_string(record->ID) << YAML::EndMap;
+            }
+            out << YAML::EndSeq;
+        }
 		if (material.MaterialInstance)
         {
             out << YAML::Key << "Overrides" << YAML::Value << YAML::BeginSeq;
@@ -200,6 +215,7 @@ void FINALITY::SceneSerializer::SerializeEntity(
 
         out << YAML::Key << "CameraComponent" << YAML::Value << YAML::BeginMap;
         out << YAML::Key << "IsPrimary" << YAML::Value << cc.IsPrimary;
+        out << YAML::Key << "OcclusionCulling" << YAML::Value << cc.OcclusionCulling;
         out << YAML::Key << "FOV" << YAML::Value << cc.FOV;
         out << YAML::Key << "AspectRatio" << YAML::Value << cc.AspectRatio;
         out << YAML::Key << "NearClip" << YAML::Value << cc.NearClip;
@@ -207,6 +223,60 @@ void FINALITY::SceneSerializer::SerializeEntity(
 		out << YAML::EndMap;
 	}
 
+    if (entity.HasComponent<LODGroupComponent>())
+    {
+        const auto& group = entity.GetComponent<LODGroupComponent>();
+        out << YAML::Key << "LODGroupComponent" << YAML::Value << YAML::BeginMap;
+        out << YAML::Key << "Enabled" << YAML::Value << group.Enabled;
+        out << YAML::Key << "AutoBounds" << YAML::Value << group.AutoBounds;
+        out << YAML::Key << "LocalCenter" << YAML::Value << group.LocalCenter;
+        out << YAML::Key << "LocalSize" << YAML::Value << group.LocalSize;
+        out << YAML::Key << "Hysteresis" << YAML::Value << group.Hysteresis;
+        out << YAML::Key << "Levels" << YAML::Value << YAML::BeginSeq;
+        for (const auto& level : group.Levels)
+        {
+            out << YAML::BeginMap << YAML::Key << "ScreenRelativeHeight" << YAML::Value << level.ScreenRelativeHeight;
+            out << YAML::Key << "Renderers" << YAML::Value << YAML::Flow << YAML::BeginSeq;
+            for (auto id : level.Renderers) out << id;
+            out << YAML::EndSeq << YAML::EndMap;
+        }
+        out << YAML::EndSeq << YAML::EndMap;
+    }
+
+    if (entity.HasComponent<ScriptStorage>())
+    {
+        out << YAML::Key << "Scripts" << YAML::Value << YAML::BeginSeq;
+        for (const auto& script : entity.GetComponent<ScriptStorage>().Scripts)
+        {
+            if (script.TypeName.empty()) continue;
+            auto properties = script.Properties;
+            if (const auto* definition = ScriptRegistry::Find(script.TypeName); definition && script.Instance)
+                for (const auto& property : definition->Properties)
+                    properties[property.Name] = property.Get(*script.Instance);
+            out << YAML::BeginMap << YAML::Key << "Type" << YAML::Value << script.TypeName;
+            out << YAML::Key << "Enabled" << YAML::Value << script.Enabled;
+            out << YAML::Key << "Properties" << YAML::Value << YAML::BeginSeq;
+            for (const auto& [name, value] : properties)
+            {
+                out << YAML::BeginMap << YAML::Key << "Name" << YAML::Value << name;
+                out << YAML::Key << "Kind" << YAML::Value << value.index();
+                out << YAML::Key << "Value" << YAML::Value;
+                std::visit([&](const auto& item)
+                {
+                    using T = std::decay_t<decltype(item)>;
+                    if constexpr (std::is_same_v<T, ScriptAssetReference>)
+                    {
+                        out << YAML::BeginMap << YAML::Key << "AssetType" << YAML::Value << static_cast<int>(item.Type);
+                        out << YAML::Key << "Reference" << YAML::Value << item.Reference << YAML::EndMap;
+                    }
+                    else out << item;
+                }, value);
+                out << YAML::EndMap;
+            }
+            out << YAML::EndSeq << YAML::EndMap;
+        }
+        out << YAML::EndSeq;
+    }
 	out << YAML::EndMap;
 }
 
@@ -229,9 +299,13 @@ void FINALITY::SceneSerializer::DeSerializeEntity(
 		tag.uuid = uuid;
 		tag.tag = tagNode["Tag"].as<std::string>();
 	}
+    else
+    {
+        auto& tag = entity.AddComponent<TagComponent>("Entity");
+        tag.uuid = uuid;
+    }
 
-	if (entityNode["RelationshipComponent"])
-		entity.AddComponent<FINALITY::RelationshipComponent>();
+	entity.AddComponent<FINALITY::RelationshipComponent>();
 
 	if (auto transformNode = entityNode["TransformComponent"])
 	{
@@ -240,12 +314,19 @@ void FINALITY::SceneSerializer::DeSerializeEntity(
 		tc.Position = transformNode["Position"].as<glm::vec3>();
 		tc.Rotation = transformNode["Rotation"].as<glm::vec3>();
 		tc.Scale = transformNode["Scale"].as<glm::vec3>();
+        if (const auto basis = transformNode["Basis"])
+        {
+            if (!basis.IsSequence() || basis.size() != 16) throw std::runtime_error("Invalid transform basis");
+            for (int c = 0; c < 4; ++c) for (int r = 0; r < 4; ++r) tc.Basis[c][r] = basis[c * 4 + r].as<float>();
+        }
 		tc.Matrix = tc.GetTransformMatrix();
 	}
+    else entity.AddComponent<TransformComponent>();
 
 	if (auto meshNode = entityNode["MeshComponent"])
 	{
 		auto& mc = entity.AddComponent<FINALITY::MeshComponent>();
+        mc.Occluder = meshNode["Occluder"].as<bool>(false);
 
 		if (meshNode["MeshIdentifier"])
 		{
@@ -268,6 +349,13 @@ void FINALITY::SceneSerializer::DeSerializeEntity(
                 if (asset) component.MaterialInstance = asset->CreateInstance();
             }
         }
+        if (component.MaterialInstance && materialNode["Textures"])
+            for (const auto& texture : materialNode["Textures"])
+            {
+                const auto reference = texture["Asset"].as<std::string>();
+                if (auto loaded = AssetManager::CreateAsset<Texture>(reference))
+                    component.MaterialInstance->SetTexture(texture["Name"].as<std::string>(), loaded);
+            }
         if (component.MaterialInstance && materialNode["Overrides"])
         {
             for (const auto& property : materialNode["Overrides"])
@@ -305,10 +393,74 @@ void FINALITY::SceneSerializer::DeSerializeEntity(
 		float farClip = cameraNode["FarClip"] ? cameraNode["FarClip"].as<float>() : 1000.0f;
 
 		auto& cc = entity.AddComponent<FINALITY::CameraComponent>(fov, aspect, nearClip, farClip);
+        cc.OcclusionCulling = cameraNode["OcclusionCulling"].as<bool>(false);
+        cc.CameraInstance->SetOcclusionCulling(cc.OcclusionCulling);
 		if (cameraNode["IsPrimary"])
 			cc.IsPrimary = cameraNode["IsPrimary"].as<bool>();
 	}
 
+    if (const auto node = entityNode["LODGroupComponent"])
+    {
+        auto& group = entity.AddComponent<LODGroupComponent>();
+        group.Enabled = node["Enabled"].as<bool>(true);
+        group.AutoBounds = node["AutoBounds"].as<bool>(true);
+        if (node["LocalCenter"]) group.LocalCenter = node["LocalCenter"].as<glm::vec3>();
+        group.LocalSize = node["LocalSize"].as<float>(1);
+        group.Hysteresis = node["Hysteresis"].as<float>(0.05f);
+        if (const auto levels = node["Levels"]; levels && levels.IsSequence())
+        {
+            group.Levels.clear();
+            for (const auto& level : levels)
+            {
+                if (group.Levels.size() >= 8) break;
+                LODLevel entry;
+                entry.ScreenRelativeHeight = level["ScreenRelativeHeight"].as<float>(0.1f);
+                if (const auto renderers = level["Renderers"]; renderers && renderers.IsSequence())
+                    for (const auto& renderer : renderers) entry.Renderers.push_back(renderer.as<uint64_t>());
+                group.Levels.push_back(std::move(entry));
+            }
+        }
+        NormalizeLODGroup(group);
+    }
+
+    if (entityNode["Scripts"])
+        for (const auto& node : entityNode["Scripts"])
+        {
+            const auto name = node["Type"].as<std::string>();
+            if (!ScriptRegistry::Attach(*scene, enttEntity, name)) continue;
+            auto& script = registry.get<ScriptStorage>(enttEntity).Scripts.back();
+            script.Enabled = node["Enabled"].as<bool>(true);
+            if (node["Properties"])
+                for (const auto& property : node["Properties"])
+                {
+                    ScriptValue value;
+                    switch (property["Kind"].as<int>())
+                    {
+                    case 0: value = property["Value"].as<bool>(); break;
+                    case 1: value = property["Value"].as<int>(); break;
+                    case 2: value = property["Value"].as<float>(); break;
+                    case 3: value = property["Value"].as<std::string>(); break;
+                    case 4: value = property["Value"].as<glm::vec3>(); break;
+                    case 5:
+                    {
+                        const int type = property["Value"]["AssetType"].as<int>();
+                        if (type < 0 || type > static_cast<int>(ProjectAssetType::Prefab)) throw std::runtime_error("Invalid script asset type");
+                        value = ScriptAssetReference{static_cast<ProjectAssetType>(type), property["Value"]["Reference"].as<std::string>()};
+                        break;
+                    }
+                    default: throw std::runtime_error("Unsupported script property type");
+                    }
+                    script.Properties[property["Name"].as<std::string>()] = value;
+                }
+            if (const auto* definition = ScriptRegistry::Find(name); definition && script.Instance)
+                for (const auto& property : definition->Properties)
+                    if (const auto found = script.Properties.find(property.Name); found != script.Properties.end())
+                    {
+                        if (property.Get(*script.Instance).index() == found->second.index())
+                            property.Set(*script.Instance, found->second);
+                    }
+        }
+    if (entityMap.contains(uuid)) throw std::runtime_error("Duplicate entity UUID");
 	entityMap[uuid] = enttEntity;
 }
 
@@ -386,10 +538,9 @@ bool FINALITY::SceneSerializer::DeSerializeFromString(const std::string& content
 			return targetIt->second;
 		};
 
-		relationship.Parent = ResolveEntity("Parent");
-		relationship.FirstChild = ResolveEntity("FirstChild");
-		relationship.NextSibling = ResolveEntity("NextSibling");
-		relationship.PrevSibling = ResolveEntity("PrevSibling");
+		const auto parent = ResolveEntity("Parent");
+		entity.SetParent(scene->GetEntity(parent));
+		if (relationship.Parent != parent) throw std::runtime_error("Scene hierarchy contains a cycle");
 	}
 
     return true;

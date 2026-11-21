@@ -6,6 +6,7 @@
 #include <scripts/CameraMovementScript.h>
 #include "scripts/LavaScript.h"
 
+/** @todo TODO: Document MainScene class semantics, ownership and usage. */
 class MainScene : public FINALITY::Scene
 {
 public:

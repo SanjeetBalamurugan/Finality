@@ -3,8 +3,7 @@
 
 namespace FINALITY
 {
-    static void ApplyCatppuccinMocha() {
-        ImGuiStyle& style = ImGui::GetStyle();
+    static void ApplyCatppuccinMocha(ImGuiStyle& style = ImGui::GetStyle()) {
         ImVec4* colors = style.Colors;
 
         colors[ImGuiCol_WindowBg] = ImVec4(0.118f, 0.118f, 0.180f, 1.000f);

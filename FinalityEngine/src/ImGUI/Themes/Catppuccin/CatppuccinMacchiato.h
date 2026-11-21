@@ -3,8 +3,7 @@
 
 namespace FINALITY
 {
-    static void ApplyCatppuccinMacchiato() {
-        ImGuiStyle& style = ImGui::GetStyle();
+    static void ApplyCatppuccinMacchiato(ImGuiStyle& style = ImGui::GetStyle()) {
         ImVec4* colors = style.Colors;
 
         colors[ImGuiCol_WindowBg] = ImVec4(0.141f, 0.153f, 0.227f, 1.000f);

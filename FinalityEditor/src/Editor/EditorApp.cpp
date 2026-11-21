@@ -4,13 +4,8 @@
 void FINALITY::EditorApp::Init()
 {
 	m_EditorLayer = std::make_unique<EditorLayer>();
+	m_EditorLayer->Configure(m_InitialProject, m_EngineAssets);
 	m_EditorLayer->Init();
-
-	m_EditorLayer->SetSceneFactory([]() { return std::make_unique<MainScene>(); });
-
-	auto next = std::make_unique<MainScene>();
-	FINALITY::SceneManager::GetInstance().SetScene(std::move(next));
-	FINALITY::SceneManager::GetInstance().ChangeScene();
 }
 
 void FINALITY::EditorApp::Update(float deltaTime)

@@ -4,6 +4,7 @@ project "FinalityEditor"
     language "C++"
     cppdialect "C++20"
     staticruntime "Off"
+    dependson { "FIScriptReflect", "FIBuild", "FIBaker", "FinalityPlayer" }
 
     files {
         "src/**.h",
@@ -22,10 +23,12 @@ project "FinalityEditor"
 
     links {
         "FinalityEngine",
-        "yaml-cpp"
+        "ImGui",
+        "yaml-cpp", "Shell32", "Ole32", "OleAut32"
     }
 
     filter "system:windows"
+        defines { "IMGUI_API=__declspec(dllimport)" }
         systemversion "latest"
         entrypoint "mainCRTStartup"
         files {
