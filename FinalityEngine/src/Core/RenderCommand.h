@@ -28,4 +28,4 @@ namespace FINALITY
     private:
         static RenderDevice* s_RenderDevice;
     };
-}
+} // namespace FINALITY

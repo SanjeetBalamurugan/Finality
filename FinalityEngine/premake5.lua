@@ -39,15 +39,17 @@ project "FinalityEngine"
         "yaml-cpp"
     }
     libdirs { "../bin-int/Assimp/lib/%{cfg.buildcfg}" }
-    links { "assimp-vc145-mt" }
+    links { "assimp" }
     filter "configurations:Debug"
         libdirs { "../bin-int/Assimp/contrib/zlib/Debug" }
         links { "zlibstaticd" }
         links { "spirv-cross-cored" }
-    filter "configurations:Release"
+    filter "configurations:Release or Dist"
         libdirs { "../bin-int/Assimp/contrib/zlib/Release" }
         links { "zlibstatic" }
         links { "spirv-cross-core" }
+    filter "configurations:Dist"
+        libdirs { "../bin-int/Assimp/lib/Release" }
     filter {}
 
     defines {
@@ -80,6 +82,13 @@ project "FinalityEngine"
     end
 
     filter "system:windows"
+        prebuildcommands { '"%{cfg.targetdir}/FIBuild.exe" dependencies --engine "' .. path.getabsolute('..') .. '" --configuration "%{cfg.buildcfg}" --compiler-version "$(VCToolsVersion)" --toolset "$(PlatformToolset)"' }
+        if vulkan then
+            postbuildcommands { '{COPYFILE} "' .. path.join(vulkan.root, 'Bin/glslc.exe') .. '" "%{cfg.targetdir}/glslc.exe"' }
+            if os.isfile(path.join(vulkan.root, 'Licenses/LICENSE.txt')) then
+                postbuildcommands { '{COPYFILE} "' .. path.join(vulkan.root, 'Licenses/LICENSE.txt') .. '" "%{cfg.targetdir}/VulkanSDK-LICENSE.txt"' }
+            end
+        end
         postbuildcommands { '"%{cfg.targetdir}/FIBuild.exe" info --engine "' .. path.getabsolute('..') .. '" --bin "%{cfg.targetdir}" --compiler-version "$(VCToolsVersion)" --toolset "$(PlatformToolset)" --sdk-version "$(WindowsTargetPlatformVersion)" --configuration "%{cfg.buildcfg}"' }
         defines { "IMGUI_API=__declspec(dllimport)", "IMGUI_IMPL_API=" }
         systemversion "latest"

@@ -21,7 +21,7 @@ namespace FINALITY
     {
     public:
         void Open(ProjectAssetType type, const std::string& reference,
-            std::function<void(const std::string&)> assign, const std::string& extension = {});
+                  std::function<void(const std::string&)> assign, const std::string& extension = {});
         void Draw();
         void Close();
 
@@ -33,4 +33,4 @@ namespace FINALITY
         std::string m_Extension;
         std::function<void(const std::string&)> m_Assign;
     };
-}
+} // namespace FINALITY

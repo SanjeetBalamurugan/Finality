@@ -4,7 +4,14 @@ project "FinalityEditor"
     language "C++"
     cppdialect "C++20"
     staticruntime "Off"
-    dependson { "FIScriptReflect", "FIBuild", "FIBaker", "FinalityPlayer" }
+    postbuildcommands { '{COPYDIR} "%{prj.location}/assets" "%{cfg.targetdir}/assets"' }
+    dependson
+    {
+        "FIScriptReflect",
+        "FIBuild",
+        "FIBaker",
+        "FinalityPlayer"
+    }
 
     files {
         "src/**.h",

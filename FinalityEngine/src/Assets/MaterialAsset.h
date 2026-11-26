@@ -61,9 +61,20 @@ namespace FINALITY
     public:
         static std::shared_ptr<MaterialAsset> Create(const std::string& filePath, RenderDevice* device);
 
-        AssetType GetType() const override { return AssetType::Material; }
-        const MaterialDefinition& GetDefinition() const { return m_Definition; }
-        MaterialDefinition& GetDefinition() { return m_Definition; }
+        AssetType GetType() const override
+        {
+            return AssetType::Material;
+        }
+
+        const MaterialDefinition& GetDefinition() const
+        {
+            return m_Definition;
+        }
+
+        MaterialDefinition& GetDefinition()
+        {
+            return m_Definition;
+        }
 
         std::shared_ptr<Material> CreateInstance() const;
         void UpdateDefaultsFromInstance(const Material& instance);
@@ -81,4 +92,4 @@ namespace FINALITY
         std::filesystem::file_time_type m_FragmentTimestamp{};
         mutable std::vector<std::weak_ptr<Material>> m_Instances;
     };
-}
+} // namespace FINALITY

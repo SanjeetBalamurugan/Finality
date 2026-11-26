@@ -18,17 +18,24 @@ layout(location = 1) out vec2 fragTexCoord;
 layout(location = 2) out vec4 fragCustomData;
 
 // Global Descriptor Set (Set 0)
-layout(set = 0, binding = 0) uniform GlobalSceneUBO {
+layout(set = 0, binding = 0) uniform GlobalSceneUBO
+{
     mat4 view;
     mat4 proj;
-} global;
+}
+
+global;
 
 // Push Constants
-layout(push_constant) uniform PushConstants {
+layout(push_constant) uniform PushConstants
+{
     float time;
-} push;
+}
 
-void main() {
+push;
+
+void main()
+{
     vec4 worldPosition = inInstanceTransform * vec4(inPosition, 1.0);
     gl_Position = global.proj * global.view * worldPosition;
 

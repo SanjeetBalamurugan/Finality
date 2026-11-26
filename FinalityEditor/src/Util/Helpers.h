@@ -14,9 +14,18 @@ namespace FINALITY::Helpers
     {
         std::string_view name(rawName);
 
-        if (name.rfind("class ", 0) == 0)  name.remove_prefix(6);
-        else if (name.rfind("struct ", 0) == 0) name.remove_prefix(7);
-        else if (name.rfind("enum ", 0) == 0)   name.remove_prefix(5);
+        if (name.rfind("class ", 0) == 0)
+        {
+            name.remove_prefix(6);
+        }
+        else if (name.rfind("struct ", 0) == 0)
+        {
+            name.remove_prefix(7);
+        }
+        else if (name.rfind("enum ", 0) == 0)
+        {
+            name.remove_prefix(5);
+        }
 
         size_t lastNamespace = name.find_last_of("::");
         if (lastNamespace != std::string_view::npos)
@@ -26,4 +35,4 @@ namespace FINALITY::Helpers
 
         return name;
     }
-}
+} // namespace FINALITY::Helpers

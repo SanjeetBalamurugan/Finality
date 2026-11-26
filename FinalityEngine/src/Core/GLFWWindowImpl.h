@@ -11,41 +11,60 @@
 
 #ifdef _WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32
-#include <GLFW/glfw3native.h> 
+#include <GLFW/glfw3native.h>
 #include <windows.h>
 #endif
 
 namespace FINALITY
 {
-	/** @todo TODO: Document GLFWWindowImpl class semantics, ownership and usage. */
-	class GLFWWindowImpl : public Window
-	{
-	public:
-		void Initialize(const WindowSpec& specification) override;
-		void Update() override;
-		void Shutdown() override;
+    /** @todo TODO: Document GLFWWindowImpl class semantics, ownership and usage. */
+    class GLFWWindowImpl : public Window
+    {
+    public:
+        void Initialize(const WindowSpec& specification) override;
+        void Update() override;
+        void Shutdown() override;
 
-		bool ShouldClose() const override;
-		uint32_t GetWidth() const override { return m_Specification.width; }
-		uint32_t GetHeight() const override { return m_Specification.height; }
-		WindowSpec GetSpecifications() const override { return m_Specification; }
-		NativeWindowHandle GetNativeHandles() const override { return m_NativeHandle; }
+        bool ShouldClose() const override;
 
-		GLFWwindow* GetGLFWwindow() const { return m_Window; }
+        uint32_t GetWidth() const override
+        {
+            return m_Specification.width;
+        }
 
-		void SetCallbacks() override;
-		bool ConsumePendingResize(int& outW, int& outH) override;
+        uint32_t GetHeight() const override
+        {
+            return m_Specification.height;
+        }
 
-		void SetCursorMode(bool hiddenAndLocked) override;
-		void SetWindowTitle(const std::string& title) override;
+        WindowSpec GetSpecifications() const override
+        {
+            return m_Specification;
+        }
 
-	private:
-		GLFWwindow* m_Window = nullptr;
-		WindowSpec m_Specification;
+        NativeWindowHandle GetNativeHandles() const override
+        {
+            return m_NativeHandle;
+        }
 
-		NativeWindowHandle m_NativeHandle;
+        GLFWwindow* GetGLFWwindow() const
+        {
+            return m_Window;
+        }
 
-		bool m_PendingResize = false; 
-		int m_PendingWidth = 0, m_PendingHeight = 0;
-	};
-}
+        void SetCallbacks() override;
+        bool ConsumePendingResize(int& outW, int& outH) override;
+
+        void SetCursorMode(bool hiddenAndLocked) override;
+        void SetWindowTitle(const std::string& title) override;
+
+    private:
+        GLFWwindow* m_Window = nullptr;
+        WindowSpec m_Specification;
+
+        NativeWindowHandle m_NativeHandle;
+
+        bool m_PendingResize = false;
+        int m_PendingWidth = 0, m_PendingHeight = 0;
+    };
+} // namespace FINALITY

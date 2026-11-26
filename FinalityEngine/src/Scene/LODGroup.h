@@ -39,12 +39,12 @@ namespace FINALITY
     {
         bool Enabled = true;
         bool AutoBounds = true;
-        glm::vec3 LocalCenter{0};
+        glm::vec3 LocalCenter{ 0 };
         float LocalSize = 1.0f;
         float Hysteresis = 0.05f;
-        std::vector<LODLevel> Levels{{0.6f,{}},{0.3f,{}},{0.01f,{}}};
+        std::vector<LODLevel> Levels{ { 0.6f, {} }, { 0.3f, {} }, { 0.01f, {} } };
     };
 
     FAPI void NormalizeLODGroup(LODGroupComponent& group);
     FAPI bool RecalculateLODBounds(Scene& scene, entt::entity entity);
-}
+} // namespace FINALITY

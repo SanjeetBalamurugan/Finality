@@ -20,25 +20,25 @@
 
 namespace FINALITY
 {
-	inline void ImGuiImplGLFW(RendererAPI api, bool installCallbacks)
-	{
-		GLFWWindowImpl* wImpl = static_cast<GLFWWindowImpl*>(&Application::Get().GetWindow());
-		GLFWwindow* window = wImpl->GetGLFWwindow();
+    inline void ImGuiImplGLFW(RendererAPI api, bool installCallbacks)
+    {
+        GLFWWindowImpl* wImpl = static_cast<GLFWWindowImpl*>(&Application::Get().GetWindow());
+        GLFWwindow* window = wImpl->GetGLFWwindow();
 
-		switch (api)
-		{
-		case RendererAPI::VULKAN:
-		{
+        switch (api)
+        {
+        case RendererAPI::VULKAN:
+        {
 #ifdef FINALITY_INCLUDE_VULKAN
-			ImGui_ImplGlfw_InitForVulkan(window, installCallbacks);
+            ImGui_ImplGlfw_InitForVulkan(window, installCallbacks);
 #endif
-			break;
-		}
-		default:
-		{
-			assert(0);
-			break;
-		}
-		}
-	}
-}
+            break;
+        }
+        default:
+        {
+            assert(0);
+            break;
+        }
+        }
+    }
+} // namespace FINALITY

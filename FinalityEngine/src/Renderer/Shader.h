@@ -24,6 +24,9 @@ namespace FINALITY
         virtual void Load(const std::string& filePath) = 0;
         virtual RendererAPI GetAPI() const = 0;
 
-        AssetType GetType() const override { return AssetType::Shader; }
+        AssetType GetType() const override
+        {
+            return AssetType::Shader;
+        }
     };
-}
+} // namespace FINALITY

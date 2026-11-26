@@ -18,8 +18,10 @@ namespace
         std::shared_ptr<FINALITY::Texture> Texture;
         VkDescriptorSet Descriptor = VK_NULL_HANDLE;
     };
+
     std::unordered_map<std::string, Preview> s_Previews;
     std::vector<Preview> s_RetiredPreviews;
+
     struct RenderedPreview
     {
         std::shared_ptr<FINALITY::RenderTarget> Target;
@@ -30,6 +32,7 @@ namespace
         bool Pending = true;
         std::chrono::steady_clock::time_point NextCheck{};
     };
+
     std::unordered_map<std::string, RenderedPreview> s_Rendered;
     std::vector<std::shared_ptr<FINALITY::RenderTarget>> s_RetiredTargets;
     int s_Resolution = 128, s_Capacity = 128;
@@ -39,47 +42,74 @@ namespace
     {
         const auto path = FINALITY::AssetRegistry::Resolve(reference);
         std::error_code error;
-        const auto time = std::filesystem::last_write_time(path,error);
+        const auto time = std::filesystem::last_write_time(path, error);
         return error ? "missing" : std::to_string(time.time_since_epoch().count());
     }
 
     std::string Fingerprint(const std::string& reference, FINALITY::ProjectAssetType type)
     {
-        std::string value = Stamp(reference) + Stamp(FINALITY::AssetRegistry::Resolve(reference)+".fmeta");
+        std::string value = Stamp(reference) + Stamp(FINALITY::AssetRegistry::Resolve(reference) + ".fmeta");
         auto material = [&](const std::string& asset)
         {
             value += Stamp(asset);
             FINALITY::MaterialDefinition definition;
-            if (FINALITY::MaterialSerializer::Deserialize(FINALITY::AssetRegistry::Resolve(asset),definition))
+            if (FINALITY::MaterialSerializer::Deserialize(FINALITY::AssetRegistry::Resolve(asset), definition))
+            {
                 value += Stamp(definition.VertexShader) + Stamp(definition.FragmentShader) + Stamp(definition.TexturePath);
+            }
         };
-        if (type == FINALITY::ProjectAssetType::Material) material(reference);
+        if (type == FINALITY::ProjectAssetType::Material)
+        {
+            material(reference);
+        }
         else if (type == FINALITY::ProjectAssetType::Model)
-            for (const auto& definition : FINALITY::ModelAsset::Load(reference)->Materials) if (!definition.Asset.empty()) material(definition.Asset);
+        {
+            for (const auto& definition : FINALITY::ModelAsset::Load(reference)->Materials)
+            {
+                if (!definition.Asset.empty())
+                {
+                    material(definition.Asset);
+                }
+            }
+        }
         return value;
     }
-}
+} // namespace
 
 void FINALITY::AssetPreview::Configure(int resolution, int capacity)
 {
-    resolution = std::clamp(resolution,64,512); capacity = std::clamp(capacity,16,512);
-    if (resolution != s_Resolution || capacity != s_Capacity) Clear();
-    s_Resolution = resolution; s_Capacity = capacity;
+    resolution = std::clamp(resolution, 64, 512);
+    capacity = std::clamp(capacity, 16, 512);
+    if (resolution != s_Resolution || capacity != s_Capacity)
+    {
+        Clear();
+    }
+    s_Resolution = resolution;
+    s_Capacity = capacity;
 }
 
 void* FINALITY::AssetPreview::RenderedHandle(const std::string& reference, ProjectAssetType type)
 {
-    if (type != ProjectAssetType::Model && type != ProjectAssetType::Material) return nullptr;
+    if (type != ProjectAssetType::Model && type != ProjectAssetType::Material)
+    {
+        return nullptr;
+    }
     auto found = s_Rendered.find(reference);
     if (found == s_Rendered.end())
     {
         if (s_Rendered.size() >= static_cast<size_t>(s_Capacity))
         {
-            const auto oldest = std::min_element(s_Rendered.begin(),s_Rendered.end(),[](const auto& a, const auto& b) { return a.second.Used < b.second.Used; });
-            if (oldest->second.Target) s_RetiredTargets.push_back(std::move(oldest->second.Target));
+            const auto oldest = std::min_element(s_Rendered.begin(), s_Rendered.end(), [](const auto& a, const auto& b)
+                                                 {
+                                                     return a.second.Used < b.second.Used;
+                                                 });
+            if (oldest->second.Target)
+            {
+                s_RetiredTargets.push_back(std::move(oldest->second.Target));
+            }
             s_Rendered.erase(oldest);
         }
-        found = s_Rendered.emplace(reference,RenderedPreview{}).first;
+        found = s_Rendered.emplace(reference, RenderedPreview{}).first;
         found->second.Type = type;
     }
     auto& preview = found->second;
@@ -90,7 +120,10 @@ void* FINALITY::AssetPreview::RenderedHandle(const std::string& reference, Proje
 void FINALITY::AssetPreview::Update()
 {
     auto* device = Renderer::GetDevice();
-    if (!device) return;
+    if (!device)
+    {
+        return;
+    }
     int generated = 0;
     bool checked = false;
     const auto now = std::chrono::steady_clock::now();
@@ -98,15 +131,26 @@ void FINALITY::AssetPreview::Update()
     {
         if (!checked && now >= preview.NextCheck)
         {
-            checked = true; preview.NextCheck = now + std::chrono::seconds(2);
+            checked = true;
+            preview.NextCheck = now + std::chrono::seconds(2);
             try
             {
-                const auto signature = Fingerprint(reference,preview.Type);
-                if (signature != preview.Signature) { preview.Signature = signature; preview.Pending = true; }
+                const auto signature = Fingerprint(reference, preview.Type);
+                if (signature != preview.Signature)
+                {
+                    preview.Signature = signature;
+                    preview.Pending = true;
+                }
             }
-            catch (const std::exception&) { preview.Pending = false; }
+            catch (const std::exception&)
+            {
+                preview.Pending = false;
+            }
         }
-        if (!preview.Pending || generated++ >= 1) continue;
+        if (!preview.Pending || generated++ >= 1)
+        {
+            continue;
+        }
         preview.Pending = false;
         std::shared_ptr<RenderTarget> target;
         try
@@ -118,52 +162,83 @@ void FINALITY::AssetPreview::Update()
             {
                 const auto model = ModelAsset::Load(reference);
                 center = (model->Minimum + model->Maximum) * 0.5f;
-                radius = std::max(glm::length(model->Maximum - model->Minimum) * 0.5f,0.01f);
+                radius = std::max(glm::length(model->Maximum - model->Minimum) * 0.5f, 0.01f);
                 queue = ModelAsset::BuildPreview(reference);
             }
             else
             {
                 MaterialDefinition definition;
                 const auto path = AssetRegistry::Resolve(reference);
-                const auto asset = AssetManager::CreateAsset<MaterialAsset>(reference,device);
-                if (!asset) throw std::runtime_error("Material preview could not load the material");
+                const auto asset = AssetManager::CreateAsset<MaterialAsset>(reference, device);
+                if (!asset)
+                {
+                    throw std::runtime_error("Material preview could not load the material");
+                }
                 const auto material = asset->CreateInstance();
-                if (!material) throw std::runtime_error("Material preview properties are invalid");
+                if (!material)
+                {
+                    throw std::runtime_error("Material preview properties are invalid");
+                }
                 RenderPacket packet;
-                packet.MeshData = Mesh::Create("builtin://sphere"); packet.PipelineInstance = material->GetPipeline();
-                packet.Textures = material->GetTextures(); packet.CustomPushData = material->GetRawDataBuffer(); packet.MaterialInstance = material;
+                packet.MeshData = Mesh::Create("builtin://sphere");
+                packet.PipelineInstance = material->GetPipeline();
+                packet.Textures = material->GetTextures();
+                packet.CustomPushData = material->GetRawDataBuffer();
+                packet.MaterialInstance = material;
                 queue.push_back(std::move(packet));
             }
-            if (queue.empty()) throw std::runtime_error("No renderable model geometry");
-            target = device->CreateRenderTarget(s_Resolution,s_Resolution);
-            target->ClearColor = {0.075f,0.09f,0.12f,1};
-            Camera camera(38,1,std::max(radius * 0.001f,0.0001f),std::max(radius * 20,10.0f));
-            const auto position = center + glm::normalize(glm::vec3(1,0.55f,1.5f)) * radius * 3.3f;
+            if (queue.empty())
+            {
+                throw std::runtime_error("No renderable model geometry");
+            }
+            target = device->CreateRenderTarget(s_Resolution, s_Resolution);
+            target->ClearColor = { 0.075f, 0.09f, 0.12f, 1 };
+            Camera camera(38, 1, std::max(radius * 0.001f, 0.0001f), std::max(radius * 20, 10.0f));
+            const auto position = center + glm::normalize(glm::vec3(1, 0.55f, 1.5f)) * radius * 3.3f;
             camera.SetPosition(position);
             const auto direction = glm::normalize(center - position);
-            camera.SetRotation({glm::degrees(std::asin(direction.y)),glm::degrees(std::atan2(direction.x,-direction.z)),0});
-            device->UpdateRenderTargetCamera(target,&camera);
-            device->RenderSceneToTarget(target,queue);
+            camera.SetRotation({ glm::degrees(std::asin(direction.y)), glm::degrees(std::atan2(direction.x, -direction.z)), 0 });
+            device->UpdateRenderTargetCamera(target, &camera);
+            device->RenderSceneToTarget(target, queue);
             const auto handle = device->GetRenderTargetTextureHandle(target);
-            if (preview.Target) s_RetiredTargets.push_back(std::move(preview.Target));
-            preview.Target = std::move(target); preview.Handle = handle;
+            if (preview.Target)
+            {
+                s_RetiredTargets.push_back(std::move(preview.Target));
+            }
+            preview.Target = std::move(target);
+            preview.Handle = handle;
         }
         catch (const std::exception& error)
         {
-            if (target) s_RetiredTargets.push_back(std::move(target));
-            FI_CORE_WARN("Preview '{}': {}",reference,error.what());
+            if (target)
+            {
+                s_RetiredTargets.push_back(std::move(target));
+            }
+            FI_CORE_WARN("Preview '{}': {}", reference, error.what());
         }
     }
 }
 
 void* FINALITY::AssetPreview::TextureHandle(const std::string& reference)
 {
-    if (const auto found = s_Previews.find(reference); found != s_Previews.end()) return found->second.Descriptor;
-    if (s_Previews.size() >= 256) return nullptr;
+    if (const auto found = s_Previews.find(reference); found != s_Previews.end())
+    {
+        return found->second.Descriptor;
+    }
+    if (s_Previews.size() >= 256)
+    {
+        return nullptr;
+    }
     auto texture = AssetManager::CreateAsset<Texture>(reference);
-    if (!texture) return nullptr;
+    if (!texture)
+    {
+        return nullptr;
+    }
     auto* vulkan = dynamic_cast<VKTexture*>(texture.get());
-    if (!vulkan) return nullptr;
+    if (!vulkan)
+    {
+        return nullptr;
+    }
     Preview preview;
     preview.Texture = std::move(texture);
     preview.Descriptor = ImGui_ImplVulkan_AddTexture(vulkan->GetSampler(), vulkan->GetImageView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -174,22 +249,48 @@ void* FINALITY::AssetPreview::TextureHandle(const std::string& reference)
 
 void FINALITY::AssetPreview::Clear()
 {
-    for (auto& [path, preview] : s_Rendered) if (preview.Target) s_RetiredTargets.push_back(std::move(preview.Target));
+    for (auto& [path, preview] : s_Rendered)
+    {
+        if (preview.Target)
+        {
+            s_RetiredTargets.push_back(std::move(preview.Target));
+        }
+    }
     s_Rendered.clear();
-    for (auto& [path, preview] : s_Previews) s_RetiredPreviews.push_back(std::move(preview));
+    for (auto& [path, preview] : s_Previews)
+    {
+        s_RetiredPreviews.push_back(std::move(preview));
+    }
     s_Previews.clear();
 }
 
 void FINALITY::AssetPreview::Flush()
 {
-    if (s_RetiredPreviews.empty() && s_RetiredTargets.empty()) return;
-    auto* device = Renderer::GetDevice();
-    if (!device) return;
-    auto textures = std::move(s_RetiredPreviews); s_RetiredPreviews.clear();
-    auto targets = std::move(s_RetiredTargets); s_RetiredTargets.clear();
-    device->RetireResource([device,textures=std::move(textures),targets=std::move(targets)]
+    if (s_RetiredPreviews.empty() && s_RetiredTargets.empty())
     {
-        for (const auto& preview:textures) if (preview.Descriptor) ImGui_ImplVulkan_RemoveTexture(preview.Descriptor);
-        for (const auto& target:targets) device->DestroyRenderTargetGpuResources(*target);
-    });
+        return;
+    }
+    auto* device = Renderer::GetDevice();
+    if (!device)
+    {
+        return;
+    }
+    auto textures = std::move(s_RetiredPreviews);
+    s_RetiredPreviews.clear();
+    auto targets = std::move(s_RetiredTargets);
+    s_RetiredTargets.clear();
+    device->RetireResource([device, textures = std::move(textures), targets = std::move(targets)]
+                           {
+                               for (const auto& preview : textures)
+                               {
+                                   if (preview.Descriptor)
+                                   {
+                                       ImGui_ImplVulkan_RemoveTexture(preview.Descriptor);
+                                   }
+                               }
+                               for (const auto& target : targets)
+                               {
+                                   device->DestroyRenderTargetGpuResources(*target);
+                               }
+                           });
 }

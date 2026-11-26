@@ -13,14 +13,18 @@ layout(location = 10) in vec4 inCustomData3;
 layout(location = 0) out vec3 fragColor;
 layout(location = 1) out vec2 fragTexCoord;
 
-layout(set = 0, binding = 0) uniform GlobalSceneUBO {
+layout(set = 0, binding = 0) uniform GlobalSceneUBO
+{
     mat4 view;
     mat4 proj;
-} global;
+}
 
-void main() {
+global;
+
+void main()
+{
     gl_Position = global.proj * global.view * inInstanceTransform * vec4(inPosition, 1.0);
-    
+
     fragColor = inColor;
     fragTexCoord = inTexCoord;
 }

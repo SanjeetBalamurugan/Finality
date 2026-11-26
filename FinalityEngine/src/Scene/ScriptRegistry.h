@@ -38,8 +38,11 @@ namespace FINALITY
         std::vector<ScriptProperty> Properties;
         std::string SourceFile;
         ScriptDefinition() = default;
+
         ScriptDefinition(std::string name, std::function<std::unique_ptr<ScriptableComponent>()> factory, std::vector<ScriptProperty> properties = {})
-            : Name(std::move(name)), Factory(std::move(factory)), Properties(std::move(properties)) {}
+            : Name(std::move(name)), Factory(std::move(factory)), Properties(std::move(properties))
+        {
+        }
     };
 
     /**
@@ -68,22 +71,31 @@ namespace FINALITY
         static bool ReplaceModule(const std::vector<ScriptDefinition>& definitions, const std::shared_ptr<void>& lease, Scene* scene, std::string& error);
         static void ClearModule();
 
-        template<typename T, typename V>
+        template <typename T, typename V>
         static ScriptProperty Property(const std::string& name, V T::* member)
         {
-            return {name,
-                [member](ScriptableComponent& script) -> ScriptValue { return static_cast<T&>(script).*member; },
-                [member](ScriptableComponent& script, const ScriptValue& value)
-                {
-                    if constexpr (std::is_same_v<V, ScriptAssetReference>)
-                        if ((static_cast<T&>(script).*member).Type != std::get<V>(value).Type) return;
-                    static_cast<T&>(script).*member = std::get<V>(value);
-                }, member,
-                [member](const std::any& candidate)
-                {
-                    const auto* other = std::any_cast<V T::*>(&candidate);
-                    return other && *other == member;
-                }};
+            return { name,
+                     [member](ScriptableComponent& script) -> ScriptValue
+                     {
+                         return static_cast<T&>(script).*member;
+                     },
+                     [member](ScriptableComponent& script, const ScriptValue& value)
+                     {
+                         if constexpr (std::is_same_v<V, ScriptAssetReference>)
+                         {
+                             if ((static_cast<T&>(script).*member).Type != std::get<V>(value).Type)
+                             {
+                                 return;
+                             }
+                         }
+                         static_cast<T&>(script).*member = std::get<V>(value);
+                     },
+                     member,
+                     [member](const std::any& candidate)
+                     {
+                         const auto* other = std::any_cast<V T::*>(&candidate);
+                         return other && *other == member;
+                     } };
         }
     };
-}
+} // namespace FINALITY

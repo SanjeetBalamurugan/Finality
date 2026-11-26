@@ -23,9 +23,11 @@ namespace FINALITY
 
         virtual void Bind(uint32_t slot = 0) const = 0;
 
-        AssetType GetType() const override { return AssetType::Texture; }
+        AssetType GetType() const override
+        {
+            return AssetType::Texture;
+        }
 
         static std::shared_ptr<Texture> Create(const std::string& filePath);
-
     };
-}
+} // namespace FINALITY

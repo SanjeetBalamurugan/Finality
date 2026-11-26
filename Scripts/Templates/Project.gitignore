@@ -3,6 +3,7 @@
 /*.sln
 /*.slnx
 /*.code-workspace
+/GameScripts.vcxproj
 *.user
 *.suo
 *.VC.db

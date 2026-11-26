@@ -10,13 +10,14 @@
 
 namespace FINALITY
 {
-	/** @todo TODO: Document TextureUploadBatchContext struct semantics, ownership and usage. */
-	struct TextureUploadBatchContext {
-		VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
-		std::vector<VkBuffer> stagingBuffers;
-		std::vector<VkDeviceMemory> stagingMemories;
-		bool isActive = false;
-	};
+    /** @todo TODO: Document TextureUploadBatchContext struct semantics, ownership and usage. */
+    struct TextureUploadBatchContext
+    {
+        VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
+        std::vector<VkBuffer> stagingBuffers;
+        std::vector<VkDeviceMemory> stagingMemories;
+        bool isActive = false;
+    };
 
     /** @todo TODO: Document VKTextureUploads class semantics, ownership and usage. */
     class VKTextureUploads
@@ -27,11 +28,28 @@ namespace FINALITY
         VKTextureUploads& operator=(const VKTextureUploads&) = delete;
         void Begin(VkDevice device, VkCommandPool pool, VkQueue queue);
         void Finish();
-        bool IsActive() const { return m_State.isActive; }
-        VkCommandBuffer CommandBuffer() const { return m_State.commandBuffer; }
-        void Retain(std::shared_ptr<void> resource) { m_Resources.push_back(std::move(resource)); }
+
+        bool IsActive() const
+        {
+            return m_State.isActive;
+        }
+
+        VkCommandBuffer CommandBuffer() const
+        {
+            return m_State.commandBuffer;
+        }
+
+        void Retain(std::shared_ptr<void> resource)
+        {
+            m_Resources.push_back(std::move(resource));
+        }
+
         void Track(VkBuffer buffer, VkDeviceMemory memory)
-        { m_State.stagingBuffers.push_back(buffer); m_State.stagingMemories.push_back(memory); }
+        {
+            m_State.stagingBuffers.push_back(buffer);
+            m_State.stagingMemories.push_back(memory);
+        }
+
     private:
         VkDevice m_Device = VK_NULL_HANDLE;
         VkCommandPool m_Pool = VK_NULL_HANDLE;
@@ -39,4 +57,4 @@ namespace FINALITY
         TextureUploadBatchContext m_State;
         std::vector<std::shared_ptr<void>> m_Resources;
     };
-}
+} // namespace FINALITY

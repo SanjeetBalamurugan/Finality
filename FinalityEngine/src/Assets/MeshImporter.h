@@ -23,4 +23,4 @@ namespace FINALITY
         static MeshGeometry Load(const std::string& path);
         static MeshGeometry Primitive(const std::string& name);
     };
-}
+} // namespace FINALITY

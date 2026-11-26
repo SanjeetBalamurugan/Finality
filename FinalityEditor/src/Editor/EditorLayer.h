@@ -22,30 +22,36 @@
 namespace FINALITY
 {
 
-
-	/** @todo TODO: Document EditorLayer class semantics, ownership and usage. */
-	class EditorLayer
-	{
-	public:
+    /** @todo TODO: Document EditorLayer class semantics, ownership and usage. */
+    class EditorLayer
+    {
+    public:
         void Configure(const std::string& initialProject, const std::filesystem::path& engineAssets)
-        { m_InitialProject = initialProject; m_EngineAssets = engineAssets; }
-		void Init();
-		void OnUpdate(float deltaTime);
-		void OnImGuiRender();
-		void Shutdown();
+        {
+            m_InitialProject = initialProject;
+            m_EngineAssets = engineAssets;
+        }
 
-		void SetSceneFactory(std::function<std::unique_ptr<Scene>()> factory) { m_SceneFactory = factory; }
+        void Init();
+        void OnUpdate(float deltaTime);
+        void OnImGuiRender();
+        void Shutdown();
 
-	private:
-		void DrawToolbar();
-		void DrawSceneView();
-		void DrawGameView();
-		void DrawMenuBar();
+        void SetSceneFactory(std::function<std::unique_ptr<Scene>()> factory)
+        {
+            m_SceneFactory = factory;
+        }
 
-		void OnPlay();
-		void OnPause();
-		void OnResume();
-		void OnStop();
+    private:
+        void DrawToolbar();
+        void DrawSceneView();
+        void DrawGameView();
+        void DrawMenuBar();
+
+        void OnPlay();
+        void OnPause();
+        void OnResume();
+        void OnStop();
         void NewScene();
         bool OpenScene(const std::string& path);
         void SaveScene(bool saveAs = false);
@@ -71,12 +77,12 @@ namespace FINALITY
         void PlaceSceneAsset(uint64_t id, const glm::vec3& position);
         void FrameSelected();
 
-	private:
-		std::shared_ptr<RenderTarget> m_SceneTarget;
-		std::shared_ptr<RenderTarget> m_GameTarget;
+    private:
+        std::shared_ptr<RenderTarget> m_SceneTarget;
+        std::shared_ptr<RenderTarget> m_GameTarget;
 
-		std::unique_ptr<EditorCameraScene> m_EditorCameraScene;
-		bool m_SceneViewActive = false;
+        std::unique_ptr<EditorCameraScene> m_EditorCameraScene;
+        bool m_SceneViewActive = false;
         GameViewSettings m_GameViewSettings;
         bool m_ShowSceneStats = false;
         bool m_CameraCaptured = false;
@@ -134,14 +140,14 @@ namespace FINALITY
         std::string m_ContentDirectory = "assets";
         float m_ShaderReloadClock = 0.0f;
         int m_GizmoOperation = 0;
-		std::function<std::unique_ptr<Scene>()> m_SceneFactory;
+        std::function<std::unique_ptr<Scene>()> m_SceneFactory;
 
-		float m_AccumulatedTime = 0.0f;
-		float m_UiFps = 0.0f;
-		float m_UiAvgFrameTimeMs = 0.0f;
-		float m_FrameTimeHistory[120]{};
-		int m_HistoryOffset = 0;
-		uint32_t m_FrameCount = 0;
-		std::chrono::steady_clock::time_point m_LastLogTime;
-	};
-}
+        float m_AccumulatedTime = 0.0f;
+        float m_UiFps = 0.0f;
+        float m_UiAvgFrameTimeMs = 0.0f;
+        float m_FrameTimeHistory[120]{};
+        int m_HistoryOffset = 0;
+        uint32_t m_FrameCount = 0;
+        std::chrono::steady_clock::time_point m_LastLogTime;
+    };
+} // namespace FINALITY

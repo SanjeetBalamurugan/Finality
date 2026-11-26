@@ -28,8 +28,9 @@ namespace FINALITY
     public:
         explicit VKGeometryUploadScope(VKRenderDevice& device);
         ~VKGeometryUploadScope();
+
     private:
         VKRenderDevice& m_Device;
         bool m_OwnsBatch;
     };
-}
+} // namespace FINALITY

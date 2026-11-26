@@ -9,7 +9,7 @@
 #define GLM_CONFIG_HIJACK
 #define GLM_FORCE_PURE
 #define GLM_FORCE_UNRESTRICTED_FLOAT
-#define GLM_STATIC_ASSERT(x, message) static_assert(x, message) 
+#define GLM_STATIC_ASSERT(x, message) static_assert(x, message)
 #endif
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -21,7 +21,7 @@
 namespace FINALITY
 {
     VKTexture::VKTexture(VkDevice device, VkPhysicalDevice physicalDevice, VkCommandBuffer sharedCmd,
-        const std::string& filePath, VkBuffer& outStagingBuffer, VkDeviceMemory& outStagingMemory)
+                         const std::string& filePath, VkBuffer& outStagingBuffer, VkDeviceMemory& outStagingMemory)
         : m_Device(device)
     {
         CreateTextureImage(physicalDevice, sharedCmd, filePath, outStagingBuffer, outStagingMemory);
@@ -31,27 +31,44 @@ namespace FINALITY
 
     VKTexture::~VKTexture()
     {
-        if (m_Sampler) vkDestroySampler(m_Device, m_Sampler, nullptr);
-        if (m_ImageView) vkDestroyImageView(m_Device, m_ImageView, nullptr);
-        if (m_TextureImage) vkDestroyImage(m_Device, m_TextureImage, nullptr);
-        if (m_TextureImageMemory) vkFreeMemory(m_Device, m_TextureImageMemory, nullptr);
+        if (m_Sampler)
+        {
+            vkDestroySampler(m_Device, m_Sampler, nullptr);
+        }
+        if (m_ImageView)
+        {
+            vkDestroyImageView(m_Device, m_ImageView, nullptr);
+        }
+        if (m_TextureImage)
+        {
+            vkDestroyImage(m_Device, m_TextureImage, nullptr);
+        }
+        if (m_TextureImageMemory)
+        {
+            vkFreeMemory(m_Device, m_TextureImageMemory, nullptr);
+        }
     }
 
-    void VKTexture::Bind(uint32_t slot) const {}
+    void VKTexture::Bind(uint32_t slot) const
+    {
+    }
 
     void VKTexture::CreateTextureImage(VkPhysicalDevice physicalDevice, VkCommandBuffer sharedCmd,
-        const std::string& filePath, VkBuffer& outStagingBuffer, VkDeviceMemory& outStagingMemory)
+                                       const std::string& filePath, VkBuffer& outStagingBuffer, VkDeviceMemory& outStagingMemory)
     {
         VkDeviceSize imageSize = 0;
         const void* pixelsToCopy = nullptr;
         bool isCompressed = false;
-        std::unique_ptr<stbi_uc,decltype(&stbi_image_free)> decoded(nullptr,&stbi_image_free);
-        static const unsigned char white[] = {255,255,255,255};
+        std::unique_ptr<stbi_uc, decltype(&stbi_image_free)> decoded(nullptr, &stbi_image_free);
+        static const unsigned char white[] = { 255, 255, 255, 255 };
         gli::texture gliTex;
 
         std::filesystem::path path(filePath);
         std::string ext = path.extension().string();
-        std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return std::tolower(c); });
+        std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c)
+                       {
+                           return std::tolower(c);
+                       });
 
         if (filePath == "builtin://white")
         {
@@ -64,9 +81,14 @@ namespace FINALITY
         {
             isCompressed = true;
             gliTex = gli::load(filePath);
-            if (gliTex.empty()) throw std::runtime_error("Failed to load compressed texture via GLI: " + filePath);
+            if (gliTex.empty())
+            {
+                throw std::runtime_error("Failed to load compressed texture via GLI: " + filePath);
+            }
             if (gliTex.target() != gli::TARGET_2D || gliTex.layers() != 1 || gliTex.faces() != 1)
+            {
                 throw std::runtime_error("Only two-dimensional, single-layer textures are supported");
+            }
 
             m_Width = static_cast<uint32_t>(gliTex.extent().x);
             m_Height = static_cast<uint32_t>(gliTex.extent().y);
@@ -79,7 +101,10 @@ namespace FINALITY
         {
             int texWidth, texHeight, texChannels;
             stbi_uc* pixels = stbi_load(filePath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-            if (!pixels) throw std::runtime_error("Failed to decode uncompressed texture via STB: " + filePath);
+            if (!pixels)
+            {
+                throw std::runtime_error("Failed to decode uncompressed texture via STB: " + filePath);
+            }
             decoded.reset(pixels);
 
             m_Width = static_cast<uint32_t>(texWidth);
@@ -91,20 +116,30 @@ namespace FINALITY
         }
 
         const auto colorSpace = filePath.starts_with("builtin://") ? TextureColorSpace::Linear : ReadTextureColorSpace(filePath);
-        if (!isCompressed && colorSpace == TextureColorSpace::Automatic && !filePath.starts_with("builtin://")) m_Format = VK_FORMAT_R8G8B8A8_SRGB;
-        m_Format = TextureColorFormat(m_Format,colorSpace);
+        if (!isCompressed && colorSpace == TextureColorSpace::Automatic && !filePath.starts_with("builtin://"))
+        {
+            m_Format = VK_FORMAT_R8G8B8A8_SRGB;
+        }
+        m_Format = TextureColorFormat(m_Format, colorSpace);
         VkFormatProperties properties{};
-        vkGetPhysicalDeviceFormatProperties(physicalDevice,m_Format,&properties);
+        vkGetPhysicalDeviceFormatProperties(physicalDevice, m_Format, &properties);
         const auto required = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT | VK_FORMAT_FEATURE_TRANSFER_DST_BIT;
-        if ((properties.optimalTilingFeatures & required) != required) throw std::runtime_error("Texture format is unsupported on this graphics device");
+        if ((properties.optimalTilingFeatures & required) != required)
+        {
+            throw std::runtime_error("Texture format is unsupported on this graphics device");
+        }
         const auto blitFeatures = VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT;
         if (!isCompressed && (properties.optimalTilingFeatures & blitFeatures) == blitFeatures)
-            m_MipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(m_Width,m_Height))))+1;
+        {
+            m_MipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(m_Width, m_Height)))) + 1;
+        }
         VkPhysicalDeviceProperties deviceProperties{};
-        vkGetPhysicalDeviceProperties(physicalDevice,&deviceProperties);
-        m_Anisotropy = std::min(16.0f,deviceProperties.limits.maxSamplerAnisotropy);
+        vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
+        m_Anisotropy = std::min(16.0f, deviceProperties.limits.maxSamplerAnisotropy);
         if (!m_Width || !m_Height || m_Width > deviceProperties.limits.maxImageDimension2D || m_Height > deviceProperties.limits.maxImageDimension2D)
+        {
             throw std::runtime_error("Texture dimensions exceed device limits");
+        }
 
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -113,7 +148,9 @@ namespace FINALITY
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
         if (vkCreateBuffer(m_Device, &bufferInfo, nullptr, &outStagingBuffer) != VK_SUCCESS)
+        {
             throw std::runtime_error("Failed to create staging buffer!");
+        }
 
         VkMemoryRequirements memReqs;
         vkGetBufferMemoryRequirements(m_Device, outStagingBuffer, &memReqs);
@@ -122,10 +159,12 @@ namespace FINALITY
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize = memReqs.size;
         allocInfo.memoryTypeIndex = FindMemoryType(physicalDevice, memReqs.memoryTypeBits,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+                                                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
         if (vkAllocateMemory(m_Device, &allocInfo, nullptr, &outStagingMemory) != VK_SUCCESS)
+        {
             throw std::runtime_error("Failed to allocate staging buffer memory!");
+        }
 
         vkBindBufferMemory(m_Device, outStagingBuffer, outStagingMemory, 0);
 
@@ -148,19 +187,26 @@ namespace FINALITY
         imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
         imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        if (!isCompressed && m_MipLevels > 1) imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        if (!isCompressed && m_MipLevels > 1)
+        {
+            imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        }
         imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 
         if (vkCreateImage(m_Device, &imageInfo, nullptr, &m_TextureImage) != VK_SUCCESS)
+        {
             throw std::runtime_error("Failed to create hardware texture image allocation!");
+        }
 
         vkGetImageMemoryRequirements(m_Device, m_TextureImage, &memReqs);
         allocInfo.allocationSize = memReqs.size;
         allocInfo.memoryTypeIndex = FindMemoryType(physicalDevice, memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
         if (vkAllocateMemory(m_Device, &allocInfo, nullptr, &m_TextureImageMemory) != VK_SUCCESS)
+        {
             throw std::runtime_error("Failed to allocate texture image memory!");
+        }
 
         vkBindImageMemory(m_Device, m_TextureImage, m_TextureImageMemory, 0);
 
@@ -204,10 +250,16 @@ namespace FINALITY
         }
 
         vkCmdCopyBufferToImage(sharedCmd, outStagingBuffer, m_TextureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            static_cast<uint32_t>(bufferCopyRegions.size()), bufferCopyRegions.data());
+                               static_cast<uint32_t>(bufferCopyRegions.size()), bufferCopyRegions.data());
 
-        if (!isCompressed && m_MipLevels > 1) GenerateTextureMipmaps(sharedCmd,m_TextureImage,m_Width,m_Height,m_MipLevels);
-        else TransitionImageLayout(sharedCmd, m_TextureImage, m_Format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        if (!isCompressed && m_MipLevels > 1)
+        {
+            GenerateTextureMipmaps(sharedCmd, m_TextureImage, m_Width, m_Height, m_MipLevels);
+        }
+        else
+        {
+            TransitionImageLayout(sharedCmd, m_TextureImage, m_Format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        }
     }
 
     void VKTexture::CreateTextureImageView()
@@ -260,9 +312,12 @@ namespace FINALITY
         VkPhysicalDeviceMemoryProperties memProperties;
         vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
 
-        for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-            if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) 
+        for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
+        {
+            if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
+            {
                 return i;
+            }
         }
 
         throw std::runtime_error("Failed to find suitable memory type!");
@@ -300,13 +355,13 @@ namespace FINALITY
             sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
             destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
         }
-        else 
+        else
         {
-            throw std::invalid_argument("Unsupported pipeline layout transition configuration!"); 
+            throw std::invalid_argument("Unsupported pipeline layout transition configuration!");
         }
 
         vkCmdPipelineBarrier(sharedCmd,
-            sourceStage, destinationStage,
-            0, 0, nullptr, 0, nullptr, 1, &barrier);
+                             sourceStage, destinationStage,
+                             0, 0, nullptr, 0, nullptr, 1, &barrier);
     }
-}
+} // namespace FINALITY

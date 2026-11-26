@@ -14,7 +14,8 @@ namespace FINALITY
 
     namespace MouseButton
     {
-        enum : MouseCode {
+        enum : MouseCode
+        {
             Button0 = 0,
             Button1 = 1,
             Button2 = 2,
@@ -27,7 +28,7 @@ namespace FINALITY
             Right = Button1,
             Middle = Button2
         };
-    }
+    } // namespace MouseButton
 
     /** @todo TODO: Document Mouse class semantics, ownership and usage. */
     class FAPI Mouse
@@ -57,4 +58,4 @@ namespace FINALITY
         static bool s_CurrentButtonStates[8];
         static bool s_PreviousButtonStates[8];
     };
-}
+} // namespace FINALITY

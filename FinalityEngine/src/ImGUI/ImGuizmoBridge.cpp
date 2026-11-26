@@ -19,12 +19,14 @@ bool FINALITY::ImGuizmoBridge::IsActive()
 }
 
 bool FINALITY::ImGuizmoBridge::Manipulate(const glm::mat4& view,
-    const glm::mat4& projection,
-    int operation,
-    glm::mat4& worldTransform, bool local)
+                                          const glm::mat4& projection,
+                                          int operation,
+                                          glm::mat4& worldTransform, bool local)
 {
     if (ImGui::GetCurrentContext() == nullptr)
+    {
         return false;
+    }
 
     const ImVec2 min = ImGui::GetItemRectMin();
     const ImVec2 max = ImGui::GetItemRectMax();
@@ -32,11 +34,13 @@ bool FINALITY::ImGuizmoBridge::Manipulate(const glm::mat4& view,
     const float height = max.y - min.y;
 
     if (width <= 0.0f || height <= 0.0f)
+    {
         return false;
+    }
 
     const ImGuizmo::OPERATION gizmoOperation =
-        operation == 1 ? ImGuizmo::ROTATE :
-        operation == 2 ? ImGuizmo::SCALE : ImGuizmo::TRANSLATE;
+        operation == 1 ? ImGuizmo::ROTATE : operation == 2 ? ImGuizmo::SCALE
+                                                           : ImGuizmo::TRANSLATE;
 
     ImGuizmo::SetDrawlist();
     ImGuizmo::SetOrthographic(false);
@@ -49,7 +53,9 @@ bool FINALITY::ImGuizmoBridge::Manipulate(const glm::mat4& view,
         glm::value_ptr(editedTransform));
 
     if (!changed || !ImGuizmo::IsUsing())
+    {
         return false;
+    }
 
     worldTransform = editedTransform;
     return true;
@@ -73,7 +79,7 @@ void FINALITY::ImGuizmoBridge::SetLocalTransform(TransformComponent& component, 
     component.Basis = glm::mat4(1);
     if (std::abs(glm::determinant(glm::mat3(local))) > 1.0e-8f)
     {
-        DecomposeTransform(local,component.Position,component.Rotation,component.Scale);
+        DecomposeTransform(local, component.Position, component.Rotation, component.Scale);
         component.Basis = glm::inverse(component.GetTransformMatrix()) * local;
     }
     else
@@ -81,7 +87,7 @@ void FINALITY::ImGuizmoBridge::SetLocalTransform(TransformComponent& component, 
         component.Position = glm::vec3(local[3]);
         component.Rotation = glm::vec3(0);
         component.Scale = glm::vec3(1);
-        component.Basis = glm::translate(glm::mat4(1),-component.Position) * local;
+        component.Basis = glm::translate(glm::mat4(1), -component.Position) * local;
     }
     component.Matrix = local;
 }

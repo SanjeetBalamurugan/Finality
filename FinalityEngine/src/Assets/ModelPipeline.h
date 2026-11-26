@@ -13,4 +13,4 @@ namespace FINALITY::ModelPipeline
     void Save(const ModelData& model, const std::filesystem::path& directory, const std::string& signature);
     bool ReadCache(ModelData& model, const std::filesystem::path& directory, const std::string& signature);
     void PrepareMaterials(ModelData& model, const std::filesystem::path& directory, const std::filesystem::path& engineAssets);
-}
+} // namespace FINALITY::ModelPipeline

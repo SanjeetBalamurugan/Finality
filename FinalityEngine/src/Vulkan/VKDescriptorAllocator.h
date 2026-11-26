@@ -15,7 +15,11 @@ namespace FINALITY
     {
     public:
         VKDescriptorAllocator() = default;
-        ~VKDescriptorAllocator() { Shutdown(); }
+
+        ~VKDescriptorAllocator()
+        {
+            Shutdown();
+        }
 
         void Initialize(VkDevice device);
         void Shutdown();
@@ -35,4 +39,4 @@ namespace FINALITY
         std::vector<VkDescriptorPool> m_UsedPoolPages;
         std::vector<VkDescriptorPool> m_FreePoolPages;
     };
-}
+} // namespace FINALITY

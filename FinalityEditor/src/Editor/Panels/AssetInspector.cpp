@@ -19,7 +19,11 @@ void FINALITY::AssetInspector::Clear()
 
 void FINALITY::AssetInspector::Draw(uint64_t selected, AssetPicker& picker, ExternalTools& tools, bool* open)
 {
-    if (!ImGui::Begin("Inspector", open)) { ImGui::End(); return; }
+    if (!ImGui::Begin("Inspector", open))
+    {
+        ImGui::End();
+        return;
+    }
     const auto* record = AssetRegistry::Find(selected);
     if (!record)
     {
@@ -54,25 +58,40 @@ void FINALITY::AssetInspector::Draw(uint64_t selected, AssetPicker& picker, Exte
                 m_Source.resize(static_cast<size_t>(stream.gcount()));
             }
             if (asset.Type == ProjectAssetType::Scene || asset.Type == ProjectAssetType::Prefab)
-                try { m_EntityCount = YAML::LoadFile(path)["Entities"].size(); }
-                catch (const std::exception&) {}
+            {
+                try
+                {
+                    m_EntityCount = YAML::LoadFile(path)["Entities"].size();
+                }
+                catch (const std::exception&)
+                {
+                }
+            }
         }
     }
-    const char* types[] = {"File", "Texture", "Model", "Material", "Shader", "Scene", "Native Script Source", "Prefab"};
+    const char* types[] = { "File", "Texture", "Model", "Material", "Shader", "Scene", "Native Script Source", "Prefab" };
     ImGui::TextUnformatted(std::filesystem::path(asset.Path).filename().string().c_str());
     ImGui::TextDisabled("%s", types[static_cast<int>(asset.Type)]);
     ImGui::Separator();
     if (asset.Status == "Ready")
-        if (void* handle = AssetPreview::RenderedHandle(reference,asset.Type))
+    {
+        if (void* handle = AssetPreview::RenderedHandle(reference, asset.Type))
         {
-            const float width = std::min(ImGui::GetContentRegionAvail().x,240.0f);
-            ImGui::Image(static_cast<ImTextureID>(reinterpret_cast<uintptr_t>(handle)),{width,width});
+            const float width = std::min(ImGui::GetContentRegionAvail().x, 240.0f);
+            ImGui::Image(static_cast<ImTextureID>(reinterpret_cast<uintptr_t>(handle)), { width, width });
         }
+    }
     ImGui::TextWrapped("Project path: %s", asset.Path.c_str());
     ImGui::TextWrapped("Asset ID: %llu", static_cast<unsigned long long>(asset.ID));
     ImGui::TextWrapped("Status: %s", asset.Status.c_str());
-    if (!asset.Source.empty()) ImGui::TextWrapped("Original source: %s", asset.Source.c_str());
-    if (!asset.Diagnostic.empty()) ImGui::TextWrapped("%s", asset.Diagnostic.c_str());
+    if (!asset.Source.empty())
+    {
+        ImGui::TextWrapped("Original source: %s", asset.Source.c_str());
+    }
+    if (!asset.Diagnostic.empty())
+    {
+        ImGui::TextWrapped("%s", asset.Diagnostic.c_str());
+    }
     if (asset.Status == "Missing" || !std::filesystem::is_regular_file(path))
     {
         ImGui::TextWrapped("The asset file is missing. Refresh the project asset registry after restoring it.");
@@ -81,35 +100,69 @@ void FINALITY::AssetInspector::Draw(uint64_t selected, AssetPicker& picker, Exte
     }
     ImGui::Separator();
     if (asset.Type == ProjectAssetType::Material)
-        DrawMaterialProperties(m_Material, picker, [this,selected]() -> MaterialComponent* { return m_Selected == selected && AssetRegistry::Find(selected) ? &m_Material : nullptr; });
+    {
+        DrawMaterialProperties(m_Material, picker, [this, selected]() -> MaterialComponent*
+                               {
+                                   return m_Selected == selected && AssetRegistry::Find(selected) ? &m_Material : nullptr;
+                               });
+    }
     else if (asset.Type == ProjectAssetType::Texture)
     {
         try
         {
             const auto previousSpace = ReadTextureColorSpace(path);
             int colorSpace = static_cast<int>(previousSpace);
-            const char* choices[] = {"Automatic (color / source format)","sRGB (color)","Linear (normal / mask / data)"};
-            if (ImGui::Combo("Color Space",&colorSpace,choices,3))
+            const char* choices[] = { "Automatic (color / source format)", "sRGB (color)", "Linear (normal / mask / data)" };
+            if (ImGui::Combo("Color Space", &colorSpace, choices, 3))
             {
                 std::string error;
-                if (!SaveTextureColorSpace(path,static_cast<TextureColorSpace>(colorSpace),error)) throw std::runtime_error(error);
+                if (!SaveTextureColorSpace(path, static_cast<TextureColorSpace>(colorSpace), error))
+                {
+                    throw std::runtime_error(error);
+                }
                 std::shared_ptr<Texture> replacement;
-                try { replacement = AssetManager::ReloadTexture(reference); if (!replacement) throw std::runtime_error("Texture reload failed"); }
-                catch (...) { SaveTextureColorSpace(path,previousSpace,error); throw; }
+                try
+                {
+                    replacement = AssetManager::ReloadTexture(reference);
+                    if (!replacement)
+                    {
+                        throw std::runtime_error("Texture reload failed");
+                    }
+                }
+                catch (...)
+                {
+                    SaveTextureColorSpace(path, previousSpace, error);
+                    throw;
+                }
                 if (auto* scene = SceneManager::GetInstance().GetActiveScene())
+                {
                     for (auto entity : scene->GetRegistry().view<MaterialComponent>())
+                    {
                         if (auto material = scene->GetRegistry().get<MaterialComponent>(entity).MaterialInstance)
                         {
                             const auto textures = material->GetTextures();
-                            for (const auto& [name,texture] : textures)
-                                if (texture && texture->Handle == replacement->Handle) material->SetTexture(name,replacement);
+                            for (const auto& [name, texture] : textures)
+                            {
+                                if (texture && texture->Handle == replacement->Handle)
+                                {
+                                    material->SetTexture(name, replacement);
+                                }
+                            }
                         }
+                    }
+                }
                 m_TextureImportError.clear();
                 AssetPreview::Clear();
             }
         }
-        catch (const std::exception& failure) { m_TextureImportError = failure.what(); }
-        if (!m_TextureImportError.empty()) ImGui::TextWrapped("%s",m_TextureImportError.c_str());
+        catch (const std::exception& failure)
+        {
+            m_TextureImportError = failure.what();
+        }
+        if (!m_TextureImportError.empty())
+        {
+            ImGui::TextWrapped("%s", m_TextureImportError.c_str());
+        }
         if (auto texture = AssetManager::CreateAsset<Texture>(reference))
         {
             ImGui::Text("Dimensions: %u x %u", texture->GetWidth(), texture->GetHeight());
@@ -118,7 +171,7 @@ void FINALITY::AssetInspector::Draw(uint64_t selected, AssetPicker& picker, Exte
             {
                 const float width = std::min(ImGui::GetContentRegionAvail().x, 320.0f);
                 const float aspect = static_cast<float>(texture->GetHeight()) / texture->GetWidth();
-                ImGui::Image(static_cast<ImTextureID>(reinterpret_cast<uintptr_t>(handle)), {width,width * aspect});
+                ImGui::Image(static_cast<ImTextureID>(reinterpret_cast<uintptr_t>(handle)), { width, width * aspect });
             }
         }
     }
@@ -126,15 +179,19 @@ void FINALITY::AssetInspector::Draw(uint64_t selected, AssetPicker& picker, Exte
     {
         try
         {
-            m_ModelImport.Draw(reference,tools);
+            m_ModelImport.Draw(reference, tools);
             const auto model = ModelAsset::Load(reference);
-            ImGui::Text("%zu nodes, %zu submeshes, %zu material slots",model->Nodes.size(),model->Meshes.size(),model->Materials.size());
+            ImGui::Text("%zu nodes, %zu submeshes, %zu material slots", model->Nodes.size(), model->Meshes.size(), model->Materials.size());
             const auto bounds = model->Maximum - model->Minimum;
-            ImGui::Text("Imported size (m): %.3f, %.3f, %.3f",bounds.x,bounds.y,bounds.z);
+            ImGui::Text("Imported size (m): %.3f, %.3f, %.3f", bounds.x, bounds.y, bounds.z);
             if (ImGui::CollapsingHeader("Submeshes"))
+            {
                 for (const auto& mesh : model->Meshes)
-                    ImGui::BulletText("%s: %zu triangles, %s",mesh.Name.c_str(),mesh.Geometry.Indices.size()/3,
-                        mesh.Material < model->Materials.size() ? model->Materials[mesh.Material].Name.c_str() : "Default");
+                {
+                    ImGui::BulletText("%s: %zu triangles, %s", mesh.Name.c_str(), mesh.Geometry.Indices.size() / 3,
+                                      mesh.Material < model->Materials.size() ? model->Materials[mesh.Material].Name.c_str() : "Default");
+                }
+            }
             if (ImGui::CollapsingHeader("Model hierarchy"))
             {
                 std::vector<int> depths;
@@ -142,14 +199,23 @@ void FINALITY::AssetInspector::Draw(uint64_t selected, AssetPicker& picker, Exte
                 {
                     const int depth = node.Parent < 0 ? 0 : depths.at(node.Parent) + 1;
                     depths.push_back(depth);
-                    ImGui::BulletText("%*s%s",2 * std::min(depth,20),"",node.Name.c_str());
+                    ImGui::BulletText("%*s%s", 2 * std::min(depth, 20), "", node.Name.c_str());
                 }
             }
-            for (const auto& diagnostic : model->Diagnostics) ImGui::TextWrapped("%s",diagnostic.c_str());
+            for (const auto& diagnostic : model->Diagnostics)
+            {
+                ImGui::TextWrapped("%s", diagnostic.c_str());
+            }
         }
-        catch (const std::exception& error) { ImGui::TextWrapped("%s",error.what()); }
+        catch (const std::exception& error)
+        {
+            ImGui::TextWrapped("%s", error.what());
+        }
     }
-    else if (asset.Type == ProjectAssetType::Scene || asset.Type == ProjectAssetType::Prefab) ImGui::Text("Entities: %zu", m_EntityCount);
+    else if (asset.Type == ProjectAssetType::Scene || asset.Type == ProjectAssetType::Prefab)
+    {
+        ImGui::Text("Entities: %zu", m_EntityCount);
+    }
     else if (asset.Type == ProjectAssetType::Shader || asset.Type == ProjectAssetType::Script)
     {
         if (asset.Type == ProjectAssetType::Shader && ImGui::CollapsingHeader("Shader Uniforms", ImGuiTreeNodeFlags_DefaultOpen))
@@ -157,7 +223,10 @@ void FINALITY::AssetInspector::Draw(uint64_t selected, AssetPicker& picker, Exte
             try
             {
                 const auto uniforms = ShaderReflection::Reflect(path);
-                if (uniforms.empty()) ImGui::TextDisabled("This shader has no uniforms.");
+                if (uniforms.empty())
+                {
+                    ImGui::TextDisabled("This shader has no uniforms.");
+                }
                 for (const auto& uniform : uniforms)
                 {
                     ImGui::PushID((uniform.Block + "." + uniform.Name).c_str());
@@ -165,35 +234,59 @@ void FINALITY::AssetInspector::Draw(uint64_t selected, AssetPicker& picker, Exte
                     ImGui::SameLine();
                     ImGui::TextDisabled("(%s)", uniform.Type.c_str());
                     if (uniform.Storage == "Texture")
+                    {
                         ImGui::TextDisabled("  Set %u, binding %u", uniform.Set, uniform.Binding);
+                    }
                     else
+                    {
                         ImGui::TextDisabled("  %s, offset %u, %u bytes", uniform.Storage.c_str(), uniform.Offset, uniform.Size);
-                    if (uniform.Editable) ImGui::TextDisabled("  Editable on the material");
+                    }
+                    if (uniform.Editable)
+                    {
+                        ImGui::TextDisabled("  Editable on the material");
+                    }
                     ImGui::PopID();
                 }
             }
-            catch (const std::exception& error) { ImGui::TextWrapped("%s", error.what()); }
+            catch (const std::exception& error)
+            {
+                ImGui::TextWrapped("%s", error.what());
+            }
         }
-        if (asset.Type == ProjectAssetType::Shader && ShaderCompiler::IsSourceShader(path) && ImGui::Button("Compile Shader")) ShaderCompiler::EnsureCompiled(path, true);
+        if (asset.Type == ProjectAssetType::Shader && ShaderCompiler::IsSourceShader(path) && ImGui::Button("Compile Shader"))
+        {
+            ShaderCompiler::EnsureCompiled(path, true);
+        }
         if (asset.Type == ProjectAssetType::Script)
         {
-            if (ImGui::Button("Open Script")) tools.OpenScript(path);
+            if (ImGui::Button("Open Script"))
+            {
+                tools.OpenScript(path);
+            }
             if (ImGui::BeginPopupContextWindow("Script Actions", ImGuiPopupFlags_MouseButtonRight))
             {
-                if (ImGui::MenuItem("Open Script")) tools.OpenScript(path);
+                if (ImGui::MenuItem("Open Script"))
+                {
+                    tools.OpenScript(path);
+                }
                 ImGui::EndPopup();
             }
             ImGui::TextWrapped("Native source must be compiled and registered before its component can be attached. Registered fields appear on the attached component.");
             if (ImGui::CollapsingHeader("Available compiled script types"))
+            {
                 for (const auto& [name, definition] : ScriptRegistry::GetDefinitions())
                 {
                     ImGui::TextUnformatted(name.c_str());
-                    for (const auto& property : definition.Properties) ImGui::BulletText("%s", property.Name.c_str());
+                    for (const auto& property : definition.Properties)
+                    {
+                        ImGui::BulletText("%s", property.Name.c_str());
+                    }
                 }
+            }
         }
         if (ImGui::CollapsingHeader("Source", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            ImGui::BeginChild("Source Text", {0,240}, ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar);
+            ImGui::BeginChild("Source Text", { 0, 240 }, ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar);
             ImGui::TextUnformatted(m_Source.data(), m_Source.data() + m_Source.size());
             ImGui::EndChild();
         }

@@ -19,17 +19,53 @@ namespace FINALITY
 
     void VKFramebuffer::CleanUp()
     {
-        if (m_Framebuffer) { vkDestroyFramebuffer(m_Device, m_Framebuffer, nullptr); m_Framebuffer = VK_NULL_HANDLE; }
-        if (m_RenderPass) { vkDestroyRenderPass(m_Device, m_RenderPass, nullptr); m_RenderPass = VK_NULL_HANDLE; }
+        if (m_Framebuffer)
+        {
+            vkDestroyFramebuffer(m_Device, m_Framebuffer, nullptr);
+            m_Framebuffer = VK_NULL_HANDLE;
+        }
+        if (m_RenderPass)
+        {
+            vkDestroyRenderPass(m_Device, m_RenderPass, nullptr);
+            m_RenderPass = VK_NULL_HANDLE;
+        }
 
-        if (m_DepthImageView) { vkDestroyImageView(m_Device, m_DepthImageView, nullptr); m_DepthImageView = VK_NULL_HANDLE; }
-        if (m_DepthImage) { vkDestroyImage(m_Device, m_DepthImage, nullptr); m_DepthImage = VK_NULL_HANDLE; }
-        if (m_DepthImageMemory) { vkFreeMemory(m_Device, m_DepthImageMemory, nullptr); m_DepthImageMemory = VK_NULL_HANDLE; }
+        if (m_DepthImageView)
+        {
+            vkDestroyImageView(m_Device, m_DepthImageView, nullptr);
+            m_DepthImageView = VK_NULL_HANDLE;
+        }
+        if (m_DepthImage)
+        {
+            vkDestroyImage(m_Device, m_DepthImage, nullptr);
+            m_DepthImage = VK_NULL_HANDLE;
+        }
+        if (m_DepthImageMemory)
+        {
+            vkFreeMemory(m_Device, m_DepthImageMemory, nullptr);
+            m_DepthImageMemory = VK_NULL_HANDLE;
+        }
 
-        if (m_ColorSampler) { vkDestroySampler(m_Device, m_ColorSampler, nullptr); m_ColorSampler = VK_NULL_HANDLE; }
-        if (m_ColorImageView) { vkDestroyImageView(m_Device, m_ColorImageView, nullptr); m_ColorImageView = VK_NULL_HANDLE; }
-        if (m_ColorImage) { vkDestroyImage(m_Device, m_ColorImage, nullptr); m_ColorImage = VK_NULL_HANDLE; }
-        if (m_ColorImageMemory) { vkFreeMemory(m_Device, m_ColorImageMemory, nullptr); m_ColorImageMemory = VK_NULL_HANDLE; }
+        if (m_ColorSampler)
+        {
+            vkDestroySampler(m_Device, m_ColorSampler, nullptr);
+            m_ColorSampler = VK_NULL_HANDLE;
+        }
+        if (m_ColorImageView)
+        {
+            vkDestroyImageView(m_Device, m_ColorImageView, nullptr);
+            m_ColorImageView = VK_NULL_HANDLE;
+        }
+        if (m_ColorImage)
+        {
+            vkDestroyImage(m_Device, m_ColorImage, nullptr);
+            m_ColorImage = VK_NULL_HANDLE;
+        }
+        if (m_ColorImageMemory)
+        {
+            vkFreeMemory(m_Device, m_ColorImageMemory, nullptr);
+            m_ColorImageMemory = VK_NULL_HANDLE;
+        }
     }
 
     uint32_t VKFramebuffer::FindMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties)
@@ -262,7 +298,6 @@ namespace FINALITY
         }
     }
 
-
     void VKFramebuffer::Bind()
     {
     }
@@ -287,9 +322,6 @@ namespace FINALITY
         return std::make_shared<VKFramebuffer>(
             renderDevice->GetActiveDevice(),
             renderDevice->GetActivePhysicalDevice(),
-            spec
-        );
+            spec);
     }
-}
-
-
+} // namespace FINALITY

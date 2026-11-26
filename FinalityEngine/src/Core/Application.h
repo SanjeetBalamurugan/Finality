@@ -19,9 +19,9 @@
 
 namespace FINALITY
 {
-	class ImGUIRenderer;
+    class ImGUIRenderer;
 
-	/**
+    /**
 	 * @ingroup core
 	 * @brief Coordinates the engine application lifetime.
 	 *
@@ -30,35 +30,53 @@ namespace FINALITY
 	 * @par Usage
 	 * Keep graphics resource retirement ahead of device destruction. Long-running imports and script compilation should report progress rather than block editor interaction.
 	 */
-	class FAPI Application
-	{
-	public:
-		Application();
-		~Application();
+    class FAPI Application
+    {
+    public:
+        Application();
+        ~Application();
 
-		void Initialize(const RendererAPI& api, const WindowSpec& spec, std::unique_ptr<Game> game);
-		void Update();
-		void Shutdown();
+        void Initialize(const RendererAPI& api, const WindowSpec& spec, std::unique_ptr<Game> game);
+        void Update();
+        void Shutdown();
 
-		void RequestClose() { m_Running = false; }
+        void RequestClose()
+        {
+            m_Running = false;
+        }
 
-		static RendererAPI GetActiveAPI() { return s_CurrentAPI; }
-		static Application& Get() { return *s_Instance; }
-		
-		RenderDevice& GetDevice() { return *m_RenderDevice; }
-		Window& GetWindow() { return *m_Window; }
-		ImGUIRenderer* GetImGUIRenderer();
+        static RendererAPI GetActiveAPI()
+        {
+            return s_CurrentAPI;
+        }
 
-	private:
-		static RendererAPI s_CurrentAPI;
+        static Application& Get()
+        {
+            return *s_Instance;
+        }
 
-		std::unique_ptr<Window> m_Window;
-		std::unique_ptr<RenderDevice> m_RenderDevice;
-		std::unique_ptr<Game> m_CurrentGame;
+        RenderDevice& GetDevice()
+        {
+            return *m_RenderDevice;
+        }
 
-		std::unique_ptr<ImGUIRenderer> m_ImGUIRenderer;
+        Window& GetWindow()
+        {
+            return *m_Window;
+        }
 
-		bool m_Running = false;
-		static inline Application* s_Instance = nullptr;
-	};
-}
+        ImGUIRenderer* GetImGUIRenderer();
+
+    private:
+        static RendererAPI s_CurrentAPI;
+
+        std::unique_ptr<Window> m_Window;
+        std::unique_ptr<RenderDevice> m_RenderDevice;
+        std::unique_ptr<Game> m_CurrentGame;
+
+        std::unique_ptr<ImGUIRenderer> m_ImGUIRenderer;
+
+        bool m_Running = false;
+        static inline Application* s_Instance = nullptr;
+    };
+} // namespace FINALITY

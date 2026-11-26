@@ -39,4 +39,4 @@ namespace FINALITY
         static ProcessResult Run(const std::vector<std::wstring>& arguments, const std::filesystem::path& directory);
         static std::filesystem::path ExecutablePath();
     };
-}
+} // namespace FINALITY

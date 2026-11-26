@@ -14,7 +14,7 @@
 
 namespace FINALITY
 {
-	/**
+    /**
 	 * @ingroup core
 	 * @brief Provides native file, save and folder selection.
 	 *
@@ -23,11 +23,11 @@ namespace FINALITY
 	 * @par Usage
 	 * Treat an empty result as cancellation. Validate the selected destination for the operation; choosing a folder alone does not mean it is suitable for overwriting.
 	 */
-	class FAPI FileDialogs
-	{
-	public:
-		static std::string OpenFile(const char* filter);
+    class FAPI FileDialogs
+    {
+    public:
+        static std::string OpenFile(const char* filter);
         static std::string OpenFolder();
-		static std::string SaveFile(const char* filter, const char* defaultName);
-	};
-}
+        static std::string SaveFile(const char* filter, const char* defaultName);
+    };
+} // namespace FINALITY

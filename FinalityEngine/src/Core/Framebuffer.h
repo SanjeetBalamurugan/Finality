@@ -32,4 +32,4 @@ namespace FINALITY
 
         static std::shared_ptr<Framebuffer> Create(const FramebufferSpecification& spec);
     };
-}
+} // namespace FINALITY

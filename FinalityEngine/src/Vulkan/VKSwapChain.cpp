@@ -18,7 +18,10 @@ namespace FINALITY
 
     void VKSwapChain::Recreate(const WindowSpec& spec)
     {
-        if (spec.width == 0 || spec.height == 0) return;
+        if (spec.width == 0 || spec.height == 0)
+        {
+            return;
+        }
 
         vkDeviceWaitIdle(m_LogicalDevice);
         Cleanup();
@@ -37,26 +40,42 @@ namespace FINALITY
 
     void VKSwapChain::Cleanup()
     {
-        for (auto framebuffer : m_FrameBuffers) {
+        for (auto framebuffer : m_FrameBuffers)
+        {
             vkDestroyFramebuffer(m_LogicalDevice, framebuffer, nullptr);
         }
         m_FrameBuffers.clear();
 
-        if (m_RenderPass) {
+        if (m_RenderPass)
+        {
             vkDestroyRenderPass(m_LogicalDevice, m_RenderPass, nullptr);
             m_RenderPass = nullptr;
         }
 
-        if (m_DepthImageView) { vkDestroyImageView(m_LogicalDevice, m_DepthImageView, nullptr); m_DepthImageView = VK_NULL_HANDLE; }
-        if (m_DepthImage) { vkDestroyImage(m_LogicalDevice, m_DepthImage, nullptr); m_DepthImage = VK_NULL_HANDLE; }
-        if (m_DepthImageMemory) { vkFreeMemory(m_LogicalDevice, m_DepthImageMemory, nullptr); m_DepthImageMemory = VK_NULL_HANDLE; }
+        if (m_DepthImageView)
+        {
+            vkDestroyImageView(m_LogicalDevice, m_DepthImageView, nullptr);
+            m_DepthImageView = VK_NULL_HANDLE;
+        }
+        if (m_DepthImage)
+        {
+            vkDestroyImage(m_LogicalDevice, m_DepthImage, nullptr);
+            m_DepthImage = VK_NULL_HANDLE;
+        }
+        if (m_DepthImageMemory)
+        {
+            vkFreeMemory(m_LogicalDevice, m_DepthImageMemory, nullptr);
+            m_DepthImageMemory = VK_NULL_HANDLE;
+        }
 
-        for (auto imageView : m_ImageViews) {
+        for (auto imageView : m_ImageViews)
+        {
             vkDestroyImageView(m_LogicalDevice, imageView, nullptr);
         }
         m_ImageViews.clear();
 
-        if (m_SwapChain) {
+        if (m_SwapChain)
+        {
             vkDestroySwapchainKHR(m_LogicalDevice, m_SwapChain, nullptr);
             m_SwapChain = nullptr;
         }
@@ -82,7 +101,8 @@ namespace FINALITY
         m_Extent = ChooseSwapExtent(capabilities, spec);
 
         uint32_t imageCount = capabilities.minImageCount + 1;
-        if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount) {
+        if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount)
+        {
             imageCount = capabilities.maxImageCount;
         }
 
@@ -102,7 +122,8 @@ namespace FINALITY
         createInfo.clipped = VK_TRUE;
         createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-        if (vkCreateSwapchainKHR(m_LogicalDevice, &createInfo, nullptr, &m_SwapChain) != VK_SUCCESS) {
+        if (vkCreateSwapchainKHR(m_LogicalDevice, &createInfo, nullptr, &m_SwapChain) != VK_SUCCESS)
+        {
             throw std::runtime_error("Failed to create Vulkan SwapChain!");
         }
 
@@ -131,12 +152,12 @@ namespace FINALITY
             createInfo.subresourceRange.baseArrayLayer = 0;
             createInfo.subresourceRange.layerCount = 1;
 
-            if (vkCreateImageView(m_LogicalDevice, &createInfo, nullptr, &m_ImageViews[i]) != VK_SUCCESS) {
+            if (vkCreateImageView(m_LogicalDevice, &createInfo, nullptr, &m_ImageViews[i]) != VK_SUCCESS)
+            {
                 throw std::runtime_error("Failed to create swapchain image views!");
             }
         }
     }
-
 
     void FINALITY::VKSwapChain::CreateSimpleRenderPass()
     {
@@ -193,7 +214,8 @@ namespace FINALITY
         renderPassInfo.dependencyCount = 1;
         renderPassInfo.pDependencies = &dependency;
 
-        if (vkCreateRenderPass(m_LogicalDevice, &renderPassInfo, nullptr, &m_RenderPass) != VK_SUCCESS) {
+        if (vkCreateRenderPass(m_LogicalDevice, &renderPassInfo, nullptr, &m_RenderPass) != VK_SUCCESS)
+        {
             throw std::runtime_error("Failed to create simple Render Pass!");
         }
     }
@@ -217,7 +239,8 @@ namespace FINALITY
             framebufferInfo.height = m_Extent.height;
             framebufferInfo.layers = 1;
 
-            if (vkCreateFramebuffer(m_LogicalDevice, &framebufferInfo, nullptr, &m_FrameBuffers[i]) != VK_SUCCESS) {
+            if (vkCreateFramebuffer(m_LogicalDevice, &framebufferInfo, nullptr, &m_FrameBuffers[i]) != VK_SUCCESS)
+            {
                 throw std::runtime_error("Failed to create framebuffer!");
             }
         }
@@ -225,8 +248,10 @@ namespace FINALITY
 
     VkSurfaceFormatKHR VKSwapChain::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
     {
-        for (const auto& availableFormat : availableFormats) {
-            if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+        for (const auto& availableFormat : availableFormats)
+        {
+            if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+            {
                 return availableFormat;
             }
         }
@@ -240,10 +265,12 @@ namespace FINALITY
 
     VkExtent2D VKSwapChain::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, const WindowSpec& spec)
     {
-        if (capabilities.currentExtent.width != UINT32_MAX) {
+        if (capabilities.currentExtent.width != UINT32_MAX)
+        {
             return capabilities.currentExtent;
         }
-        else {
+        else
+        {
             VkExtent2D actualExtent = { static_cast<uint32_t>(spec.width), static_cast<uint32_t>(spec.height) };
             actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
             actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
@@ -270,7 +297,8 @@ namespace FINALITY
         imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 
-        if (vkCreateImage(m_LogicalDevice, &imageInfo, nullptr, &m_DepthImage) != VK_SUCCESS) {
+        if (vkCreateImage(m_LogicalDevice, &imageInfo, nullptr, &m_DepthImage) != VK_SUCCESS)
+        {
             throw std::runtime_error("Failed to create depth texture image layout allocation!");
         }
 
@@ -281,9 +309,10 @@ namespace FINALITY
         vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
 
         uint32_t memoryTypeIndex = UINT32_MAX;
-        for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-            if ((memReqs.memoryTypeBits & (1 << i)) &&
-                (memProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+        for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
+        {
+            if ((memReqs.memoryTypeBits & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+            {
                 memoryTypeIndex = i;
                 break;
             }
@@ -294,7 +323,8 @@ namespace FINALITY
         allocInfo.allocationSize = memReqs.size;
         allocInfo.memoryTypeIndex = memoryTypeIndex;
 
-        if (vkAllocateMemory(m_LogicalDevice, &allocInfo, nullptr, &m_DepthImageMemory) != VK_SUCCESS) {
+        if (vkAllocateMemory(m_LogicalDevice, &allocInfo, nullptr, &m_DepthImageMemory) != VK_SUCCESS)
+        {
             throw std::runtime_error("Failed to allocate depth buffer image memory!");
         }
 
@@ -320,8 +350,10 @@ namespace FINALITY
             vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
             std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
             vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
-            for (uint32_t i = 0; i < queueFamilyCount; i++) {
-                if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+            for (uint32_t i = 0; i < queueFamilyCount; i++)
+            {
+                if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+                {
                     queueFamilyIndex = i;
                     break;
                 }
@@ -351,8 +383,8 @@ namespace FINALITY
         vkBeginCommandBuffer(cmd, &beginInfo);
 
         ImageMemBarrier(cmd, m_DepthImage, depthFormat,
-            VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1, 1, 0);
+                        VK_IMAGE_LAYOUT_UNDEFINED,
+                        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1, 1, 0);
 
         vkEndCommandBuffer(cmd);
 
@@ -373,15 +405,17 @@ namespace FINALITY
 
     const VkImageView& VKSwapChain::GetImageView(int idx) const
     {
-        if (idx >= m_ImageViews.size()) {
+        if (idx >= m_ImageViews.size())
+        {
             FI_CORE_ERROR("Invalid depth view index %d\n", idx);
             exit(1);
         }
 
         return m_ImageViews[idx];
     }
+
     const VkImageView& VKSwapChain::GetDepthView() const
     {
         return m_DepthImageView;
     }
-}
+} // namespace FINALITY

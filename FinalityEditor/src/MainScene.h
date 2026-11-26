@@ -14,8 +14,7 @@ public:
     {
         FINALITY::Scene::OnInit();
         auto camera = CreateEntity("Main Camera");
-        auto& component = camera.AddComponent<FINALITY::CameraComponent>(
-            60.0f, 1280.0f / 720.0f, 0.1f, 1000.0f);
+        auto& component = camera.AddComponent<FINALITY::CameraComponent>( 60.0f, 1280.0f / 720.0f, 0.1f, 1000.0f);
         auto& transform = camera.GetComponent<FINALITY::TransformComponent>();
         transform.Position = glm::vec3(0.0f, 1.5f, 5.0f);
         transform.Rotation = glm::vec3(-15.0f, 0.0f, 0.0f);

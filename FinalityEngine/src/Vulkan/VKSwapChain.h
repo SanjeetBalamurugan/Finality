@@ -22,20 +22,60 @@ namespace FINALITY
         void Recreate(const WindowSpec& spec) override;
         void Shutdown() override;
 
-        uint32_t AcquireNextImage() override { return UINT32_MAX; }
-        void Present() override {}
+        uint32_t AcquireNextImage() override
+        {
+            return UINT32_MAX;
+        }
 
-        uint32_t GetWidth() const override { return m_Extent.width; }
-        uint32_t GetHeight() const override { return m_Extent.height; }
-        uint32_t GetImageCount() const override { return static_cast<uint32_t>(m_Images.size()); }
-        uint32_t GetCurrentImageIndex() const override { return m_ImageIndex; }
+        void Present() override
+        {
+        }
 
-        VkSwapchainKHR GetVKHandle() const { return m_SwapChain; }
-        VkRenderPass GetVKRenderPass() const { return m_RenderPass; }
-        VkFramebuffer GetVKFramebuffer(uint32_t index) const { return m_FrameBuffers[index]; }
-        VkFormat GetVKFormat() const { return m_SurfaceFormat.format; }
+        uint32_t GetWidth() const override
+        {
+            return m_Extent.width;
+        }
 
-        VkImage GetVKImage(uint32_t index) const { return m_Images[index]; }
+        uint32_t GetHeight() const override
+        {
+            return m_Extent.height;
+        }
+
+        uint32_t GetImageCount() const override
+        {
+            return static_cast<uint32_t>(m_Images.size());
+        }
+
+        uint32_t GetCurrentImageIndex() const override
+        {
+            return m_ImageIndex;
+        }
+
+        VkSwapchainKHR GetVKHandle() const
+        {
+            return m_SwapChain;
+        }
+
+        VkRenderPass GetVKRenderPass() const
+        {
+            return m_RenderPass;
+        }
+
+        VkFramebuffer GetVKFramebuffer(uint32_t index) const
+        {
+            return m_FrameBuffers[index];
+        }
+
+        VkFormat GetVKFormat() const
+        {
+            return m_SurfaceFormat.format;
+        }
+
+        VkImage GetVKImage(uint32_t index) const
+        {
+            return m_Images[index];
+        }
+
         const VkImageView& GetImageView(int idx) const;
         const VkImageView& GetDepthView() const;
 
@@ -63,7 +103,7 @@ namespace FINALITY
 
         std::vector<VkImage> m_Images;
         std::vector<VkImageView> m_ImageViews;
-        
+
         VkImage m_DepthImage = VK_NULL_HANDLE;
         VkDeviceMemory m_DepthImageMemory = VK_NULL_HANDLE;
         VkImageView m_DepthImageView = VK_NULL_HANDLE;
@@ -71,4 +111,4 @@ namespace FINALITY
         std::vector<VkFramebuffer> m_FrameBuffers;
         VkRenderPass m_RenderPass = nullptr;
     };
-}
+} // namespace FINALITY

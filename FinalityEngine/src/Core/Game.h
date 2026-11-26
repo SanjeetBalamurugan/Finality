@@ -8,12 +8,12 @@
 
 namespace FINALITY
 {
-	/** @todo TODO: Document Game class semantics, ownership and usage. */
-	class FAPI Game
-	{
-	public:
-		virtual void Init() = 0;
-		virtual void Update(float ts) = 0;
-		virtual void Destroy() = 0;
-	};
-}
+    /** @todo TODO: Document Game class semantics, ownership and usage. */
+    class FAPI Game
+    {
+    public:
+        virtual void Init() = 0;
+        virtual void Update(float ts) = 0;
+        virtual void Destroy() = 0;
+    };
+} // namespace FINALITY

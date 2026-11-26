@@ -11,24 +11,32 @@
 
 namespace FINALITY
 {
-	/** @todo TODO: Document VKImGUIRenderer class semantics, ownership and usage. */
-	class VKImGUIRenderer : public ImGUIRenderer
-	{
-	public:
-		VKImGUIRenderer(WindowSpec spec, RenderDevice* device)
-			: ImGUIRenderer(spec, device) {}
-		~VKImGUIRenderer() {};
+    /** @todo TODO: Document VKImGUIRenderer class semantics, ownership and usage. */
+    class VKImGUIRenderer : public ImGUIRenderer
+    {
+    public:
+        VKImGUIRenderer(WindowSpec spec, RenderDevice* device)
+            : ImGUIRenderer(spec, device)
+        {
+        }
 
-		void Destroy() override;
-		void Update() override;
-		void Initialize() override;
+        ~VKImGUIRenderer() {};
 
-		VkCommandBuffer PrepareCommandBuffer(int image);
-		VkDescriptorPool GetDescriptorPool() const { return m_DescriptorPool; }
-	private:
-		void CreateDescriptorPool();
+        void Destroy() override;
+        void Update() override;
+        void Initialize() override;
 
-		std::vector<VkCommandBuffer> m_CMDBufs;
-		VkDescriptorPool m_DescriptorPool = VK_NULL_HANDLE;
-	};
-}
+        VkCommandBuffer PrepareCommandBuffer(int image);
+
+        VkDescriptorPool GetDescriptorPool() const
+        {
+            return m_DescriptorPool;
+        }
+
+    private:
+        void CreateDescriptorPool();
+
+        std::vector<VkCommandBuffer> m_CMDBufs;
+        VkDescriptorPool m_DescriptorPool = VK_NULL_HANDLE;
+    };
+} // namespace FINALITY

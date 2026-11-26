@@ -35,11 +35,11 @@ namespace FINALITY
     struct ModelMaterial
     {
         std::string Name;
-        glm::vec4 Color{1};
+        glm::vec4 Color{ 1 };
         std::string Texture;
         std::string Asset;
         bool DoubleSided = false;
-        std::map<std::string,std::string> Properties;
+        std::map<std::string, std::string> Properties;
     };
 
     /** @brief One hierarchy node with a parent index, local transform and attached mesh indices. A parent of -1 identifies a root. */
@@ -47,7 +47,7 @@ namespace FINALITY
     {
         std::string Name;
         int Parent = -1;
-        glm::mat4 Transform{1};
+        glm::mat4 Transform{ 1 };
         std::vector<uint32_t> Meshes;
     };
 
@@ -59,7 +59,7 @@ namespace FINALITY
         std::vector<ModelNode> Nodes;
         std::vector<std::string> Dependencies;
         std::vector<std::string> Diagnostics;
-        glm::vec3 Minimum{0}, Maximum{0};
+        glm::vec3 Minimum{ 0 }, Maximum{ 0 };
     };
 
     /**
@@ -87,4 +87,4 @@ namespace FINALITY
         static bool SaveImportOptions(const std::string& reference, const ModelImportOptions& options, std::string& error);
         static bool ExtractMaterials(const std::string& reference, const std::filesystem::path& directory, std::string& error);
     };
-}
+} // namespace FINALITY

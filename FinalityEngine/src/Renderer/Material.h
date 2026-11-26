@@ -43,17 +43,21 @@ namespace FINALITY
 
         bool RegisterUniform(const std::string& name, uint32_t offset, uint32_t size)
         {
-            if (name.empty() || size == 0 || offset > PushConstantBytes ||
-                size > PushConstantBytes - offset)
+            if (name.empty() || size == 0 || offset > PushConstantBytes || size > PushConstantBytes - offset)
+            {
                 return false;
+            }
 
             for (const auto& [otherName, other] : m_Uniforms)
             {
                 if (otherName == name)
+                {
                     continue;
-                if (offset < other.Offset + other.Size &&
-                    other.Offset < offset + size)
+                }
+                if (offset < other.Offset + other.Size && other.Offset < offset + size)
+                {
                     return false;
+                }
             }
 
             m_Uniforms[name] = { offset, size };
@@ -96,11 +100,26 @@ namespace FINALITY
             m_MaterialDirty = true;
         }
 
-        bool IsDirty() const { return m_MaterialDirty; }
-        void ClearDirtyFlag() { m_MaterialDirty = false; }
+        bool IsDirty() const
+        {
+            return m_MaterialDirty;
+        }
 
-        const std::vector<uint8_t>& GetRawDataBuffer() const { return m_DataBuffer; }
-        std::shared_ptr<Pipeline> GetPipeline() const { return *m_Pipeline; }
+        void ClearDirtyFlag()
+        {
+            m_MaterialDirty = false;
+        }
+
+        const std::vector<uint8_t>& GetRawDataBuffer() const
+        {
+            return m_DataBuffer;
+        }
+
+        std::shared_ptr<Pipeline> GetPipeline() const
+        {
+            return *m_Pipeline;
+        }
+
         std::shared_ptr<Material> Clone() const
         {
             auto copy = std::make_shared<Material>(*m_Pipeline);
@@ -111,8 +130,16 @@ namespace FINALITY
             copy->m_MaterialDirty = true;
             return copy;
         }
-        const std::unordered_map<std::string, UniformMember>& GetUniforms() const { return m_Uniforms; }
-        std::unordered_map<std::string, std::shared_ptr<Texture>>& GetTextures() { return m_Textures; }
+
+        const std::unordered_map<std::string, UniformMember>& GetUniforms() const
+        {
+            return m_Uniforms;
+        }
+
+        std::unordered_map<std::string, std::shared_ptr<Texture>>& GetTextures()
+        {
+            return m_Textures;
+        }
 
         void SetPipeline(std::shared_ptr<Pipeline> pipeline)
         {
@@ -120,15 +147,14 @@ namespace FINALITY
             m_MaterialDirty = true;
         }
 
-
     private:
         bool WriteUniform(const std::string& name, const void* data, size_t size)
         {
             const auto it = m_Uniforms.find(name);
-            if (it == m_Uniforms.end() || it->second.Size != size ||
-                it->second.Offset > m_DataBuffer.size() ||
-                size > m_DataBuffer.size() - it->second.Offset)
+            if (it == m_Uniforms.end() || it->second.Size != size || it->second.Offset > m_DataBuffer.size() || size > m_DataBuffer.size() - it->second.Offset)
+            {
                 return false;
+            }
 
             std::memcpy(m_DataBuffer.data() + it->second.Offset, data, size);
             m_MaterialDirty = true;
@@ -138,10 +164,10 @@ namespace FINALITY
         bool ReadUniform(const std::string& name, void* data, size_t size) const
         {
             const auto it = m_Uniforms.find(name);
-            if (it == m_Uniforms.end() || it->second.Size != size ||
-                it->second.Offset > m_DataBuffer.size() ||
-                size > m_DataBuffer.size() - it->second.Offset)
+            if (it == m_Uniforms.end() || it->second.Size != size || it->second.Offset > m_DataBuffer.size() || size > m_DataBuffer.size() - it->second.Offset)
+            {
                 return false;
+            }
 
             std::memcpy(data, m_DataBuffer.data() + it->second.Offset, size);
             return true;
@@ -153,4 +179,4 @@ namespace FINALITY
         std::unordered_map<std::string, std::shared_ptr<Texture>> m_Textures;
         bool m_MaterialDirty = false;
     };
-}
+} // namespace FINALITY

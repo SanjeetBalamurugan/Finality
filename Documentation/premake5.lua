@@ -4,10 +4,18 @@ project "Documentation"
     local external = os.getenv("DOXYGEN_EXECUTABLE")
     if not external and os.host() == "windows" then
         local installed = path.join(os.getenv("ProgramFiles") or "", "doxygen/bin/doxygen.exe")
-        if os.isfile(installed) then external = installed end
+        if os.isfile(installed) then
+            external = installed
+        end
     end
     local command = external and ('"' .. external .. '"') or "doxygen"
-    files { "**.md", "**.dox", "**.css", "../Doxyfile" }
+    files
+    {
+        "**.md",
+        "**.dox",
+        "**.css",
+        "../Doxyfile"
+    }
     buildmessage "Generating Finality API documentation"
     prebuildcommands { '{MKDIR} "' .. path.join(root, 'bin/Documentation') .. '"' }
     filter "system:windows"

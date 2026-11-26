@@ -33,16 +33,16 @@ namespace FINALITY
                     uint32_t baseOffset = 64;
 
                     matComp.MaterialInstance->RegisterUniform("time",
-                        baseOffset + offsetof(LavaMaterialLayout, Time), sizeof(float));
+                                                              baseOffset + offsetof(LavaMaterialLayout, Time), sizeof(float));
 
                     matComp.MaterialInstance->RegisterUniform("speed",
-                        baseOffset + offsetof(LavaMaterialLayout, Speed), sizeof(float));
+                                                              baseOffset + offsetof(LavaMaterialLayout, Speed), sizeof(float));
 
                     matComp.MaterialInstance->RegisterUniform("scale",
-                        baseOffset + offsetof(LavaMaterialLayout, Scale), sizeof(float));
+                                                              baseOffset + offsetof(LavaMaterialLayout, Scale), sizeof(float));
 
                     matComp.MaterialInstance->RegisterUniform("glowIntensity",
-                        baseOffset + offsetof(LavaMaterialLayout, GlowIntensity), sizeof(float));
+                                                              baseOffset + offsetof(LavaMaterialLayout, GlowIntensity), sizeof(float));
 
                     matComp.MaterialInstance->SetUniform1f("speed", 1.2f);
                     matComp.MaterialInstance->SetUniform1f("scale", 4.0f);
@@ -73,4 +73,4 @@ namespace FINALITY
     private:
         float m_Clock = 0.0f;
     };
-}
+} // namespace FINALITY

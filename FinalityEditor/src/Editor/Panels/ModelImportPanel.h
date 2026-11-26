@@ -9,12 +9,14 @@
 namespace FINALITY
 {
     class ExternalTools;
+
     /** @todo TODO: Document ModelImportPanel class semantics, ownership and usage. */
     class ModelImportPanel
     {
         std::string m_Reference, m_Message;
         ModelImportOptions m_Draft;
+
     public:
         void Draw(const std::string& reference, ExternalTools& tools);
     };
-}
+} // namespace FINALITY

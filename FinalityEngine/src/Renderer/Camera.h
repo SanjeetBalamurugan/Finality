@@ -36,7 +36,10 @@ namespace FINALITY
 
         virtual ~Camera() = default;
 
-        const glm::mat4& GetProjection() const { return m_ProjectionMatrix; }
+        const glm::mat4& GetProjection() const
+        {
+            return m_ProjectionMatrix;
+        }
 
         glm::mat4 GetViewMatrix() const
         {
@@ -72,14 +75,40 @@ namespace FINALITY
             UpdateVectors();
         }
 
-        const glm::vec3& GetPosition() const { return m_Position; }
-        const glm::vec3& GetRotation() const { return m_Rotation; }
+        const glm::vec3& GetPosition() const
+        {
+            return m_Position;
+        }
 
-        const glm::vec3& GetForward() const { return m_Forward; }
-        const glm::vec3& GetRight() const { return m_Right; }
-        const glm::vec3& GetUp() const { return m_Up; }
-        void SetOcclusionCulling(bool enabled) { m_OcclusionCulling = enabled; }
-        bool GetOcclusionCulling() const { return m_OcclusionCulling; }
+        const glm::vec3& GetRotation() const
+        {
+            return m_Rotation;
+        }
+
+        const glm::vec3& GetForward() const
+        {
+            return m_Forward;
+        }
+
+        const glm::vec3& GetRight() const
+        {
+            return m_Right;
+        }
+
+        const glm::vec3& GetUp() const
+        {
+            return m_Up;
+        }
+
+        void SetOcclusionCulling(bool enabled)
+        {
+            m_OcclusionCulling = enabled;
+        }
+
+        bool GetOcclusionCulling() const
+        {
+            return m_OcclusionCulling;
+        }
 
         void SetViewportSize(float width, float height)
         {
@@ -125,4 +154,4 @@ namespace FINALITY
         glm::vec3 m_Right{ 1.0f, 0.0f, 0.0f };
         glm::vec3 m_Up{ 0.0f, 1.0f, 0.0f };
     };
-}
+} // namespace FINALITY

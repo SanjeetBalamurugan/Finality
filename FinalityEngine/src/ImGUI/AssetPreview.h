@@ -22,4 +22,4 @@ namespace FINALITY
         static void Clear();
         static void Flush();
     };
-}
+} // namespace FINALITY

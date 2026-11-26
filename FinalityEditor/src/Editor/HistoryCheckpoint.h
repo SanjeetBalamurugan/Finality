@@ -12,16 +12,29 @@ namespace FINALITY
     {
         bool m_Requested = true;
         bool m_Interacting = false;
+
     public:
-        void Request() { m_Requested = true; }
-        void Completed() { m_Requested = false; }
+        void Request()
+        {
+            m_Requested = true;
+        }
+
+        void Completed()
+        {
+            m_Requested = false;
+        }
+
         bool Update(bool interacting, bool actionCompleted = false)
         {
             m_Requested |= actionCompleted;
-            if (interacting) { m_Interacting = true; return false; }
+            if (interacting)
+            {
+                m_Interacting = true;
+                return false;
+            }
             const bool checkpoint = m_Requested || m_Interacting;
             m_Requested = m_Interacting = false;
             return checkpoint;
         }
     };
-}
+} // namespace FINALITY

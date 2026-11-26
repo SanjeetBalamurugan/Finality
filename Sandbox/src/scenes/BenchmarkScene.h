@@ -19,15 +19,9 @@ public:
         FINALITY::Scene::OnInit();
 
         auto cameraEntity = CreateEntity("Benchmark Camera");
-        auto& camComp = cameraEntity.AddComponent<FINALITY::CameraComponent>(
-            45.0f,
-            1280.0f / 720.0f,
-            0.01f,
-            500.0f
-        );
+        auto& camComp = cameraEntity.AddComponent<FINALITY::CameraComponent>( 45.0f, 1280.0f / 720.0f, 0.01f, 500.0f);
 
-        auto& cameraTransform =
-            cameraEntity.GetComponent<FINALITY::TransformComponent>();
+        auto& cameraTransform = cameraEntity.GetComponent<FINALITY::TransformComponent>();
 
         cameraTransform.Position = glm::vec3(0.0f, 5.0f, 15.0f);
         cameraTransform.Rotation = glm::vec3(-10.0f, 0.0f, 0.0f);
@@ -37,30 +31,30 @@ public:
         cameraEntity.AddScript<FINALITY::CameraMovementScript>();
 
         std::vector<FINALITY::Vertex> cubeVertices = {
-            {{-0.3f, -0.3f,  0.3f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-            {{ 0.3f, -0.3f,  0.3f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-            {{ 0.3f,  0.3f,  0.3f}, {1.0f, 1.0f, 1.0f}, {1.0f, 0.0f}},
-            {{-0.3f,  0.3f,  0.3f}, {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}},
-            {{ 0.3f, -0.3f, -0.3f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-            {{-0.3f, -0.3f, -0.3f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-            {{-0.3f,  0.3f, -0.3f}, {1.0f, 1.0f, 1.0f}, {1.0f, 0.0f}},
-            {{ 0.3f,  0.3f, -0.3f}, {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}},
-            {{-0.3f,  0.3f,  0.3f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-            {{ 0.3f,  0.3f,  0.3f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-            {{ 0.3f,  0.3f, -0.3f}, {1.0f, 1.0f, 1.0f}, {1.0f, 0.0f}},
-            {{-0.3f,  0.3f, -0.3f}, {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}},
-            {{-0.3f, -0.3f, -0.3f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-            {{ 0.3f, -0.3f, -0.3f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-            {{ 0.3f, -0.3f,  0.3f}, {1.0f, 1.0f, 1.0f}, {1.0f, 0.0f}},
-            {{-0.3f, -0.3f,  0.3f}, {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}},
-            {{ 0.3f, -0.3f,  0.3f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-            {{ 0.3f, -0.3f, -0.3f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-            {{ 0.3f,  0.3f, -0.3f}, {1.0f, 1.0f, 1.0f}, {1.0f, 0.0f}},
-            {{ 0.3f,  0.3f,  0.3f}, {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}},
-            {{-0.3f, -0.3f, -0.3f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-            {{-0.3f, -0.3f,  0.3f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-            {{-0.3f,  0.3f,  0.3f}, {1.0f, 1.0f, 1.0f}, {1.0f, 0.0f}},
-            {{-0.3f,  0.3f, -0.3f}, {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}}
+            { { -0.3f, -0.3f, 0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
+            { { 0.3f, -0.3f, 0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
+            { { 0.3f, 0.3f, 0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
+            { { -0.3f, 0.3f, 0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
+            { { 0.3f, -0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
+            { { -0.3f, -0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
+            { { -0.3f, 0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
+            { { 0.3f, 0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
+            { { -0.3f, 0.3f, 0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
+            { { 0.3f, 0.3f, 0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
+            { { 0.3f, 0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
+            { { -0.3f, 0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
+            { { -0.3f, -0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
+            { { 0.3f, -0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
+            { { 0.3f, -0.3f, 0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
+            { { -0.3f, -0.3f, 0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
+            { { 0.3f, -0.3f, 0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
+            { { 0.3f, -0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
+            { { 0.3f, 0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
+            { { 0.3f, 0.3f, 0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
+            { { -0.3f, -0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
+            { { -0.3f, -0.3f, 0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
+            { { -0.3f, 0.3f, 0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
+            { { -0.3f, 0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } }
         };
 
         std::vector<uint32_t> cubeIndices = {
@@ -78,17 +72,9 @@ public:
         FINALITY::RenderDevice* device =
             FINALITY::Renderer::GetDevice();
 
-        auto vertexShader =
-            FINALITY::AssetManager::CreateAsset<FINALITY::Shader>(
-                "assets/shaders/shader.vert",
-                device
-            );
+        auto vertexShader = FINALITY::AssetManager::CreateAsset<FINALITY::Shader>( "assets/shaders/shader.vert", device);
 
-        auto fragmentShader =
-            FINALITY::AssetManager::CreateAsset<FINALITY::Shader>(
-                "assets/shaders/shader.frag",
-                device
-            );
+        auto fragmentShader = FINALITY::AssetManager::CreateAsset<FINALITY::Shader>( "assets/shaders/shader.frag", device);
 
         FINALITY::PipelineConfig cubeConfig{};
         cubeConfig.VertexShader = std::move(vertexShader);
@@ -98,13 +84,9 @@ public:
         std::shared_ptr<FINALITY::Pipeline> materialPipeline =
             FINALITY::Pipeline::Create(cubeConfig);
 
-        auto sharedMaterial =
-            std::make_shared<FINALITY::Material>(materialPipeline);
+        auto sharedMaterial = std::make_shared<FINALITY::Material>(materialPipeline);
 
-        auto pngTexture =
-            FINALITY::AssetManager::CreateAsset<FINALITY::Texture>(
-                "assets/textures/test.png"
-            );
+        auto pngTexture = FINALITY::AssetManager::CreateAsset<FINALITY::Texture>( "assets/textures/test.png");
 
         sharedMaterial->SetTexture("textureSampler", pngTexture);
 
@@ -123,7 +105,9 @@ public:
         m_F3PressedLastFrame = false;
 
         for (float& frameTime : m_FrameTimeHistory)
+        {
             frameTime = 0.0f;
+        }
 
         for (int x = 0; x < GRID_X; x++)
         {
@@ -131,21 +115,14 @@ public:
             {
                 for (int z = 0; z < GRID_Z; z++)
                 {
-                    auto entity = CreateEntity(
-                        "Cube_" +
-                        std::to_string(x) + "_" +
-                        std::to_string(y) + "_" +
-                        std::to_string(z)
-                    );
+                    auto entity = CreateEntity( "Cube_" + std::to_string(x) + "_" + std::to_string(y) + "_" + std::to_string(z));
 
-                    auto& transform =
-                        entity.GetComponent<FINALITY::TransformComponent>();
+                    auto& transform = entity.GetComponent<FINALITY::TransformComponent>();
 
                     transform.Position = glm::vec3(
                         (x - GRID_X * 0.5f) * SPACING,
                         (y - GRID_Y * 0.5f) * SPACING,
-                        (z - GRID_Z * 0.5f) * SPACING
-                    );
+                        (z - GRID_Z * 0.5f) * SPACING);
 
                     transform.Scale = glm::vec3(1.0f);
 
@@ -169,8 +146,7 @@ public:
             0.05f,
             0.02f,
             0.02f,
-            1.0f
-        );
+            1.0f);
 
         if (FINALITY::Input::IsKeyUp(FINALITY::Key::L))
         {
@@ -183,7 +159,9 @@ public:
             FINALITY::Input::IsKeyDown(FINALITY::Key::F3);
 
         if (f3Down && !m_F3PressedLastFrame)
+        {
             m_ShowPerformanceOverlay = !m_ShowPerformanceOverlay;
+        }
 
         m_F3PressedLastFrame = f3Down;
 
@@ -196,13 +174,12 @@ public:
         m_HistoryOffset =
             (m_HistoryOffset + 1) % 120;
 
-        const auto now =
-            std::chrono::steady_clock::now();
+        const auto now = std::chrono::steady_clock::now();
 
         const float elapsed =
             std::chrono::duration<float>(
-                now - m_LastLogTime
-            ).count();
+                now - m_LastLogTime)
+                .count();
 
         if (elapsed >= 1.0f)
         {
@@ -214,7 +191,7 @@ public:
 
                 m_UiAvgFrameTimeMs =
                     (m_AccumulatedTime /
-                        static_cast<float>(m_FrameCount)) *
+                     static_cast<float>(m_FrameCount)) *
                     1000.0f;
             }
 
@@ -224,7 +201,9 @@ public:
         }
 
         if (!m_ShowPerformanceOverlay)
+        {
             return;
+        }
 
         FINALITY::PanelFlags overlayFlags =
             FINALITY::PanelFlags_NoDecoration |
@@ -237,16 +216,14 @@ public:
         FINALITY::ImGUIPanel::SetNextWindowPos(
             glm::vec2(10.0f, 10.0f),
             FINALITY::PanelCondition_Always,
-            glm::vec2(0.0f, 0.0f)
-        );
+            glm::vec2(0.0f, 0.0f));
 
         FINALITY::ImGUIPanel::SetNextWindowBgAlpha(0.80f);
 
         FINALITY::ImGUIPanel perfPanel(
             "Performance Overlay",
             nullptr,
-            overlayFlags
-        );
+            overlayFlags);
 
         perfPanel.Text("System Benchmarks");
         perfPanel.Text("FPS: %.1f", m_UiFps);
@@ -256,18 +233,15 @@ public:
 
         perfPanel.Text(
             "Frame Time: %.2f ms",
-            m_FrameTimeHistory[latestIndex]
-        );
+            m_FrameTimeHistory[latestIndex]);
 
         perfPanel.Text(
             "Avg (1s): %.2f ms",
-            m_UiAvgFrameTimeMs
-        );
+            m_UiAvgFrameTimeMs);
 
         perfPanel.Text(
             "GPU main render: %.2f ms",
-			static_cast<float>(FINALITY::Renderer::GetDevice()->GetGPUTimeMS())
-        );
+            static_cast<float>(FINALITY::Renderer::GetDevice()->GetGPUTimeMS()));
 
         perfPanel.PlotLines(
             "##TimeGraph",
@@ -277,8 +251,7 @@ public:
             "Frame History (ms)",
             0.0f,
             33.3f,
-            glm::vec2(200.0f, 60.0f)
-        );
+            glm::vec2(200.0f, 60.0f));
 
         perfPanel.Text("Renderer Statistics");
 
@@ -290,26 +263,23 @@ public:
 
         const float cullPercent =
             m_TotalEntities > 0
-            ? 100.0f *
-            static_cast<float>(currentCulled) /
-            static_cast<float>(m_TotalEntities)
-            : 0.0f;
+                ? 100.0f *
+                      static_cast<float>(currentCulled) /
+                      static_cast<float>(m_TotalEntities)
+                : 0.0f;
 
         perfPanel.Text(
             "Total Entities: %u",
-            m_TotalEntities
-        );
+            m_TotalEntities);
 
         perfPanel.Text(
             "Visible Count: %u",
-            currentVisible
-        );
+            currentVisible);
 
         perfPanel.Text(
             "Culled Count: %u (%.1f%%)",
             currentCulled,
-            cullPercent
-        );
+            cullPercent);
     }
 
     void OnDestroy() override

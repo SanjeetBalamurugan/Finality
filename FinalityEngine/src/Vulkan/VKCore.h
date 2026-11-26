@@ -11,8 +11,9 @@
 
 #include <stdio.h>
 
-#define CHECK_VK_RESULT(res, msg) \
-	if (res != VK_SUCCESS) { \
-		FI_CORE_ERROR("On {}:{} - {}, {}", __FILE__, __LINE__, msg, static_cast<int>(res)); \
-		std::exit(EXIT_FAILURE); \
-	}
+#define CHECK_VK_RESULT(res, msg)                                                           \
+    if (res != VK_SUCCESS)                                                                  \
+    {                                                                                       \
+        FI_CORE_ERROR("On {}:{} - {}, {}", __FILE__, __LINE__, msg, static_cast<int>(res)); \
+        std::exit(EXIT_FAILURE);                                                            \
+    }

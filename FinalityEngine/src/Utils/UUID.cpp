@@ -16,4 +16,4 @@ namespace FINALITY
         : m_UUID(uuid)
     {
     }
-}
+} // namespace FINALITY

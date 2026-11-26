@@ -16,8 +16,13 @@ namespace FINALITY
     {
     public:
         CameraMovementScript() = default;
+
         void Configure(float speed, float sprint, float sensitivity)
-        { m_MoveSpeed = speed; m_SprintMultiplier = sprint; m_LookSensitivity = sensitivity; }
+        {
+            m_MoveSpeed = speed;
+            m_SprintMultiplier = sprint;
+            m_LookSensitivity = sensitivity;
+        }
 
     private:
         void Start() override
@@ -34,21 +39,32 @@ namespace FINALITY
         void Update(float dt) override
         {
             if (!HasComponent<CameraComponent>() || !HasComponent<TransformComponent>())
+            {
                 return;
+            }
 
             auto& camera = GetComponent<CameraComponent>();
             auto& transform = GetComponent<TransformComponent>();
 
             if (!camera.CameraInstance)
+            {
                 return;
+            }
 
             if (Mouse::IsButtonDown(MouseButton::Right))
+            {
                 RenderCommand::SetCursorMode(true);
+            }
 
             if (Mouse::IsButtonUp(MouseButton::Right))
+            {
                 RenderCommand::SetCursorMode(false);
+            }
 
-            if (!Mouse::IsButtonHeld(MouseButton::Right)) return;
+            if (!Mouse::IsButtonHeld(MouseButton::Right))
+            {
+                return;
+            }
 
             if (Mouse::IsButtonHeld(MouseButton::Right))
             {
@@ -58,9 +74,13 @@ namespace FINALITY
                 m_Rotation.x = glm::clamp(m_Rotation.x, -89.0f, 89.0f);
 
                 if (m_Rotation.y > 360.0f)
+                {
                     m_Rotation.y -= 360.0f;
+                }
                 else if (m_Rotation.y < 0.0f)
+                {
                     m_Rotation.y += 360.0f;
+                }
             }
 
             transform.Rotation = m_Rotation;
@@ -81,27 +101,41 @@ namespace FINALITY
             float moveSpeed = m_MoveSpeed;
 
             if (Input::IsKeyHeld(Key::LeftShift))
+            {
                 moveSpeed *= m_SprintMultiplier;
+            }
 
             moveSpeed *= dt;
 
             if (Input::IsKeyHeld(Key::W))
+            {
                 transform.Position += forward * moveSpeed;
+            }
 
             if (Input::IsKeyHeld(Key::S))
+            {
                 transform.Position -= forward * moveSpeed;
+            }
 
             if (Input::IsKeyHeld(Key::A))
+            {
                 transform.Position -= right * moveSpeed;
+            }
 
             if (Input::IsKeyHeld(Key::D))
+            {
                 transform.Position += right * moveSpeed;
+            }
 
             if (Input::IsKeyHeld(Key::E))
+            {
                 transform.Position += worldUp * moveSpeed;
+            }
 
             if (Input::IsKeyHeld(Key::Q))
+            {
                 transform.Position -= worldUp * moveSpeed;
+            }
 
             camera.CameraInstance->SetPosition(transform.Position);
             camera.CameraInstance->SetRotation(transform.Rotation);
@@ -119,4 +153,4 @@ namespace FINALITY
         float m_SprintMultiplier = 3.0f;
         float m_LookSensitivity = 0.12f;
     };
-}
+} // namespace FINALITY

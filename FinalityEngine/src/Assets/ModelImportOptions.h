@@ -22,4 +22,4 @@ namespace FINALITY
         bool ImportMaterials = true;
         bool operator==(const ModelImportOptions&) const = default;
     };
-}
+} // namespace FINALITY

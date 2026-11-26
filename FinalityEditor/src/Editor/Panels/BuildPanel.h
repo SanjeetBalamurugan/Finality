@@ -7,32 +7,42 @@
 #include <Core/Process.h>
 #include <Finality.h>
 #include <future>
+#include <map>
+
 namespace FINALITY
 {
-/** @todo TODO: Document BuildPanel class semantics, ownership and usage. */
-class BuildPanel
-{
-    /** @todo TODO: Document Entry struct semantics, ownership and usage. */
-    struct Entry
+    /** @todo TODO: Document BuildPanel class semantics, ownership and usage. */
+    class BuildPanel
     {
-        std::string Path;
-        bool Enabled = true;
-    };
-    std::filesystem::path Root, Output, Launch;
-    std::vector<Entry> Scenes;
-    std::string Company = "DefaultCompany", Product = "Finality Game", Version = "0.1.0", Status;
-    int Width = 1280, Height = 720;
-    bool Fullscreen = false, CopyPDB = false, Run = false;
-    std::future<ProcessResult> Job;
-    void Load(const Project &project);
-    void Save();
+        /** @todo TODO: Document Entry struct semantics, ownership and usage. */
+        struct Entry
+        {
+            std::string Path;
+            bool Enabled = true;
+        };
 
-  public:
-    bool Visible = false, OpenPlayerSettings = false;
-    bool IsBuilding() const { return Job.valid(); }
-    void Draw(Project &project, const std::filesystem::path &engineAssets, const std::string &scene,
-              bool canBuild);
-    void PlayerProperties(const Project &project);
-    void Start(Project &project, const std::filesystem::path &engineAssets, bool run);
-};
-}
+        std::filesystem::path Root, Output, Launch;
+        std::vector<Entry> Scenes;
+        std::string Company = "DefaultCompany", Product = "Finality Game", Version = "0.1.0", Status;
+        std::string DefaultIcon;
+        std::map<int, std::string> Icons;
+        int Width = 1280, Height = 720;
+        bool Fullscreen = false, CopyPDB = false, Run = false;
+        std::future<ProcessResult> Job;
+        void Load(const Project& project);
+        void Save();
+
+    public:
+        bool Visible = false, OpenPlayerSettings = false;
+
+        bool IsBuilding() const
+        {
+            return Job.valid();
+        }
+
+        void Draw(Project& project, const std::filesystem::path& engineAssets, const std::string& scene,
+                  bool canBuild);
+        void PlayerProperties(const Project& project);
+        void Start(Project& project, const std::filesystem::path& engineAssets, bool run);
+    };
+} // namespace FINALITY

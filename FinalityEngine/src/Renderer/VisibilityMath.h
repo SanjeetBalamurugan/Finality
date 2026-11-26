@@ -21,9 +21,9 @@ namespace FINALITY
                 column += std::abs(transform[i][j]);
                 row += std::abs(transform[j][i]);
             }
-            oneNorm = std::max(oneNorm,column);
-            infinityNorm = std::max(infinityNorm,row);
+            oneNorm = std::max(oneNorm, column);
+            infinityNorm = std::max(infinityNorm, row);
         }
         return std::sqrt(oneNorm * infinityNorm);
     }
-}
+} // namespace FINALITY

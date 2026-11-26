@@ -30,4 +30,4 @@ namespace FINALITY
         virtual ~Asset() = default;
         virtual AssetType GetType() const = 0;
     };
-}
+} // namespace FINALITY
