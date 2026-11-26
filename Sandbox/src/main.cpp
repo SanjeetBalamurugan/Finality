@@ -12,7 +12,8 @@ public:
         FINALITY::SceneManager::GetInstance().SetScene(std::move(next));
         FINALITY::SceneManager::GetInstance().ChangeScene();
     };
-    void Update(float ts) override 
+
+    void Update(float ts) override
     {
         if (FINALITY::Input::IsKeyDown(FINALITY::Key::Escape))
         {
@@ -21,18 +22,19 @@ public:
             FI_CLIENT_INFO("Changed Cursor Mode");
         }
     };
+
     void Destroy() override {};
 
 private:
     bool m_Hidden = false;
 };
 
-int main(int argc, char const *argv[])
+int main(int argc, char const* argv[])
 {
     FINALITY::RendererAPI api = FINALITY::RendererAPI::VULKAN;
     FINALITY::WindowSpec spec = { .title = "Hello", .width = 1280, .height = 720, .isFullscreen = false };
     FINALITY::Application app;
-    
+
     std::unique_ptr<SandboxGame> game = std::make_unique<SandboxGame>();
 
     app.Initialize(api, spec, std::move(game));

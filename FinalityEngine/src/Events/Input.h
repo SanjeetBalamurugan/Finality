@@ -26,4 +26,4 @@ namespace FINALITY
         static bool s_CurrentFrameStates[512];
         static bool s_PreviousFrameStates[512];
     };
-}
+} // namespace FINALITY

@@ -9,41 +9,48 @@
 
 namespace FINALITY
 {
-	/** @todo TODO: Document VKQueue class semantics, ownership and usage. */
-	class VKQueue
-	{
-	private:
-		void CreateSyncObjects(uint32_t swapchainImageCount);
-	public:
-		void Initialize(VkDevice device, VkSwapchainKHR swapchain, uint32_t swapchainImageCount, uint32_t queueFamily, uint32_t queueIndex);
-		void ShutDown();
+    /** @todo TODO: Document VKQueue class semantics, ownership and usage. */
+    class VKQueue
+    {
+    private:
+        void CreateSyncObjects(uint32_t swapchainImageCount);
 
-		void UpdateSwapChain(VkSwapchainKHR newSwapchain) { m_SwapChain = newSwapchain; }
+    public:
+        void Initialize(VkDevice device, VkSwapchainKHR swapchain, uint32_t swapchainImageCount, uint32_t queueFamily, uint32_t queueIndex);
+        void ShutDown();
 
-		void SubmitSync(VkCommandBuffer cmdBuf);
-		void SubmitASync(VkCommandBuffer cmdBuf, uint32_t imageIndex, bool isFirst, bool isLast);
+        void UpdateSwapChain(VkSwapchainKHR newSwapchain)
+        {
+            m_SwapChain = newSwapchain;
+        }
+
+        void SubmitSync(VkCommandBuffer cmdBuf);
+        void SubmitASync(VkCommandBuffer cmdBuf, uint32_t imageIndex, bool isFirst, bool isLast);
         void SubmitFrame(const std::vector<VkCommandBuffer>& commands, uint32_t imageIndex);
 
-		uint32_t AcquireNextImage(bool& outNeedsRecreate);
-		bool Present(uint32_t imageIndex);
-		void WaitIdle();
+        uint32_t AcquireNextImage(bool& outNeedsRecreate);
+        bool Present(uint32_t imageIndex);
+        void WaitIdle();
 
-		VkQueue GetQueue() { return m_Queue; }
+        VkQueue GetQueue()
+        {
+            return m_Queue;
+        }
 
-	private:
-		VkDevice m_Device = nullptr;
-		VkSwapchainKHR m_SwapChain = nullptr;
-		VkQueue m_Queue = nullptr;
+    private:
+        VkDevice m_Device = nullptr;
+        VkSwapchainKHR m_SwapChain = nullptr;
+        VkQueue m_Queue = nullptr;
 
-		static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
-		uint32_t m_CurrentFrame = 0;
+        static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
+        uint32_t m_CurrentFrame = 0;
 
-		// Per frame-in-flight (size MAX_FRAMES_IN_FLIGHT)
-		std::vector<VkSemaphore> m_ImageAvailableSemaphores;
-		std::vector<VkFence> m_InFlightFences;
+        // Per frame-in-flight (size MAX_FRAMES_IN_FLIGHT)
+        std::vector<VkSemaphore> m_ImageAvailableSemaphores;
+        std::vector<VkFence> m_InFlightFences;
 
-		std::vector<VkSemaphore> m_RenderFinishedSemaphores;
+        std::vector<VkSemaphore> m_RenderFinishedSemaphores;
 
-		std::vector<VkFence> m_ImagesInFlight;
-	};
-}
+        std::vector<VkFence> m_ImagesInFlight;
+    };
+} // namespace FINALITY

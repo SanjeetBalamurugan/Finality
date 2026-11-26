@@ -3,7 +3,12 @@ project "FIScriptReflect"
     language "C++"
     files { "src/**.cpp", "src/**.h" }
     local llvm = os.getenv("LLVM_ROOT") or path.join(os.getenv("ProgramFiles") or "/usr/local", "LLVM")
-    includedirs { "../vendor/llvm-project/clang/include", "../vendor/llvm-project/llvm/include", path.join(llvm, "include") }
+    includedirs
+    {
+        "../vendor/llvm-project/clang/include",
+        "../vendor/llvm-project/llvm/include",
+        path.join(llvm, "include")
+    }
     local libraryDirectory = path.join(llvm, "lib")
     local runtimeDirectory = path.join(llvm, "bin")
     libdirs { libraryDirectory }

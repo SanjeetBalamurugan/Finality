@@ -5,19 +5,22 @@
  */
 #pragma once
 
-namespace FINALITY {
+namespace FINALITY
+{
 
     /** @todo TODO: Document KeyCode alias semantics, ownership and usage. */
     using KeyCode = unsigned int;
 
-    namespace Key {
-        enum : KeyCode {
+    namespace Key
+    {
+        enum : KeyCode
+        {
             Space = 32,
             Apostrophe = 39, /* ' */
-            Comma = 44, /* , */
-            Minus = 45, /* - */
-            Period = 46, /* . */
-            Slash = 47, /* / */
+            Comma = 44,      /* , */
+            Minus = 45,      /* - */
+            Period = 46,     /* . */
+            Slash = 47,      /* / */
 
             D0 = 48, /* 0 */
             D1 = 49, /* 1 */
@@ -31,7 +34,7 @@ namespace FINALITY {
             D9 = 57, /* 9 */
 
             Semicolon = 59, /* ; */
-            Equal = 61, /* = */
+            Equal = 61,     /* = */
 
             A = 65,
             B = 66,
@@ -61,11 +64,11 @@ namespace FINALITY {
             Z = 90,
 
             LeftBracket = 91,  /* [ */
-            Backslash = 92,  /* \ */
-            RightBracket = 93,  /* ] */
+            Backslash = 92,    /* \ */
+            RightBracket = 93, /* ] */
             GraveAccent = 96,  /* ` */
-            World1 = 161, /* non-US #1 */
-            World2 = 162, /* non-US #2 */
+            World1 = 161,      /* non-US #1 */
+            World2 = 162,      /* non-US #2 */
 
             // Function keys
             Escape = 256,
@@ -142,5 +145,5 @@ namespace FINALITY {
             RightSuper = 347,
             Menu = 348
         };
-    }
-}
+    } // namespace Key
+} // namespace FINALITY

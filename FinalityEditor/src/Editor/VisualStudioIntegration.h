@@ -5,6 +5,7 @@
  */
 #pragma once
 #include <filesystem>
+
 namespace FINALITY
 {
     bool OpenInRunningSolution(const std::filesystem::path& solution, const std::filesystem::path& source);

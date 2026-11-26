@@ -54,22 +54,54 @@ namespace FINALITY
         static void PushEntity(Entity entity);
         static void PushEntity(Entity entity, const glm::mat4& worldTransform);
         static void ConfigureLODGroups(const Scene& scene);
-        static RenderDevice* GetDevice() { return s_Device; }
 
-        static void SetActiveCamera(Camera* camera) { s_ActiveCamera = camera; }
-        static Camera* GetActiveCamera() { return s_ActiveCamera; }
+        static RenderDevice* GetDevice()
+        {
+            return s_Device;
+        }
+
+        static void SetActiveCamera(Camera* camera)
+        {
+            s_ActiveCamera = camera;
+        }
+
+        static Camera* GetActiveCamera()
+        {
+            return s_ActiveCamera;
+        }
 
         static void SetPostProcessPipeline(std::shared_ptr<Pipeline> pipeline);
         static std::shared_ptr<Pipeline> CreatePostProcessPipeline(const PipelineConfig& config);
-        
-        static uint32_t GetSubmittedCount() { return (uint32_t)s_RenderQueue.size(); }
-        static uint32_t GetCulledCount() { return s_CulledCount; }
-        static const std::vector<RenderPacket>& GetRenderQueue() { return s_RenderQueue; }
 
-        static void SetDirectRenderingEnabled(bool enabled) { s_DirectRenderingEnabled = enabled; }
-        static bool IsDirectRenderingEnabled() { return s_DirectRenderingEnabled; }
+        static uint32_t GetSubmittedCount()
+        {
+            return (uint32_t)s_RenderQueue.size();
+        }
 
-        static void SetFrustumCullingEnabled(bool enabled) { s_FrustumCullingEnabled = enabled; }
+        static uint32_t GetCulledCount()
+        {
+            return s_CulledCount;
+        }
+
+        static const std::vector<RenderPacket>& GetRenderQueue()
+        {
+            return s_RenderQueue;
+        }
+
+        static void SetDirectRenderingEnabled(bool enabled)
+        {
+            s_DirectRenderingEnabled = enabled;
+        }
+
+        static bool IsDirectRenderingEnabled()
+        {
+            return s_DirectRenderingEnabled;
+        }
+
+        static void SetFrustumCullingEnabled(bool enabled)
+        {
+            s_FrustumCullingEnabled = enabled;
+        }
 
     private:
         static RenderDevice* s_Device;
@@ -85,6 +117,10 @@ namespace FINALITY
 
     protected:
         static bool TryGetCullingFrustum(const Frustum*& outFrustum);
-        static bool IsFrustumCullingEnabled() { return s_FrustumCullingEnabled; }
+
+        static bool IsFrustumCullingEnabled()
+        {
+            return s_FrustumCullingEnabled;
+        }
     };
-}
+} // namespace FINALITY

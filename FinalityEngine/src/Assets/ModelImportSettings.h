@@ -12,4 +12,4 @@ namespace FINALITY::ModelImportSettings
 {
     ModelImportOptions Read(const std::filesystem::path& model, const ModelImportOptions& defaults);
     bool Save(const std::filesystem::path& model, const ModelImportOptions& options, std::string& error);
-}
+} // namespace FINALITY::ModelImportSettings

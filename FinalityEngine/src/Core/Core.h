@@ -10,23 +10,23 @@
 #define ENGINE_VERSION_PATCH 0
 
 #ifdef _WIN32
-    #ifdef FINALITY_BUILD_DLL
-        #define FAPI __declspec(dllexport)
-    #else
-        #define FAPI __declspec(dllimport)
-    #endif
+#ifdef FINALITY_BUILD_DLL
+#define FAPI __declspec(dllexport)
 #else
-    #ifdef FINALITY_BUILD_DLL
-        #define FAPI __attribute__((visibility("default")))
-    #else
-        #define FAPI
-    #endif
+#define FAPI __declspec(dllimport)
+#endif
+#else
+#ifdef FINALITY_BUILD_DLL
+#define FAPI __attribute__((visibility("default")))
+#else
+#define FAPI
+#endif
 #endif
 
 #ifdef FINALITY_INCLUDE_VULKAN
-    #define GLFW_INCLUDE_VULKAN
+#define GLFW_INCLUDE_VULKAN
 #endif // FINALITY_INCLUDE_VULKAN
 
 #ifdef _WIN32
-    #define GLFW_EXPOSE_NATIVE_WIN32
+#define GLFW_EXPOSE_NATIVE_WIN32
 #endif

@@ -11,9 +11,15 @@ namespace FINALITY
 {
     inline bool SavePrefab(Scene& source, entt::entity root, const std::filesystem::path& path)
     {
-        if (!source.GetRegistry().valid(root)) return false;
+        if (!source.GetRegistry().valid(root))
+        {
+            return false;
+        }
         EmptyScene copy;
-        if (!copy.InstantiateHierarchy(source, root).IsValid()) return false;
+        if (!copy.InstantiateHierarchy(source, root).IsValid())
+        {
+            return false;
+        }
         std::filesystem::create_directories(path.parent_path());
         SceneSerializer(copy, path.stem().string()).Serialize(path.string());
         AssetRegistry::Scan();
@@ -23,10 +29,17 @@ namespace FINALITY
     inline Entity InstantiatePrefab(Scene& destination, const std::filesystem::path& path)
     {
         EmptyScene source;
-        if (!SceneSerializer(source).DeSerialize(path.string())) return {};
+        if (!SceneSerializer(source).DeSerialize(path.string()))
+        {
+            return {};
+        }
         for (auto entity : source.GetRegistry().view<RelationshipComponent>())
+        {
             if (source.GetRegistry().get<RelationshipComponent>(entity).Parent == entt::null)
+            {
                 return destination.InstantiateHierarchy(source, entity);
+            }
+        }
         return {};
     }
-}
+} // namespace FINALITY

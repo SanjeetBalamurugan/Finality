@@ -17,7 +17,7 @@ namespace FINALITY
         float CameraSpeed = 4.0f;
         float CameraSprint = 3.0f;
         float CameraSensitivity = 0.12f;
-        glm::vec4 SceneBackground{0.075f,0.09f,0.11f,1};
+        glm::vec4 SceneBackground{ 0.075f, 0.09f, 0.11f, 1 };
         bool Grid = true;
         float GridSpacing = 1.0f;
         float GridFadeDistance = 180.0f;
@@ -31,4 +31,4 @@ namespace FINALITY
         std::string Theme = "Dark01";
         ModelImportOptions Models;
     };
-}
+} // namespace FINALITY

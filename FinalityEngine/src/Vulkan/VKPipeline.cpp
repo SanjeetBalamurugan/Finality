@@ -10,9 +10,12 @@ namespace FINALITY
     {
         switch (mode)
         {
-        case CullMode::None:  return VK_CULL_MODE_NONE;
-        case CullMode::Back:  return VK_CULL_MODE_BACK_BIT;
-        case CullMode::Front: return VK_CULL_MODE_FRONT_BIT;
+        case CullMode::None:
+            return VK_CULL_MODE_NONE;
+        case CullMode::Back:
+            return VK_CULL_MODE_BACK_BIT;
+        case CullMode::Front:
+            return VK_CULL_MODE_FRONT_BIT;
         }
         return VK_CULL_MODE_BACK_BIT;
     }
@@ -27,7 +30,8 @@ namespace FINALITY
         auto vertShader = static_cast<VKShader*>(config.VertexShader.get());
         auto fragShader = static_cast<VKShader*>(config.FragmentShader.get());
 
-        if (!vertShader || !fragShader || !vertShader->GetVkModule() || !fragShader->GetVkModule()) {
+        if (!vertShader || !fragShader || !vertShader->GetVkModule() || !fragShader->GetVkModule())
+        {
             throw std::runtime_error("Failed to create graphics pipeline: Shader modules are invalid!");
         }
 
@@ -114,7 +118,8 @@ namespace FINALITY
         pipelineLayoutInfo.pushConstantRangeCount = 1;
         pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
-        if (vkCreatePipelineLayout(m_Device, &pipelineLayoutInfo, nullptr, &m_PipelineLayout) != VK_SUCCESS) {
+        if (vkCreatePipelineLayout(m_Device, &pipelineLayoutInfo, nullptr, &m_PipelineLayout) != VK_SUCCESS)
+        {
             throw std::runtime_error("Failed to create pipeline layout!");
         }
 
@@ -144,7 +149,8 @@ namespace FINALITY
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex = -1;
 
-        if (vkCreateGraphicsPipelines(m_Device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_GraphicsPipeline) != VK_SUCCESS) {
+        if (vkCreateGraphicsPipelines(m_Device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_GraphicsPipeline) != VK_SUCCESS)
+        {
             throw std::runtime_error("Failed to create graphics pipeline!");
         }
     }
@@ -155,7 +161,8 @@ namespace FINALITY
         auto vertShader = static_cast<VKShader*>(config.VertexShader.get());
         auto fragShader = static_cast<VKShader*>(config.FragmentShader.get());
 
-        if (!vertShader || !fragShader || !vertShader->GetVkModule() || !fragShader->GetVkModule()) {
+        if (!vertShader || !fragShader || !vertShader->GetVkModule() || !fragShader->GetVkModule())
+        {
             throw std::runtime_error("Failed to create post-process pipeline: Shader modules are invalid!");
         }
 
@@ -232,7 +239,8 @@ namespace FINALITY
         pipelineLayoutInfo.pushConstantRangeCount = 0;
         pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
-        if (vkCreatePipelineLayout(m_Device, &pipelineLayoutInfo, nullptr, &m_PipelineLayout) != VK_SUCCESS) {
+        if (vkCreatePipelineLayout(m_Device, &pipelineLayoutInfo, nullptr, &m_PipelineLayout) != VK_SUCCESS)
+        {
             throw std::runtime_error("Failed to create post-process pipeline layout!");
         }
 
@@ -262,7 +270,8 @@ namespace FINALITY
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex = -1;
 
-        if (vkCreateGraphicsPipelines(m_Device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_GraphicsPipeline) != VK_SUCCESS) {
+        if (vkCreateGraphicsPipelines(m_Device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_GraphicsPipeline) != VK_SUCCESS)
+        {
             throw std::runtime_error("Failed to create post-process graphics pipeline!");
         }
     }
@@ -291,4 +300,4 @@ namespace FINALITY
     {
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline);
     }
-}
+} // namespace FINALITY

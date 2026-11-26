@@ -14,4 +14,4 @@ namespace FINALITY
             return nullptr;
         }
     }
-}
+} // namespace FINALITY

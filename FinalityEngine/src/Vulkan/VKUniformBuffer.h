@@ -14,14 +14,25 @@ namespace FINALITY
     {
     public:
         VKUniformBuffer() = default;
-        ~VKUniformBuffer() { Shutdown(); }
+
+        ~VKUniformBuffer()
+        {
+            Shutdown();
+        }
 
         void Initialize(VkDevice device, VkPhysicalDevice physicalDevice, VkDeviceSize bufferSize, uint32_t count);
         void Shutdown();
         void Update(uint32_t imageIndex, const void* data);
 
-        VkBuffer GetBuffer(uint32_t imageIndex) const { return m_Buffers[imageIndex]; }
-        VkDeviceSize GetSize() const { return m_BufferSize; }
+        VkBuffer GetBuffer(uint32_t imageIndex) const
+        {
+            return m_Buffers[imageIndex];
+        }
+
+        VkDeviceSize GetSize() const
+        {
+            return m_BufferSize;
+        }
 
     private:
         uint32_t FindMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties);
@@ -34,4 +45,4 @@ namespace FINALITY
         std::vector<VkDeviceMemory> m_BuffersMemory;
         std::vector<void*> m_BuffersMapped;
     };
-}
+} // namespace FINALITY

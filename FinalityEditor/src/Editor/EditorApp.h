@@ -14,7 +14,11 @@ namespace FINALITY
     {
     public:
         void Configure(const std::string& initialProject, const std::filesystem::path& engineAssets)
-        { m_InitialProject = initialProject; m_EngineAssets = engineAssets; }
+        {
+            m_InitialProject = initialProject;
+            m_EngineAssets = engineAssets;
+        }
+
         void Init() override;
         void Update(float ts) override;
         void Destroy() override;
@@ -24,4 +28,4 @@ namespace FINALITY
         std::filesystem::path m_EngineAssets;
         std::unique_ptr<EditorLayer> m_EditorLayer;
     };
-}
+} // namespace FINALITY

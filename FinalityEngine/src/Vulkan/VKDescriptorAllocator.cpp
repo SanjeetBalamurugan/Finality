@@ -10,7 +10,8 @@ namespace FINALITY
 
     VkDescriptorPool VKDescriptorAllocator::CreatePoolPage()
     {
-        VkDescriptorPoolSize poolSizes[] = {
+        VkDescriptorPoolSize poolSizes[] =
+        {
             { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 64 },
             { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 64 }
         };
@@ -70,7 +71,10 @@ namespace FINALITY
     void VKDescriptorAllocator::Free(VkDescriptorSet set)
     {
         const auto found = m_AllocationPools.find(set);
-        if (found == m_AllocationPools.end()) return;
+        if (found == m_AllocationPools.end())
+        {
+            return;
+        }
         vkFreeDescriptorSets(m_Device, found->second, 1, &set);
         m_AllocationPools.erase(found);
     }
@@ -90,12 +94,18 @@ namespace FINALITY
 
     void VKDescriptorAllocator::Shutdown()
     {
-        for (auto pool : m_UsedPoolPages) vkDestroyDescriptorPool(m_Device, pool, nullptr);
-        for (auto pool : m_FreePoolPages) vkDestroyDescriptorPool(m_Device, pool, nullptr);
+        for (auto pool : m_UsedPoolPages)
+        {
+            vkDestroyDescriptorPool(m_Device, pool, nullptr);
+        }
+        for (auto pool : m_FreePoolPages)
+        {
+            vkDestroyDescriptorPool(m_Device, pool, nullptr);
+        }
 
         m_UsedPoolPages.clear();
         m_FreePoolPages.clear();
         m_CurrentPool = VK_NULL_HANDLE;
         m_AllocationPools.clear();
     }
-}
+} // namespace FINALITY

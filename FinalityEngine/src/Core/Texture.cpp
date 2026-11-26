@@ -1,7 +1,6 @@
 #include "Texture.h"
 #include "Application.h"
 
-
 #include <Vulkan/VKRenderDevice.h>
 #include <Vulkan/VKTexture.h>
 
@@ -16,7 +15,10 @@ std::shared_ptr<FINALITY::Texture> FINALITY::Texture::Create(const std::string& 
     case RendererAPI::VULKAN:
     {
         auto* renderDevice = static_cast<VKRenderDevice*>(&FINALITY::Application::Get().GetDevice());
-        if (!renderDevice) throw std::runtime_error("Vulkan Render Device is invalid!");
+        if (!renderDevice)
+        {
+            throw std::runtime_error("Vulkan Render Device is invalid!");
+        }
 
         VkDevice device = renderDevice->GetActiveDevice();
         VkCommandBuffer targetCmd = VK_NULL_HANDLE;
@@ -42,14 +44,7 @@ std::shared_ptr<FINALITY::Texture> FINALITY::Texture::Create(const std::string& 
             vkBeginCommandBuffer(targetCmd, &beginInfo);
         }
 
-        auto texture = std::make_shared<VKTexture>(
-            device,
-            renderDevice->GetActivePhysicalDevice(),
-            targetCmd,
-            filePath,
-            stagingBuffer,
-            stagingMemory
-        );
+        auto texture = std::make_shared<VKTexture>( device, renderDevice->GetActivePhysicalDevice(), targetCmd, filePath, stagingBuffer, stagingMemory);
 
         if (isSharedBatch)
         {
@@ -74,8 +69,14 @@ std::shared_ptr<FINALITY::Texture> FINALITY::Texture::Create(const std::string& 
             vkDestroyFence(device, fence, nullptr);
             vkFreeCommandBuffers(device, renderDevice->GetCommandPool(), 1, &targetCmd);
 
-            if (stagingBuffer) vkDestroyBuffer(device, stagingBuffer, nullptr);
-            if (stagingMemory) vkFreeMemory(device, stagingMemory, nullptr);
+            if (stagingBuffer)
+            {
+                vkDestroyBuffer(device, stagingBuffer, nullptr);
+            }
+            if (stagingMemory)
+            {
+                vkFreeMemory(device, stagingMemory, nullptr);
+            }
         }
 
         return texture;

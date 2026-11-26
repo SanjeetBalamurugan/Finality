@@ -33,4 +33,4 @@ namespace FINALITY
         double VisibilityMS = 0, RecordMS = 0, GpuMS = 0;
         bool GpuValid = false;
     };
-}
+} // namespace FINALITY

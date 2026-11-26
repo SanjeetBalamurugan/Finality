@@ -18,4 +18,4 @@ namespace FINALITY
         static bool Deserialize(const std::string& filePath, MaterialDefinition& output);
         static bool Serialize(const MaterialDefinition& definition, const std::string& filePath);
     };
-}
+} // namespace FINALITY

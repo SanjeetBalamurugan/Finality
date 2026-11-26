@@ -20,13 +20,35 @@ namespace FINALITY
         void Unbind() override;
         void Resize(uint32_t width, uint32_t height) override;
 
-        const FramebufferSpecification& GetSpecification() const override { return m_Specification; }
-        void* GetColorAttachmentRendererID() const override { return (void*)m_ColorImageView; }
+        const FramebufferSpecification& GetSpecification() const override
+        {
+            return m_Specification;
+        }
 
-        VkRenderPass GetVKRenderPass() const { return m_RenderPass; }
-        VkFramebuffer GetVKFramebuffer() const { return m_Framebuffer; }
-        VkImage GetVKColorImage() const { return m_ColorImage; }
-        VkSampler GetColorSampler() const { return m_ColorSampler; }
+        void* GetColorAttachmentRendererID() const override
+        {
+            return (void*)m_ColorImageView;
+        }
+
+        VkRenderPass GetVKRenderPass() const
+        {
+            return m_RenderPass;
+        }
+
+        VkFramebuffer GetVKFramebuffer() const
+        {
+            return m_Framebuffer;
+        }
+
+        VkImage GetVKColorImage() const
+        {
+            return m_ColorImage;
+        }
+
+        VkSampler GetColorSampler() const
+        {
+            return m_ColorSampler;
+        }
 
     private:
         void Invalidate(VkPhysicalDevice physicalDevice);
@@ -49,4 +71,4 @@ namespace FINALITY
         VkRenderPass m_RenderPass = VK_NULL_HANDLE;
         VkFramebuffer m_Framebuffer = VK_NULL_HANDLE;
     };
-}
+} // namespace FINALITY

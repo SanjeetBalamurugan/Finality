@@ -15,6 +15,7 @@
 namespace FINALITY
 {
     class Texture;
+
     /** @todo TODO: Document AssetManager class semantics, ownership and usage. */
     class FAPI AssetManager
     {
@@ -22,11 +23,14 @@ namespace FINALITY
         static void Initialize();
         static void Shutdown();
 
-        template<typename T, typename... Args>
+        template <typename T, typename... Args>
         static std::shared_ptr<T> CreateAsset(const std::string& filePath, Args&&... args)
         {
             const std::string resolved = AssetRegistry::Resolve(filePath);
-            if (resolved.empty()) return nullptr;
+            if (resolved.empty())
+            {
+                return nullptr;
+            }
             auto it = s_PathToHandleRegistry.find(resolved);
             if (it != s_PathToHandleRegistry.end())
             {
@@ -34,9 +38,18 @@ namespace FINALITY
             }
 
             std::shared_ptr<T> asset;
-            try { asset = T::Create(resolved, std::forward<Args>(args)...); }
-            catch (const std::exception&) { return nullptr; }
-            if (!asset) return nullptr;
+            try
+            {
+                asset = T::Create(resolved, std::forward<Args>(args)...);
+            }
+            catch (const std::exception&)
+            {
+                return nullptr;
+            }
+            if (!asset)
+            {
+                return nullptr;
+            }
 
             const auto* record = AssetRegistry::FindPath(resolved);
             UUID handle = record ? UUID(record->ID) : UUID();
@@ -58,4 +71,4 @@ namespace FINALITY
         static std::unordered_map<UUID, std::shared_ptr<Asset>> s_LoadedAssets;
         static std::unordered_map<std::string, UUID> s_PathToHandleRegistry;
     };
-}
+} // namespace FINALITY

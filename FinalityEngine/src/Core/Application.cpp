@@ -21,7 +21,7 @@
 
 #include <ImGUI/ImGUIRenderer.h>
 
-#define GLM_FORCE_PURE  
+#define GLM_FORCE_PURE
 #define GLM_ENABLE_EXPERIMENTAL
 
 FINALITY::RendererAPI FINALITY::Application::s_CurrentAPI = RendererAPI::NONE;
@@ -31,144 +31,149 @@ FINALITY::Application::~Application() = default;
 
 void FINALITY::Application::Initialize(const RendererAPI& api, const WindowSpec& spec, std::unique_ptr<Game> game)
 {
-	s_Instance = this;
-	Logger::Init();
+    s_Instance = this;
+    Logger::Init();
 
-	FI_CORE_INFO("FINALITY ENGINE");
+    FI_CORE_INFO("FINALITY ENGINE");
 
-	if (!glfwInit())
-	{
-		FI_CORE_ERROR("GLFW Cannot Initialise!!");
-		std::exit(EXIT_FAILURE);
-	}
+    if (!glfwInit())
+    {
+        FI_CORE_ERROR("GLFW Cannot Initialise!!");
+        std::exit(EXIT_FAILURE);
+    }
 
-	if (!glfwVulkanSupported() && api == RendererAPI::VULKAN)
-	{
-		FI_CORE_ERROR("VULKAN is not supported on this system");
-		std::exit(EXIT_FAILURE);
-	}
+    if (!glfwVulkanSupported() && api == RendererAPI::VULKAN)
+    {
+        FI_CORE_ERROR("VULKAN is not supported on this system");
+        std::exit(EXIT_FAILURE);
+    }
 
-	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
-	switch (api)
-	{
-	case RendererAPI::VULKAN:
-		m_RenderDevice = std::make_unique<VKRenderDevice>();
-		break;
-	default:
-		FI_CORE_ERROR("UNKNOWN API!!!");
-		std::exit(EXIT_FAILURE);
-		break;
-	}
+    switch (api)
+    {
+    case RendererAPI::VULKAN:
+        m_RenderDevice = std::make_unique<VKRenderDevice>();
+        break;
+    default:
+        FI_CORE_ERROR("UNKNOWN API!!!");
+        std::exit(EXIT_FAILURE);
+        break;
+    }
 
-	s_CurrentAPI = api;
+    s_CurrentAPI = api;
 
-	m_CurrentGame = std::move(game);
+    m_CurrentGame = std::move(game);
 
-	m_Window = std::make_unique<GLFWWindowImpl>();
-	m_Window->Initialize(spec);
+    m_Window = std::make_unique<GLFWWindowImpl>();
+    m_Window->Initialize(spec);
 
-	m_RenderDevice->SetWindowSpec(spec);
-	m_RenderDevice->Initialize(m_Window->GetNativeHandles());
-	FINALITY::RenderCommand::Init(m_RenderDevice.get());
+    m_RenderDevice->SetWindowSpec(spec);
+    m_RenderDevice->Initialize(m_Window->GetNativeHandles());
+    FINALITY::RenderCommand::Init(m_RenderDevice.get());
 
-	FINALITY::Renderer::Initialize(m_RenderDevice.get());
+    FINALITY::Renderer::Initialize(m_RenderDevice.get());
 
-	m_ImGUIRenderer = ImGUIRenderer::Create(m_RenderDevice.get());
-	m_ImGUIRenderer->Initialize();
+    m_ImGUIRenderer = ImGUIRenderer::Create(m_RenderDevice.get());
+    m_ImGUIRenderer->Initialize();
 
-	FINALITY::AssetManager::Initialize();
-	m_CurrentGame->Init();
-	//SceneManager::GetInstance().Initialize();
+    FINALITY::AssetManager::Initialize();
+    m_CurrentGame->Init();
+    //SceneManager::GetInstance().Initialize();
 
-	m_Window->SetCallbacks();
+    m_Window->SetCallbacks();
 
-	m_Running = true;
+    m_Running = true;
 }
 
 void FINALITY::Application::Update()
 {
-	auto lastFrameTime = std::chrono::high_resolution_clock::now();
-	float deltaTime = 0.0f;
+    auto lastFrameTime = std::chrono::high_resolution_clock::now();
+    float deltaTime = 0.0f;
 
-	while (!m_Window->ShouldClose() && m_Running)
-	{
-		auto currentFrameTime = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<float> elapsed = currentFrameTime - lastFrameTime;
-		deltaTime = elapsed.count();
+    while (!m_Window->ShouldClose() && m_Running)
+    {
+        auto currentFrameTime = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<float> elapsed = currentFrameTime - lastFrameTime;
+        deltaTime = elapsed.count();
 
-		lastFrameTime = currentFrameTime;
+        lastFrameTime = currentFrameTime;
 
-		m_Window->Update();
-		int framebufferWidth = 0, framebufferHeight = 0;
-		glfwGetFramebufferSize(static_cast<GLFWwindow*>(m_Window->GetNativeHandles().WindowHandle), &framebufferWidth, &framebufferHeight);
-		if (framebufferWidth == 0 || framebufferHeight == 0)
-		{
-			glfwWaitEventsTimeout(0.05);
-			continue;
-		}
-		int newW, newH;
-		if (m_Window->ConsumePendingResize(newW, newH))
-		{
-			if (newW > 0 && newH > 0)
-			{
-				WindowSpec spec = m_Window->GetSpecifications();
-				spec.width = newW;
-				spec.height = newH;
-				m_RenderDevice->SetWindowSpec(spec);
-			}
-		}
+        m_Window->Update();
+        int framebufferWidth = 0, framebufferHeight = 0;
+        glfwGetFramebufferSize(static_cast<GLFWwindow*>(m_Window->GetNativeHandles().WindowHandle), &framebufferWidth, &framebufferHeight);
+        if (framebufferWidth == 0 || framebufferHeight == 0)
+        {
+            glfwWaitEventsTimeout(0.05);
+            continue;
+        }
+        int newW, newH;
+        if (m_Window->ConsumePendingResize(newW, newH))
+        {
+            if (newW > 0 && newH > 0)
+            {
+                WindowSpec spec = m_Window->GetSpecifications();
+                spec.width = newW;
+                spec.height = newH;
+                m_RenderDevice->SetWindowSpec(spec);
+            }
+        }
 
-		m_RenderDevice->BeginFrame();
+        m_RenderDevice->BeginFrame();
 
-		m_ImGUIRenderer->Update();
-		ImGui::NewFrame();
+        m_ImGUIRenderer->Update();
+        ImGui::NewFrame();
 
+        // Frame logic like draw calls here
+        SceneManager::GetInstance().Update(deltaTime);
+        m_CurrentGame->Update(deltaTime);
 
-		// Frame logic like draw calls here
-		SceneManager::GetInstance().Update(deltaTime);
-		m_CurrentGame->Update(deltaTime);
+        ImGui::Render();
+        m_RenderDevice->EndFrame();
+        m_RenderDevice->PresentFrame();
 
-		ImGui::Render();
-		m_RenderDevice->EndFrame();
-		m_RenderDevice->PresentFrame();
+        Input::ClearFrameStates();
+        Mouse::ClearFrameStates();
+    }
 
-		Input::ClearFrameStates();
-		Mouse::ClearFrameStates();
-	}
-
-	m_Running = false;
+    m_Running = false;
 }
 
 void FINALITY::Application::Shutdown()
 {
-	m_RenderDevice->WaitIdle();
-	if (m_CurrentGame) m_CurrentGame->Destroy();
-	SceneManager::GetInstance().Shutdown();
-	FINALITY::AssetManager::Shutdown();
-	FINALITY::Renderer::Shutdown();
+    m_RenderDevice->WaitIdle();
+    if (m_CurrentGame)
+    {
+        m_CurrentGame->Destroy();
+    }
+    SceneManager::GetInstance().Shutdown();
+    FINALITY::AssetManager::Shutdown();
+    FINALITY::Renderer::Shutdown();
     m_RenderDevice->FlushRetiredResources();
 
-	m_ImGUIRenderer->Destroy();
-	m_ImGUIRenderer.reset();
+    m_ImGUIRenderer->Destroy();
+    m_ImGUIRenderer.reset();
 
-	if (m_Window)
-	{
-		m_Window->Shutdown();
-		m_Window.reset();
-	}
-	
-	if (m_RenderDevice)
-	{
-		m_RenderDevice->Shutdown();
-		m_RenderDevice.reset();
-	}
+    if (m_Window)
+    {
+        m_Window->Shutdown();
+        m_Window.reset();
+    }
 
-	if (!m_Running) glfwTerminate();
+    if (m_RenderDevice)
+    {
+        m_RenderDevice->Shutdown();
+        m_RenderDevice.reset();
+    }
+
+    if (!m_Running)
+    {
+        glfwTerminate();
+    }
 }
 
 FINALITY::ImGUIRenderer* FINALITY::Application::GetImGUIRenderer()
 {
-	return m_ImGUIRenderer.get();
+    return m_ImGUIRenderer.get();
 }

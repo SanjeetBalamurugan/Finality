@@ -24,7 +24,9 @@ int main(int argc, char const* argv[])
         SpirvCompiler compiler;
 
         if (!compiler.Compile(inputFile, outputFile))
+        {
             return EXIT_FAILURE;
+        }
     }
 
     return EXIT_SUCCESS;

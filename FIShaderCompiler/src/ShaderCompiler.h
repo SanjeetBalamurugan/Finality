@@ -10,6 +10,5 @@ public:
 
     virtual bool Compile(
         const std::string& inputFile,
-        const std::string& outputFile
-    ) = 0;
+        const std::string& outputFile) = 0;
 };

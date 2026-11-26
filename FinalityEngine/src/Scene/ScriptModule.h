@@ -32,8 +32,12 @@ namespace FINALITY
     struct ScriptRegistrationContext
     {
         void* User = nullptr;
-        bool (*Register)(void*,const ScriptDefinition&) = nullptr;
-        bool Add(const ScriptDefinition& definition) const { return Register && Register(User,definition); }
+        bool (*Register)(void*, const ScriptDefinition&) = nullptr;
+
+        bool Add(const ScriptDefinition& definition) const
+        {
+            return Register && Register(User, definition);
+        }
     };
 
     /**
@@ -71,4 +75,4 @@ namespace FINALITY
         struct State;
         std::unique_ptr<State> m_State;
     };
-}
+} // namespace FINALITY

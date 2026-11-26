@@ -13,4 +13,4 @@ namespace FINALITY
     void DrawEntityInspector(Scene* scene, entt::entity selected, AssetPicker& picker, ExternalTools& tools, bool* open = nullptr);
     void DrawMaterialProperties(MaterialComponent& component, AssetPicker& picker, std::function<MaterialComponent*()> target);
     void ClearInspectorClipboard();
-}
+} // namespace FINALITY

@@ -1,40 +1,40 @@
 #include <iostream>
 #include <Finality.h>
 #include <Editor/EditorApp.h>
+#include <Editor/EditorDependencies.h>
 
-int main(int argc, char const *argv[])
+int main(int argc, char const* argv[])
 {
-    FINALITY::RendererAPI api = FINALITY::RendererAPI::VULKAN;
-    FINALITY::WindowSpec spec = { .title = "FINALITY Editor", .width = 1280, .height = 720, .isFullscreen = false };
-    FINALITY::Application app;
-    
-    std::unique_ptr<FINALITY::EditorApp> game = std::make_unique<FINALITY::EditorApp>();
-    auto directory = std::filesystem::absolute(argv[0]).parent_path();
-    std::filesystem::path engineAssets;
-    std::filesystem::path bundledAssets;
-    const auto validAssets = [](const std::filesystem::path& path)
+    const auto directory = FINALITY::Process::ExecutablePath().parent_path();
+    auto dependencies = FINALITY::EditorDependencies::Inspect(directory);
+    if (argc > 1 && std::string(argv[1]) == "--check-dependencies")
     {
-        return std::filesystem::is_regular_file(path / "Editor/Shaders/editor_grid.vert") &&
-            std::filesystem::is_regular_file(path / "Editor/Shaders/editor_grid.frag") &&
-            std::filesystem::is_regular_file(path / "shaders/imported_model.frag");
-    };
-    for (auto candidate = directory; !candidate.empty(); candidate = candidate.parent_path())
-    {
-        if (validAssets(candidate / "FinalityEditor/assets")) { engineAssets = candidate / "FinalityEditor/assets"; break; }
-        if (bundledAssets.empty() && validAssets(candidate / "assets")) bundledAssets = candidate / "assets";
-        if (candidate == candidate.parent_path()) break;
+        std::cout << dependencies.Describe();
+        return dependencies.Errors.empty() ? 0 : 1;
     }
-    if (engineAssets.empty()) engineAssets = bundledAssets;
-    if (engineAssets.empty())
+    if (!FINALITY::EditorDependencies::ConfirmStartup(directory, dependencies))
     {
-        std::cerr << "Finality editor assets could not be found." << std::endl;
         return 1;
     }
-    game->Configure(argc > 1 ? argv[1] : "", engineAssets);
 
-    app.Initialize(api, spec, std::move(game));
-    app.Update();
-    app.Shutdown();
+    try
+    {
+        FINALITY::RendererAPI api = FINALITY::RendererAPI::VULKAN;
+        FINALITY::WindowSpec spec = { .title = "FINALITY Editor", .width = 1280, .height = 720, .isFullscreen = false };
+        FINALITY::Application app;
+
+        std::unique_ptr<FINALITY::EditorApp> game = std::make_unique<FINALITY::EditorApp>();
+        game->Configure(argc > 1 ? argv[1] : "", dependencies.Assets);
+
+        app.Initialize(api, spec, std::move(game));
+        app.Update();
+        app.Shutdown();
+    }
+    catch (const std::exception& error)
+    {
+        FINALITY::EditorDependencies::ShowStartupError(error.what());
+        return 1;
+    }
 
     return 0;
 }

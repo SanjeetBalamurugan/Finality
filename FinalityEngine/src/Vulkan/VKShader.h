@@ -18,12 +18,19 @@ namespace FINALITY
         ~VKShader() override;
 
         void Load(const std::string& filePath) override;
-        RendererAPI GetAPI() const override { return RendererAPI::VULKAN; }
 
-        VkShaderModule GetVkModule() const { return m_ShaderModule; }
+        RendererAPI GetAPI() const override
+        {
+            return RendererAPI::VULKAN;
+        }
+
+        VkShaderModule GetVkModule() const
+        {
+            return m_ShaderModule;
+        }
 
     private:
         VkDevice m_Device = VK_NULL_HANDLE;
         VkShaderModule m_ShaderModule = VK_NULL_HANDLE;
     };
-}
+} // namespace FINALITY

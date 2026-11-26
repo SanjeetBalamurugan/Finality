@@ -19,7 +19,7 @@ namespace FINALITY
         Back,
         Front
     };
-    
+
     /** @todo TODO: Document PipelineConfig struct semantics, ownership and usage. */
     struct PipelineConfig
     {
@@ -42,14 +42,31 @@ namespace FINALITY
         Pipeline() = default;
 
         static std::shared_ptr<Pipeline> Create(const PipelineConfig& config);
-        bool IsTransparent() const { return m_Transparent; }
-        bool WritesDepth() const { return m_DepthWrite; }
-        bool TestsDepth() const { return m_DepthTest; }
-        CullMode GetCullMode() const { return m_Culling; }
+
+        bool IsTransparent() const
+        {
+            return m_Transparent;
+        }
+
+        bool WritesDepth() const
+        {
+            return m_DepthWrite;
+        }
+
+        bool TestsDepth() const
+        {
+            return m_DepthTest;
+        }
+
+        CullMode GetCullMode() const
+        {
+            return m_Culling;
+        }
+
     protected:
         bool m_Transparent = false;
         bool m_DepthWrite = true;
         bool m_DepthTest = true;
         CullMode m_Culling = CullMode::Back;
     };
-}
+} // namespace FINALITY

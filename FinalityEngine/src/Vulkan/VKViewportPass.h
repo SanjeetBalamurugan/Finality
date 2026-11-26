@@ -28,4 +28,4 @@ namespace FINALITY
         void Destroy(VkDevice device, VkCommandPool commands);
         void CollectTiming(VkDevice device, double period, uint32_t validBits);
     };
-}
+} // namespace FINALITY

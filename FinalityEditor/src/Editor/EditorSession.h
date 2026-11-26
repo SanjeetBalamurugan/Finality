@@ -14,7 +14,12 @@
 namespace FINALITY
 {
     /** @todo TODO: Document EditorState enum semantics, ownership and usage. */
-    enum class EditorState { Edit, Play, Paused };
+    enum class EditorState
+    {
+        Edit,
+        Play,
+        Paused
+    };
 
     /** @todo TODO: Document EditorSession class semantics, ownership and usage. */
     class EditorSession
@@ -34,8 +39,18 @@ namespace FINALITY
         EditorPreferences Preferences;
         AssetChangeMonitor AssetChanges;
 
-        void SelectEntity(entt::entity entity) { SelectedEntity = entity; SelectedAsset = 0; }
-        void SelectAsset(uint64_t asset) { SelectedAsset = asset; SelectedEntity = entt::null; }
+        void SelectEntity(entt::entity entity)
+        {
+            SelectedEntity = entity;
+            SelectedAsset = 0;
+        }
+
+        void SelectAsset(uint64_t asset)
+        {
+            SelectedAsset = asset;
+            SelectedEntity = entt::null;
+        }
+
         void CloseProjectTools()
         {
             Imports.Clear();
@@ -48,4 +63,4 @@ namespace FINALITY
             Checkpoint.Request();
         }
     };
-}
+} // namespace FINALITY

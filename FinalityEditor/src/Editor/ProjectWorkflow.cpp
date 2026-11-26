@@ -10,25 +10,37 @@ namespace
 {
     std::filesystem::path RecentPath()
     {
-        if (const auto* local = std::getenv("LOCALAPPDATA")) return std::filesystem::path(local) / "Finality/RecentProjects.txt";
+        if (const auto* local = std::getenv("LOCALAPPDATA"))
+        {
+            return std::filesystem::path(local) / "Finality/RecentProjects.txt";
+        }
         return std::filesystem::current_path() / ".Finality/RecentProjects.txt";
     }
-}
+} // namespace
 
 void FINALITY::EditorLayer::SetupLayout()
 {
     if (m_LoadProjectLayout)
     {
         ImGui::ClearIniSettings();
-        if (std::filesystem::is_regular_file(m_LayoutPath)) ImGui::LoadIniSettingsFromDisk(m_LayoutPath.c_str());
+        if (std::filesystem::is_regular_file(m_LayoutPath))
+        {
+            ImGui::LoadIniSettingsFromDisk(m_LayoutPath.c_str());
+        }
         m_LoadProjectLayout = false;
         m_LayoutReady = false;
     }
-    if (m_LayoutReady) return;
+    if (m_LayoutReady)
+    {
+        return;
+    }
     m_LayoutReady = true;
     const ImGuiID root = 0xF1A117;
     const auto* node = ImGui::DockBuilderGetNode(root);
-    if (node && node->IsSplitNode()) return;
+    if (node && node->IsSplitNode())
+    {
+        return;
+    }
     ImGui::DockBuilderRemoveNode(root);
     ImGui::DockBuilderAddNode(root, ImGuiDockNodeFlags_DockSpace);
     ImGui::DockBuilderSetNodePos(root, ImGui::GetMainViewport()->WorkPos);
@@ -53,14 +65,23 @@ void FINALITY::EditorLayer::SetupLayout()
 
 bool FINALITY::EditorLayer::OpenProject(const std::string& path)
 {
-    if (m_Session.State != EditorState::Edit) return false;
+    if (m_Session.State != EditorState::Edit)
+    {
+        return false;
+    }
     Project next;
-    if (!next.Open(path)) { m_ProjectError = "Project could not be opened. Check its format and location."; return false; }
+    if (!next.Open(path))
+    {
+        m_ProjectError = "Project could not be opened. Check its format and location.";
+        return false;
+    }
     m_AssetPicker.Close();
     m_AssetInspector.Clear();
     ClearInspectorClipboard();
     m_Session.SelectedAsset = 0;
-    m_EntityClipboard.clear(); m_RenameTarget = entt::null; m_ShortcutCapture = -1;
+    m_EntityClipboard.clear();
+    m_RenameTarget = entt::null;
+    m_ShortcutCapture = -1;
     m_AssetRefreshPending = false;
     Renderer::GetDevice()->WaitIdle();
     SceneManager::GetInstance().SetScene(std::make_unique<EmptyScene>());
@@ -73,7 +94,10 @@ bool FINALITY::EditorLayer::OpenProject(const std::string& path)
     m_Session.Preferences = {};
     m_Session.Preferences.Load(m_Session.ProjectData.GetDirectory());
     m_Session.Tools.OpenProject(m_Session.ProjectData.GetDirectory(), m_Session.ProjectData.Settings.ScriptDirectory, m_Session.ProjectData.GetName());
-    if (!m_LayoutPath.empty()) ImGui::SaveIniSettingsToDisk(m_LayoutPath.c_str());
+    if (!m_LayoutPath.empty())
+    {
+        ImGui::SaveIniSettingsToDisk(m_LayoutPath.c_str());
+    }
     m_LayoutPath = (m_Session.ProjectData.GetDirectory() / "Settings/EditorLayout.ini").string();
     std::filesystem::create_directories(std::filesystem::path(m_LayoutPath).parent_path());
     ImGui::GetIO().IniFilename = m_LayoutPath.c_str();
@@ -86,9 +110,9 @@ bool FINALITY::EditorLayer::OpenProject(const std::string& path)
         m_ShowPerformance = false;
         m_FocusWindow = "Scene";
     }
-    ModelAsset::Configure(m_EngineAssets,m_Session.ProjectData.Settings.Models);
+    ModelAsset::Configure(m_EngineAssets, m_Session.ProjectData.Settings.Models);
     AssetRegistry::Open(m_Session.ProjectData.GetDirectory());
-    m_Session.Scripts.Open(m_Session.ProjectData,m_EngineAssets);
+    m_Session.Scripts.Open(m_Session.ProjectData, m_EngineAssets);
     m_SettingsInitialized = false;
     ApplyProjectSettings();
     m_ContentDirectory = m_Session.ProjectData.GetAssetsDirectory().string();
@@ -102,17 +126,33 @@ bool FINALITY::EditorLayer::OpenProject(const std::string& path)
         std::string lastScene;
         std::ifstream(m_Session.ProjectData.GetDirectory() / "Settings/LastScene.txt") >> std::quoted(lastScene);
         auto startup = m_Session.ProjectData.GetDirectory() / m_Session.ProjectData.StartupScene;
-        if (!lastScene.empty() && std::filesystem::is_regular_file(lastScene)) startup = lastScene;
-        if (!OpenScene(startup.string())) { NewScene(); FI_CLIENT_WARN("Startup scene is missing; opened an empty scene"); }
+        if (!lastScene.empty() && std::filesystem::is_regular_file(lastScene))
+        {
+            startup = lastScene;
+        }
+        if (!OpenScene(startup.string()))
+        {
+            NewScene();
+            FI_CLIENT_WARN("Startup scene is missing; opened an empty scene");
+        }
     }
-    else NewScene();
+    else
+    {
+        NewScene();
+    }
     Application::Get().GetWindow().SetWindowTitle("Finality - " + m_Session.ProjectData.GetName());
     m_RecentProjects.erase(std::remove(m_RecentProjects.begin(), m_RecentProjects.end(), m_Session.ProjectData.GetPath().string()), m_RecentProjects.end());
     m_RecentProjects.insert(m_RecentProjects.begin(), m_Session.ProjectData.GetPath().string());
-    if (m_RecentProjects.size() > 12) m_RecentProjects.resize(12);
+    if (m_RecentProjects.size() > 12)
+    {
+        m_RecentProjects.resize(12);
+    }
     std::filesystem::create_directories(RecentPath().parent_path());
     std::ofstream recent(RecentPath());
-    for (const auto& entry : m_RecentProjects) recent << entry << '\n';
+    for (const auto& entry : m_RecentProjects)
+    {
+        recent << entry << '\n';
+    }
     return true;
 }
 
@@ -124,10 +164,19 @@ void FINALITY::EditorLayer::DrawProjectManager()
         loadedRecent = true;
         std::ifstream recent(RecentPath());
         std::string entry;
-        while (std::getline(recent, entry)) if (!entry.empty()) m_RecentProjects.push_back(entry);
+        while (std::getline(recent, entry))
+        {
+            if (!entry.empty())
+            {
+                m_RecentProjects.push_back(entry);
+            }
+        }
     }
-    if (!m_ShowProjectManager) return;
-    ImGui::SetNextWindowSize({860,620}, ImGuiCond_FirstUseEver);
+    if (!m_ShowProjectManager)
+    {
+        return;
+    }
+    ImGui::SetNextWindowSize({ 860, 620 }, ImGuiCond_FirstUseEver);
     ImGui::Begin("Finality Project Manager", m_Session.ProjectData.IsOpen() ? &m_ShowProjectManager : nullptr);
     ImGui::TextUnformatted("Create a project or open an existing .fproj.");
     ImGui::Separator();
@@ -136,22 +185,37 @@ void FINALITY::EditorLayer::DrawProjectManager()
     if (ImGui::Button("Choose Location..."))
     {
         const auto path = FileDialogs::OpenFolder();
-        if (!path.empty()) m_ProjectLocation = path;
+        if (!path.empty())
+        {
+            m_ProjectLocation = path;
+        }
     }
     ImGui::Checkbox("Include extra starter assets", &m_UseTemplate);
     if (ImGui::Button("Create Project"))
     {
         Project created;
-        if (created.Create(m_ProjectLocation, m_ProjectName, m_EngineAssets, m_UseTemplate)) OpenProject(created.GetPath().string());
-        else m_ProjectError = "Creation failed. Use a valid name and an empty writable directory.";
+        if (created.Create(m_ProjectLocation, m_ProjectName, m_EngineAssets, m_UseTemplate))
+        {
+            OpenProject(created.GetPath().string());
+        }
+        else
+        {
+            m_ProjectError = "Creation failed. Use a valid name and an empty writable directory.";
+        }
     }
     ImGui::SameLine();
     if (ImGui::Button("Open Project..."))
     {
         const auto path = FileDialogs::OpenFile("Finality Project (*.fproj)\0*.fproj\0\0");
-        if (!path.empty()) OpenProject(path);
+        if (!path.empty())
+        {
+            OpenProject(path);
+        }
     }
-    if (!m_ProjectError.empty()) ImGui::TextWrapped("%s", m_ProjectError.c_str());
+    if (!m_ProjectError.empty())
+    {
+        ImGui::TextWrapped("%s", m_ProjectError.c_str());
+    }
     ImGui::Separator();
     ImGui::TextUnformatted("Recent Projects");
     std::string open;
@@ -160,20 +224,35 @@ void FINALITY::EditorLayer::DrawProjectManager()
         ImGui::PushID(path.c_str());
         const auto thumbnail = std::filesystem::path(path).parent_path() / "Settings/ProjectThumbnail.png";
         void* image = nullptr;
-        if (std::filesystem::is_regular_file(thumbnail)) image = AssetPreview::TextureHandle(thumbnail.string());
-        if (image) ImGui::Image(static_cast<ImTextureID>(reinterpret_cast<uintptr_t>(image)), {64,64});
-        else ImGui::Button("F", {64,64});
+        if (std::filesystem::is_regular_file(thumbnail))
+        {
+            image = AssetPreview::TextureHandle(thumbnail.string());
+        }
+        if (image)
+        {
+            ImGui::Image(static_cast<ImTextureID>(reinterpret_cast<uintptr_t>(image)), { 64, 64 });
+        }
+        else
+        {
+            ImGui::Button("F", { 64, 64 });
+        }
         ImGui::SameLine();
         ImGui::BeginGroup();
         ImGui::BeginDisabled(!std::filesystem::is_regular_file(path));
-        if (ImGui::Selectable(std::filesystem::path(path).stem().string().c_str())) open = path;
+        if (ImGui::Selectable(std::filesystem::path(path).stem().string().c_str()))
+        {
+            open = path;
+        }
         ImGui::EndDisabled();
-        ImGui::TextDisabled("%s",path.c_str());
+        ImGui::TextDisabled("%s", path.c_str());
         ImGui::EndGroup();
         ImGui::Separator();
         ImGui::PopID();
     }
-    if (!open.empty()) OpenProject(open);
+    if (!open.empty())
+    {
+        OpenProject(open);
+    }
     ImGui::End();
 }
 
@@ -181,25 +260,43 @@ void FINALITY::EditorLayer::CreatePrimitive(const std::string& name, const std::
 {
     m_Session.Checkpoint.Request();
     auto* scene = SceneManager::GetInstance().GetActiveScene();
-    if (!scene || m_Session.State != EditorState::Edit) return;
+    if (!scene || m_Session.State != EditorState::Edit)
+    {
+        return;
+    }
     if (!meshReference.empty())
     {
-        try { m_Session.SelectedEntity = ModelAsset::Instantiate(*scene,meshReference).GetHandle(); m_Session.SelectedAsset = 0; }
-        catch (const std::exception& error) { FI_CLIENT_ERROR("Cannot instantiate model: {}",error.what()); }
+        try
+        {
+            m_Session.SelectedEntity = ModelAsset::Instantiate(*scene, meshReference).GetHandle();
+            m_Session.SelectedAsset = 0;
+        }
+        catch (const std::exception& error)
+        {
+            FI_CLIENT_ERROR("Cannot instantiate model: {}", error.what());
+        }
         return;
     }
     auto entity = scene->CreateEntity(name);
-    if (name == "Camera") entity.AddComponent<CameraComponent>().IsPrimary = false;
+    if (name == "Camera")
+    {
+        entity.AddComponent<CameraComponent>().IsPrimary = false;
+    }
     else if (name != "Empty Entity")
     {
         std::string primitive = name;
-        std::transform(primitive.begin(), primitive.end(), primitive.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        std::transform(primitive.begin(), primitive.end(), primitive.begin(), [](unsigned char c)
+                       {
+                           return static_cast<char>(std::tolower(c));
+                       });
         const std::string identifier = meshReference.empty() ? "builtin://" + primitive : meshReference;
         entity.AddComponent<MeshComponent>(Mesh::Create(identifier), identifier);
         const auto materialPath = m_Session.ProjectData.GetAssetsDirectory() / "materials/Default.fmat";
         const auto reference = AssetRegistry::Reference(materialPath);
         if (auto material = AssetManager::CreateAsset<MaterialAsset>(reference, Renderer::GetDevice()))
+        {
             entity.AddComponent<MaterialComponent>(material->CreateInstance(), reference);
+        }
     }
     m_Session.SelectedEntity = entity.GetHandle();
     m_Session.SelectedAsset = 0;
@@ -207,6 +304,23 @@ void FINALITY::EditorLayer::CreatePrimitive(const std::string& name, const std::
 
 void FINALITY::EditorLayer::DrawCreateMenu()
 {
-    for (const char* name : {"Empty Entity", "Camera", "Cube", "Sphere", "Capsule", "Cylinder", "Plane", "Quad"})
-        if (ImGui::MenuItem(name)) CreatePrimitive(name);
+    constexpr const char* names[] =
+    {
+        "Empty Entity",
+        "Camera",
+        "Cube",
+        "Sphere",
+        "Capsule",
+        "Cylinder",
+        "Plane",
+        "Quad"
+    };
+
+    for (const char* name : names)
+    {
+        if (ImGui::MenuItem(name))
+        {
+            CreatePrimitive(name);
+        }
+    }
 }

@@ -14,6 +14,7 @@ namespace FINALITY
     {
     public:
         VKDeletionQueue() = default;
+
         void Push(std::function<void()>&& cleanupFunc)
         {
             m_Deletions.push_back(std::move(cleanupFunc));
@@ -25,11 +26,14 @@ namespace FINALITY
             {
                 auto pending = std::move(m_Deletions);
                 m_Deletions.clear();
-                for (auto it = pending.rbegin(); it != pending.rend(); ++it) (*it)();
+                for (auto it = pending.rbegin(); it != pending.rend(); ++it)
+                {
+                    (*it)();
+                }
             }
         }
 
     private:
         std::vector<std::function<void()>> m_Deletions;
     };
-}
+} // namespace FINALITY

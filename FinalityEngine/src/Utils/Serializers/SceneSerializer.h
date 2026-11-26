@@ -16,24 +16,25 @@
 
 namespace FINALITY
 {
-	class Scene;
+    class Scene;
 
-	/** @todo TODO: Document SceneSerializer class semantics, ownership and usage. */
-	class FAPI SceneSerializer
-	{
-	private:
-		static void SerializeEntity(YAML::Emitter& out, FINALITY::Entity entity, const entt::registry& registry);
-		static void DeSerializeEntity(const YAML::Node& entityNode, FINALITY::Scene* scene, std::unordered_map<FINALITY::UUID, entt::entity>& entityMap);
-	public:
-		SceneSerializer(const Scene& scene, const std::string& name = "Untitled Scene");
+    /** @todo TODO: Document SceneSerializer class semantics, ownership and usage. */
+    class FAPI SceneSerializer
+    {
+    private:
+        static void SerializeEntity(YAML::Emitter& out, FINALITY::Entity entity, const entt::registry& registry);
+        static void DeSerializeEntity(const YAML::Node& entityNode, FINALITY::Scene* scene, std::unordered_map<FINALITY::UUID, entt::entity>& entityMap);
 
-		void Serialize(const std::string& filePath);
-		bool DeSerialize(const std::string& filePath);
+    public:
+        SceneSerializer(const Scene& scene, const std::string& name = "Untitled Scene");
+
+        void Serialize(const std::string& filePath);
+        bool DeSerialize(const std::string& filePath);
         std::string SerializeToString() const;
         bool DeSerializeFromString(const std::string& text);
 
-	private:
-		const Scene& m_Scene;
-		std::string m_SceneName;
-	};
-}
+    private:
+        const Scene& m_Scene;
+        std::string m_SceneName;
+    };
+} // namespace FINALITY

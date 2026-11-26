@@ -17,4 +17,4 @@ namespace FINALITY::Primitives
         static const std::vector<uint32_t>& GetIndices();
         static std::shared_ptr<Mesh> CreateMesh();
     };
-}
+} // namespace FINALITY::Primitives

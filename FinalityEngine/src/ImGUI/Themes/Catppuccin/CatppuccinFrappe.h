@@ -3,7 +3,8 @@
 
 namespace FINALITY
 {
-    static void ApplyCatppuccinFrappe(ImGuiStyle& style = ImGui::GetStyle()) {
+    static void ApplyCatppuccinFrappe(ImGuiStyle& style = ImGui::GetStyle())
+    {
         ImVec4* colors = style.Colors;
 
         colors[ImGuiCol_WindowBg] = ImVec4(0.188f, 0.204f, 0.275f, 1.000f);
@@ -54,4 +55,4 @@ namespace FINALITY
         style.ItemSpacing = ImVec2(6.0f, 4.0f);
         style.ItemInnerSpacing = ImVec2(6.0f, 6.0f);
     }
-}
+} // namespace FINALITY

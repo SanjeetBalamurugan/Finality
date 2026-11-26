@@ -34,7 +34,7 @@ namespace FINALITY
     {
         return s_LoadedAssets.find(handle) != s_LoadedAssets.end();
     }
-}
+} // namespace FINALITY
 
 size_t FINALITY::AssetManager::ReloadMaterialShaders(bool force)
 {
@@ -42,7 +42,9 @@ size_t FINALITY::AssetManager::ReloadMaterialShaders(bool force)
     for (auto& [handle, asset] : s_LoadedAssets)
     {
         if (auto material = std::dynamic_pointer_cast<MaterialAsset>(asset))
+        {
             rebuilt += material->ReloadShadersIfChanged(force) ? 1 : 0;
+        }
     }
     return rebuilt;
 }
@@ -50,7 +52,10 @@ size_t FINALITY::AssetManager::ReloadMaterialShaders(bool force)
 void FINALITY::AssetManager::InvalidateAssetPath(const std::string& filePath)
 {
     auto it = s_PathToHandleRegistry.find(filePath);
-    if (it == s_PathToHandleRegistry.end()) return;
+    if (it == s_PathToHandleRegistry.end())
+    {
+        return;
+    }
     s_LoadedAssets.erase(it->second);
     s_PathToHandleRegistry.erase(it);
 }
@@ -59,13 +64,27 @@ std::shared_ptr<FINALITY::Texture> FINALITY::AssetManager::ReloadTexture(const s
 {
     auto previous = CreateAsset<Texture>(filePath);
     const auto replacement = Texture::Create(AssetRegistry::Resolve(filePath));
-    if (!replacement) return nullptr;
+    if (!replacement)
+    {
+        return nullptr;
+    }
     const auto* record = AssetRegistry::FindPath(AssetRegistry::Resolve(filePath));
-    replacement->Handle = record ? UUID(record->ID) : previous ? previous->Handle : UUID();
+    replacement->Handle = record ? UUID(record->ID) : previous ? previous->Handle
+                                                               : UUID();
     s_LoadedAssets[replacement->Handle] = replacement;
     s_PathToHandleRegistry[AssetRegistry::Resolve(filePath)] = replacement->Handle;
-    for (const auto& [id,asset] : s_LoadedAssets)
-        if (auto material = std::dynamic_pointer_cast<MaterialAsset>(asset)) material->ReplaceTexture(previous,replacement);
-    if (previous && Renderer::GetDevice()) Renderer::GetDevice()->RetireResource([previous]() {});
+    for (const auto& [id, asset] : s_LoadedAssets)
+    {
+        if (auto material = std::dynamic_pointer_cast<MaterialAsset>(asset))
+        {
+            material->ReplaceTexture(previous, replacement);
+        }
+    }
+    if (previous && Renderer::GetDevice())
+    {
+        Renderer::GetDevice()->RetireResource([previous]()
+                                              {
+                                              });
+    }
     return replacement;
 }

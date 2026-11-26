@@ -20,7 +20,17 @@
 namespace FINALITY
 {
     /** @brief Asset categories used by registry discovery and editor inspection. */
-    enum class ProjectAssetType { Unknown, Texture, Model, Material, Shader, Scene, Script, Prefab };
+    enum class ProjectAssetType
+    {
+        Unknown,
+        Texture,
+        Model,
+        Material,
+        Shader,
+        Scene,
+        Script,
+        Prefab
+    };
 
     /** @brief Registry entry associating a stable asset ID with a project-relative path, dependencies and import status. */
     struct AssetRecord
@@ -70,4 +80,4 @@ namespace FINALITY
         static const std::filesystem::path& GetProjectDirectory();
         static ProjectAssetType GetType(const std::filesystem::path& path);
     };
-}
+} // namespace FINALITY

@@ -27,9 +27,20 @@ namespace FINALITY
 
         void UpdateVertices(const std::vector<Vertex>& vertices) override;
 
-        uint32_t GetVertexCount() const override { return m_VertexCount; }
-        uint32_t GetIndexCount() const override { return m_IndexCount; }
-        bool HasIndices() const override { return m_HasIndices; }
+        uint32_t GetVertexCount() const override
+        {
+            return m_VertexCount;
+        }
+
+        uint32_t GetIndexCount() const override
+        {
+            return m_IndexCount;
+        }
+
+        bool HasIndices() const override
+        {
+            return m_HasIndices;
+        }
 
     private:
         void CreateVertexBuffer(const std::vector<Vertex>& vertices);
@@ -44,4 +55,4 @@ namespace FINALITY
         uint32_t m_IndexCount = 0;
         bool m_HasIndices = false;
     };
-}
+} // namespace FINALITY

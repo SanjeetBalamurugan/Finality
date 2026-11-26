@@ -18,10 +18,10 @@ namespace FINALITY
     {
     public:
         VKPipeline(VkDevice device, VkRenderPass renderPass, const PipelineConfig& config,
-            VkDescriptorSetLayout globalLayout, VkDescriptorSetLayout materialLayout);
+                   VkDescriptorSetLayout globalLayout, VkDescriptorSetLayout materialLayout);
 
         VKPipeline(VkDevice device, VkRenderPass renderPass, const PipelineConfig& config,
-            VkDescriptorSetLayout postProcessLayout);
+                   VkDescriptorSetLayout postProcessLayout);
 
         ~VKPipeline() override;
 
@@ -30,12 +30,19 @@ namespace FINALITY
 
         void Bind(VkCommandBuffer commandBuffer);
 
-        VkPipeline GetVKPipeline() const { return m_GraphicsPipeline; }
-        VkPipelineLayout GetVKLayout() const { return m_PipelineLayout; }
+        VkPipeline GetVKPipeline() const
+        {
+            return m_GraphicsPipeline;
+        }
+
+        VkPipelineLayout GetVKLayout() const
+        {
+            return m_PipelineLayout;
+        }
 
     private:
         VkDevice m_Device = nullptr;
         VkPipelineLayout m_PipelineLayout = nullptr;
         VkPipeline m_GraphicsPipeline = nullptr;
     };
-}
+} // namespace FINALITY

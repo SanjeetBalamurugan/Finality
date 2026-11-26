@@ -16,537 +16,581 @@
 
 void FINALITY::VKRenderDevice::CreateInstance()
 {
-	m_EnableValidationLayers = FINALITY::VKDebug::EnableValidationLayers || std::getenv("FINALITY_VULKAN_VALIDATION") != nullptr;
+    m_EnableValidationLayers = FINALITY::VKDebug::EnableValidationLayers || std::getenv("FINALITY_VULKAN_VALIDATION") != nullptr;
 
-	if (m_EnableValidationLayers && !VKDebug::CheckValidationLayerSupport())
-	{
-		FI_CORE_WARN("Vulkan validation layers are unavailable; continuing without them");
-		m_EnableValidationLayers = false;
-	}
+    if (m_EnableValidationLayers && !VKDebug::CheckValidationLayerSupport())
+    {
+        FI_CORE_WARN("Vulkan validation layers are unavailable; continuing without them");
+        m_EnableValidationLayers = false;
+    }
 
-	m_AppInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	m_AppInfo.pApplicationName = m_Spec.title.c_str();
-	m_AppInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-	m_AppInfo.pEngineName = "FinalityEngine";
-	m_AppInfo.engineVersion = VK_MAKE_VERSION(ENGINE_VERSION_MAJOR, ENGINE_VERSION_MINOR, ENGINE_VERSION_PATCH);
-	m_AppInfo.apiVersion = VK_API_VERSION_1_2;
+    m_AppInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    m_AppInfo.pApplicationName = m_Spec.title.c_str();
+    m_AppInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+    m_AppInfo.pEngineName = "FinalityEngine";
+    m_AppInfo.engineVersion = VK_MAKE_VERSION(ENGINE_VERSION_MAJOR, ENGINE_VERSION_MINOR, ENGINE_VERSION_PATCH);
+    m_AppInfo.apiVersion = VK_API_VERSION_1_2;
 
-	VkInstanceCreateInfo createInfo{};
-	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-	createInfo.pApplicationInfo = &m_AppInfo;
+    VkInstanceCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    createInfo.pApplicationInfo = &m_AppInfo;
 
-	auto extensions = VKDebug::GetRequiredExtensions();
-    if (m_EnableValidationLayers && !VKDebug::EnableValidationLayers) extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-	createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-	createInfo.ppEnabledExtensionNames = extensions.data();
+    auto extensions = VKDebug::GetRequiredExtensions();
+    if (m_EnableValidationLayers && !VKDebug::EnableValidationLayers)
+    {
+        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    }
+    createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+    createInfo.ppEnabledExtensionNames = extensions.data();
 
-	VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
-	if (m_EnableValidationLayers) {
-		createInfo.enabledLayerCount = static_cast<uint32_t>(m_ValidationLayers.size());
-		createInfo.ppEnabledLayerNames = m_ValidationLayers.data();
+    VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
+    if (m_EnableValidationLayers)
+    {
+        createInfo.enabledLayerCount = static_cast<uint32_t>(m_ValidationLayers.size());
+        createInfo.ppEnabledLayerNames = m_ValidationLayers.data();
 
-		VKDebug::PopulateDebugMessengerCreateInfo(debugCreateInfo);
-		createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
-	}
-	else {
-		createInfo.enabledLayerCount = 0;
-		createInfo.pNext = nullptr;
-	}
+        VKDebug::PopulateDebugMessengerCreateInfo(debugCreateInfo);
+        createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
+    }
+    else
+    {
+        createInfo.enabledLayerCount = 0;
+        createInfo.pNext = nullptr;
+    }
 
-	VkResult result = vkCreateInstance(&createInfo, nullptr, &m_Instance);
-	CHECK_VK_RESULT(result, "Create Instance");
-	FI_CORE_INFO("VULKAN instance created successfully");
+    VkResult result = vkCreateInstance(&createInfo, nullptr, &m_Instance);
+    CHECK_VK_RESULT(result, "Create Instance");
+    FI_CORE_INFO("VULKAN instance created successfully");
 }
 
 void FINALITY::VKRenderDevice::SetupDebugMessanger()
 {
-	if (!m_EnableValidationLayers) return;
+    if (!m_EnableValidationLayers)
+    {
+        return;
+    }
 
-	VkDebugUtilsMessengerCreateInfoEXT createInfo{};
-	VKDebug::PopulateDebugMessengerCreateInfo(createInfo);
+    VkDebugUtilsMessengerCreateInfoEXT createInfo{};
+    VKDebug::PopulateDebugMessengerCreateInfo(createInfo);
 
-	VkResult res = VKDebug::CreateDebugUtilsMessengerEXT(m_Instance, &createInfo, nullptr, &m_DebugMessanger);
-	CHECK_VK_RESULT(res, "Create Debug Messanger");
+    VkResult res = VKDebug::CreateDebugUtilsMessengerEXT(m_Instance, &createInfo, nullptr, &m_DebugMessanger);
+    CHECK_VK_RESULT(res, "Create Debug Messanger");
 }
 
 void FINALITY::VKRenderDevice::CreateSurface(const NativeWindowHandle& handle)
 {
-	GLFWwindow* window = (GLFWwindow*)handle.WindowHandle;
-	VkResult res = glfwCreateWindowSurface(m_Instance, window, nullptr, &m_Surface);
-	CHECK_VK_RESULT(res, "Vulkan Surface Creation");
+    GLFWwindow* window = (GLFWwindow*)handle.WindowHandle;
+    VkResult res = glfwCreateWindowSurface(m_Instance, window, nullptr, &m_Surface);
+    CHECK_VK_RESULT(res, "Vulkan Surface Creation");
 }
 
 void FINALITY::VKRenderDevice::DestroySurface() const
 {
-	PFN_vkDestroySurfaceKHR vkDestroySurface = nullptr;
-	vkDestroySurface = (PFN_vkDestroySurfaceKHR)vkGetInstanceProcAddr(m_Instance, "vkDestroySurfaceKHR");
+    PFN_vkDestroySurfaceKHR vkDestroySurface = nullptr;
+    vkDestroySurface = (PFN_vkDestroySurfaceKHR)vkGetInstanceProcAddr(m_Instance, "vkDestroySurfaceKHR");
 
-	if (!vkDestroySurface)
-	{
-		FI_CORE_ERROR("Cannot find the address of vkDestroySurfaceKHR");
-	}
+    if (!vkDestroySurface)
+    {
+        FI_CORE_ERROR("Cannot find the address of vkDestroySurfaceKHR");
+    }
 
-	vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
+    vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
 }
 
 void FINALITY::VKRenderDevice::CreateDevice()
 {
-	float qPriorities[] = { 1.0f };
+    float qPriorities[] = { 1.0f };
 
-	VkDeviceQueueCreateInfo qInfo = {
-		.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-		.pNext = nullptr,
-		.flags = 0,
-		.queueFamilyIndex = m_QueueFamily,
-		.queueCount = 1,
-		.pQueuePriorities = &qPriorities[0]
-	};
+    VkDeviceQueueCreateInfo qInfo = {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .queueFamilyIndex = m_QueueFamily,
+        .queueCount = 1,
+        .pQueuePriorities = &qPriorities[0]
+    };
 
-	std::vector<const char*> DevExts = {
-		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-		VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
-		VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME
-	};
+    std::vector<const char*> DevExts = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
+        VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME
+    };
 
-	VkPhysicalDeviceFeatures deviceFeatures{};
-	deviceFeatures.samplerAnisotropy = VK_TRUE;
+    VkPhysicalDeviceFeatures deviceFeatures{};
+    deviceFeatures.samplerAnisotropy = VK_TRUE;
     VkPhysicalDeviceFeatures supported{};
-    vkGetPhysicalDeviceFeatures(m_Devices.SelectedDevice().device,&supported);
+    vkGetPhysicalDeviceFeatures(m_Devices.SelectedDevice().device, &supported);
     deviceFeatures.textureCompressionBC = supported.textureCompressionBC;
 
-	VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeature{};
-	dynamicRenderingFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
-	dynamicRenderingFeature.dynamicRendering = VK_TRUE;
+    VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeature{};
+    dynamicRenderingFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
+    dynamicRenderingFeature.dynamicRendering = VK_TRUE;
 
-	VkDeviceCreateInfo createInfo{};
-	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	createInfo.pNext = &dynamicRenderingFeature;
-	createInfo.pQueueCreateInfos = &qInfo;
-	createInfo.queueCreateInfoCount = 1;
-	createInfo.pEnabledFeatures = &deviceFeatures;
-	createInfo.enabledExtensionCount = (uint32_t)DevExts.size();
-	createInfo.ppEnabledExtensionNames = DevExts.data();
+    VkDeviceCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    createInfo.pNext = &dynamicRenderingFeature;
+    createInfo.pQueueCreateInfos = &qInfo;
+    createInfo.queueCreateInfoCount = 1;
+    createInfo.pEnabledFeatures = &deviceFeatures;
+    createInfo.enabledExtensionCount = (uint32_t)DevExts.size();
+    createInfo.ppEnabledExtensionNames = DevExts.data();
 
-	VkResult res = vkCreateDevice(m_Devices.SelectedDevice().device, &createInfo, nullptr, &m_Device);
-	CHECK_VK_RESULT(res, "vkCreateDevice");
+    VkResult res = vkCreateDevice(m_Devices.SelectedDevice().device, &createInfo, nullptr, &m_Device);
+    CHECK_VK_RESULT(res, "vkCreateDevice");
 }
 
 void FINALITY::VKRenderDevice::DestroyDevice()
 {
-	vkDestroyDevice(m_Device, nullptr);
+    vkDestroyDevice(m_Device, nullptr);
 }
 
 void FINALITY::VKRenderDevice::CreateCommandBuffers(uint32_t count)
 {
-	m_CMDBuffers.resize(count);
+    m_CMDBuffers.resize(count);
 
-	VkCommandBufferAllocateInfo cmdBufAllocInfo{};
-	cmdBufAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	cmdBufAllocInfo.pNext = nullptr;
-	cmdBufAllocInfo.commandPool = m_CMDBufPool;
-	cmdBufAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	cmdBufAllocInfo.commandBufferCount = count;
+    VkCommandBufferAllocateInfo cmdBufAllocInfo{};
+    cmdBufAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    cmdBufAllocInfo.pNext = nullptr;
+    cmdBufAllocInfo.commandPool = m_CMDBufPool;
+    cmdBufAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cmdBufAllocInfo.commandBufferCount = count;
 
-	VkResult res = vkAllocateCommandBuffers(m_Device, &cmdBufAllocInfo, m_CMDBuffers.data());
-	CHECK_VK_RESULT(res, "vkAllocateCommandBuffers error");
+    VkResult res = vkAllocateCommandBuffers(m_Device, &cmdBufAllocInfo, m_CMDBuffers.data());
+    CHECK_VK_RESULT(res, "vkAllocateCommandBuffers error");
 }
 
 void FINALITY::VKRenderDevice::CreateCommandBufferPool()
 {
-	VkCommandPoolCreateInfo cmdPoolCreateInfo{};
-	cmdPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	cmdPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-	cmdPoolCreateInfo.pNext = nullptr;
-	cmdPoolCreateInfo.queueFamilyIndex = m_QueueFamily;
+    VkCommandPoolCreateInfo cmdPoolCreateInfo{};
+    cmdPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    cmdPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    cmdPoolCreateInfo.pNext = nullptr;
+    cmdPoolCreateInfo.queueFamilyIndex = m_QueueFamily;
 
-	VkResult res = vkCreateCommandPool(m_Device, &cmdPoolCreateInfo, nullptr, &m_CMDBufPool);
-	CHECK_VK_RESULT(res, "vkCreateCommandPool error");
+    VkResult res = vkCreateCommandPool(m_Device, &cmdPoolCreateInfo, nullptr, &m_CMDBufPool);
+    CHECK_VK_RESULT(res, "vkCreateCommandPool error");
 }
 
 void FINALITY::VKRenderDevice::BeginCommandBuffers(VkCommandBuffer cmdBuf, uint32_t usageFlags)
 {
-	VkCommandBufferBeginInfo cmdBufBeginInfo{};
-	cmdBufBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	cmdBufBeginInfo.pNext = nullptr;
-	cmdBufBeginInfo.flags = usageFlags;
-	cmdBufBeginInfo.pInheritanceInfo = nullptr;
+    VkCommandBufferBeginInfo cmdBufBeginInfo{};
+    cmdBufBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    cmdBufBeginInfo.pNext = nullptr;
+    cmdBufBeginInfo.flags = usageFlags;
+    cmdBufBeginInfo.pInheritanceInfo = nullptr;
 
-	VkResult res = vkBeginCommandBuffer(cmdBuf, &cmdBufBeginInfo);
-	CHECK_VK_RESULT(res, "vkBeginCommandBuffer error");
+    VkResult res = vkBeginCommandBuffer(cmdBuf, &cmdBufBeginInfo);
+    CHECK_VK_RESULT(res, "vkBeginCommandBuffer error");
 }
 
 void FINALITY::VKRenderDevice::CreateInstanceBuffers(VkDeviceSize initialSize)
 {
-	uint32_t frameCount = m_SwapChain->GetImageCount();
-	m_InstanceBuffers.resize(frameCount);
+    uint32_t frameCount = m_SwapChain->GetImageCount();
+    m_InstanceBuffers.resize(frameCount);
 
-	for (uint32_t i = 0; i < frameCount; ++i)
-	{
-		auto& buffer = m_InstanceBuffers[i];
-		buffer.Capacity = initialSize;
-		buffer.CurrentOffset = 0;
+    for (uint32_t i = 0; i < frameCount; ++i)
+    {
+        auto& buffer = m_InstanceBuffers[i];
+        buffer.Capacity = initialSize;
+        buffer.CurrentOffset = 0;
 
-		VkBufferCreateInfo bufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-		bufferInfo.size = buffer.Capacity;
-		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        VkBufferCreateInfo bufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+        bufferInfo.size = buffer.Capacity;
+        bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-		if (vkCreateBuffer(m_Device, &bufferInfo, nullptr, &buffer.Buffer) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to create dynamic instance buffer!");
-		}
+        if (vkCreateBuffer(m_Device, &bufferInfo, nullptr, &buffer.Buffer) != VK_SUCCESS)
+        {
+            throw std::runtime_error("Failed to create dynamic instance buffer!");
+        }
 
-		VkMemoryRequirements memReqs;
-		vkGetBufferMemoryRequirements(m_Device, buffer.Buffer, &memReqs);
+        VkMemoryRequirements memReqs;
+        vkGetBufferMemoryRequirements(m_Device, buffer.Buffer, &memReqs);
 
-		VkMemoryAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-		allocInfo.allocationSize = memReqs.size;
-		allocInfo.memoryTypeIndex = FindMemoryType(
-			memReqs.memoryTypeBits,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-		);
+        VkMemoryAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+        allocInfo.allocationSize = memReqs.size;
+        allocInfo.memoryTypeIndex = FindMemoryType(
+            memReqs.memoryTypeBits,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-		if (vkAllocateMemory(m_Device, &allocInfo, nullptr, &buffer.Memory) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to allocate dynamic instance buffer memory!");
-		}
+        if (vkAllocateMemory(m_Device, &allocInfo, nullptr, &buffer.Memory) != VK_SUCCESS)
+        {
+            throw std::runtime_error("Failed to allocate dynamic instance buffer memory!");
+        }
 
-		vkBindBufferMemory(m_Device, buffer.Buffer, buffer.Memory, 0);
-		vkMapMemory(m_Device, buffer.Memory, 0, buffer.Capacity, 0, reinterpret_cast<void**>(&buffer.MappedData));
-	}
+        vkBindBufferMemory(m_Device, buffer.Buffer, buffer.Memory, 0);
+        vkMapMemory(m_Device, buffer.Memory, 0, buffer.Capacity, 0, reinterpret_cast<void**>(&buffer.MappedData));
+    }
 }
 
 void FINALITY::VKRenderDevice::DestroyInstanceBuffers()
 {
-	for (auto& buffer : m_InstanceBuffers)
-	{
-		if (buffer.MappedData) {
-			vkUnmapMemory(m_Device, buffer.Memory);
-			buffer.MappedData = nullptr;
-		}
-		if (buffer.Buffer != VK_NULL_HANDLE) {
-			vkDestroyBuffer(m_Device, buffer.Buffer, nullptr);
-			buffer.Buffer = VK_NULL_HANDLE;
-		}
-		if (buffer.Memory != VK_NULL_HANDLE) {
-			vkFreeMemory(m_Device, buffer.Memory, nullptr);
-			buffer.Memory = VK_NULL_HANDLE;
-		}
-	}
-	m_InstanceBuffers.clear();
+    for (auto& buffer : m_InstanceBuffers)
+    {
+        if (buffer.MappedData)
+        {
+            vkUnmapMemory(m_Device, buffer.Memory);
+            buffer.MappedData = nullptr;
+        }
+        if (buffer.Buffer != VK_NULL_HANDLE)
+        {
+            vkDestroyBuffer(m_Device, buffer.Buffer, nullptr);
+            buffer.Buffer = VK_NULL_HANDLE;
+        }
+        if (buffer.Memory != VK_NULL_HANDLE)
+        {
+            vkFreeMemory(m_Device, buffer.Memory, nullptr);
+            buffer.Memory = VK_NULL_HANDLE;
+        }
+    }
+    m_InstanceBuffers.clear();
 }
 
 void FINALITY::VKRenderDevice::UploadToDynamicInstanceBuffer(
-	VkBuffer& buffer,
-	VkDeviceMemory& memory,
-	uint8_t*& mappedData,
-	VkDeviceSize& capacity,
-	VkDeviceSize& currentOffset,
-	const void* data,
-	VkDeviceSize dataSize,
-	VkBuffer& outBuffer,
-	VkDeviceSize& outOffset)
+    VkBuffer& buffer,
+    VkDeviceMemory& memory,
+    uint8_t*& mappedData,
+    VkDeviceSize& capacity,
+    VkDeviceSize& currentOffset,
+    const void* data,
+    VkDeviceSize dataSize,
+    VkBuffer& outBuffer,
+    VkDeviceSize& outOffset)
 {
-	if (dataSize == 0) return;
+    if (dataSize == 0)
+    {
+        return;
+    }
 
-	constexpr VkDeviceSize alignment = 256;
-	VkDeviceSize alignedOffset = (currentOffset + (alignment - 1)) & ~(alignment - 1);
+    constexpr VkDeviceSize alignment = 256;
+    VkDeviceSize alignedOffset = (currentOffset + (alignment - 1)) & ~(alignment - 1);
 
-	if (alignedOffset + dataSize > capacity)
-	{
-		VkDeviceSize newCapacity = std::max(capacity * 2, alignedOffset + dataSize + (1024 * 1024));
+    if (alignedOffset + dataSize > capacity)
+    {
+        VkDeviceSize newCapacity = std::max(capacity * 2, alignedOffset + dataSize + (1024 * 1024));
         if (buffer != VK_NULL_HANDLE)
         {
-            const auto oldBuffer = buffer; const auto oldMemory = memory; const auto device = m_Device;
-            m_FrameDeletionQueues[m_ImageIndex].Push([oldBuffer,oldMemory,device]()
-            { vkUnmapMemory(device,oldMemory); vkDestroyBuffer(device,oldBuffer,nullptr); vkFreeMemory(device,oldMemory,nullptr); });
+            const auto oldBuffer = buffer;
+            const auto oldMemory = memory;
+            const auto device = m_Device;
+            m_FrameDeletionQueues[m_ImageIndex].Push([oldBuffer, oldMemory, device]()
+                                                     {
+                                                         vkUnmapMemory(device, oldMemory);
+                                                         vkDestroyBuffer(device, oldBuffer, nullptr);
+                                                         vkFreeMemory(device, oldMemory, nullptr);
+                                                     });
         }
 
-		VkBufferCreateInfo bufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-		bufferInfo.size = newCapacity;
-		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        VkBufferCreateInfo bufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+        bufferInfo.size = newCapacity;
+        bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-		vkCreateBuffer(m_Device, &bufferInfo, nullptr, &buffer);
+        vkCreateBuffer(m_Device, &bufferInfo, nullptr, &buffer);
 
-		VkMemoryRequirements memReqs;
-		vkGetBufferMemoryRequirements(m_Device, buffer, &memReqs);
+        VkMemoryRequirements memReqs;
+        vkGetBufferMemoryRequirements(m_Device, buffer, &memReqs);
 
-		VkMemoryAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-		allocInfo.allocationSize = memReqs.size;
-		allocInfo.memoryTypeIndex = FindMemoryType(
-			memReqs.memoryTypeBits,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-		);
+        VkMemoryAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+        allocInfo.allocationSize = memReqs.size;
+        allocInfo.memoryTypeIndex = FindMemoryType(
+            memReqs.memoryTypeBits,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-		vkAllocateMemory(m_Device, &allocInfo, nullptr, &memory);
-		vkBindBufferMemory(m_Device, buffer, memory, 0);
-		vkMapMemory(m_Device, memory, 0, newCapacity, 0, reinterpret_cast<void**>(&mappedData));
+        vkAllocateMemory(m_Device, &allocInfo, nullptr, &memory);
+        vkBindBufferMemory(m_Device, buffer, memory, 0);
+        vkMapMemory(m_Device, memory, 0, newCapacity, 0, reinterpret_cast<void**>(&mappedData));
 
-		capacity = newCapacity;
-		alignedOffset = 0;
-	}
+        capacity = newCapacity;
+        alignedOffset = 0;
+    }
 
-	std::memcpy(mappedData + alignedOffset, data, dataSize);
+    std::memcpy(mappedData + alignedOffset, data, dataSize);
 
-	outBuffer = buffer;
-	outOffset = alignedOffset;
+    outBuffer = buffer;
+    outOffset = alignedOffset;
 
-	currentOffset = alignedOffset + dataSize;
+    currentOffset = alignedOffset + dataSize;
 }
 
 uint32_t FINALITY::VKRenderDevice::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
 {
-	VkPhysicalDeviceMemoryProperties memProperties;
-	vkGetPhysicalDeviceMemoryProperties(GetActivePhysicalDevice(), &memProperties);
+    VkPhysicalDeviceMemoryProperties memProperties;
+    vkGetPhysicalDeviceMemoryProperties(GetActivePhysicalDevice(), &memProperties);
 
-	for (uint32_t i = 0; i < memProperties.memoryTypeCount; ++i)
-	{
-		if ((typeFilter & (1 << i)) &&
-			(memProperties.memoryTypes[i].propertyFlags & properties) == properties)
-		{
-			return i;
-		}
-	}
+    for (uint32_t i = 0; i < memProperties.memoryTypeCount; ++i)
+    {
+        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
+        {
+            return i;
+        }
+    }
 
-	throw std::runtime_error("Failed to find suitable Vulkan memory type!");
+    throw std::runtime_error("Failed to find suitable Vulkan memory type!");
 }
 
 void FINALITY::VKRenderDevice::RecreateSwapchainResources()
 {
-	if (m_Spec.width == 0 || m_Spec.height == 0)
-	{
-		m_PendingSwapchainRecreate = true;
-		return;
-	}
+    if (m_Spec.width == 0 || m_Spec.height == 0)
+    {
+        m_PendingSwapchainRecreate = true;
+        return;
+    }
 
-	vkDeviceWaitIdle(m_Device);
+    vkDeviceWaitIdle(m_Device);
 
-	m_SwapChain->Recreate(m_Spec);
-	m_Queue.UpdateSwapChain(m_SwapChain->GetVKHandle());
+    m_SwapChain->Recreate(m_Spec);
+    m_Queue.UpdateSwapChain(m_SwapChain->GetVKHandle());
 
-	m_PostProcessingFramebuffer->Resize(m_SwapChain->GetWidth(), m_SwapChain->GetHeight());
+    m_PostProcessingFramebuffer->Resize(m_SwapChain->GetWidth(), m_SwapChain->GetHeight());
 
-	auto* vkFB = static_cast<VKFramebuffer*>(m_PostProcessingFramebuffer.get());
-	VkDescriptorImageInfo imageInfo{};
-	imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	imageInfo.imageView = (VkImageView)vkFB->GetColorAttachmentRendererID();
-	imageInfo.sampler = m_PostProcessSampler;
+    auto* vkFB = static_cast<VKFramebuffer*>(m_PostProcessingFramebuffer.get());
+    VkDescriptorImageInfo imageInfo{};
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    imageInfo.imageView = (VkImageView)vkFB->GetColorAttachmentRendererID();
+    imageInfo.sampler = m_PostProcessSampler;
 
-	VkWriteDescriptorSet write{};
-	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	write.dstSet = m_PostProcessDescriptorSet;
-	write.dstBinding = 0;
-	write.descriptorCount = 1;
-	write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	write.pImageInfo = &imageInfo;
-	vkUpdateDescriptorSets(m_Device, 1, &write, 0, nullptr);
+    VkWriteDescriptorSet write{};
+    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write.dstSet = m_PostProcessDescriptorSet;
+    write.dstBinding = 0;
+    write.descriptorCount = 1;
+    write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    write.pImageInfo = &imageInfo;
+    vkUpdateDescriptorSets(m_Device, 1, &write, 0, nullptr);
 }
 
 void FINALITY::VKRenderDevice::DrawQueueToTarget(
-	VkCommandBuffer cmd, uint32_t width, uint32_t height,
-	VkDescriptorSet globalDescriptorSet,
-	VkBuffer& instanceBuffer,
-	VkDeviceMemory& instanceBufferMemory,
-	uint8_t*& instanceBufferMapped,
-	VkDeviceSize& instanceBufferCapacity,
-	VkDeviceSize& instanceBufferOffset,
-	const std::vector<RenderPacket>& queue, RenderStatistics* statistics, const RenderView* view)
+    VkCommandBuffer cmd, uint32_t width, uint32_t height,
+    VkDescriptorSet globalDescriptorSet,
+    VkBuffer& instanceBuffer,
+    VkDeviceMemory& instanceBufferMemory,
+    uint8_t*& instanceBufferMapped,
+    VkDeviceSize& instanceBufferCapacity,
+    VkDeviceSize& instanceBufferOffset,
+    const std::vector<RenderPacket>& queue, RenderStatistics* statistics, const RenderView* view)
 {
-	if (queue.empty()) return;
+    if (queue.empty())
+    {
+        return;
+    }
 
-	std::vector<size_t> indices(queue.size());
-	std::iota(indices.begin(), indices.end(), 0);
+    std::vector<size_t> indices(queue.size());
+    std::iota(indices.begin(), indices.end(), 0);
 
-	std::stable_sort(indices.begin(), indices.end(), [&queue,view](size_t i1, size_t i2) {
-		const auto& a = queue[i1];
-		const auto& b = queue[i2];
-        if (a.EditorOverlay != b.EditorOverlay) return !a.EditorOverlay;
-        const bool transparentA = a.PipelineInstance && a.PipelineInstance->IsTransparent();
-        const bool transparentB = b.PipelineInstance && b.PipelineInstance->IsTransparent();
-        if (transparentA != transparentB) return !transparentA;
-        if (transparentA && view && a.MeshData && b.MeshData)
+    std::stable_sort(indices.begin(), indices.end(), [&queue, view](size_t i1, size_t i2)
+                     {
+                         const auto& a = queue[i1];
+                         const auto& b = queue[i2];
+                         if (a.EditorOverlay != b.EditorOverlay)
+                         {
+                             return !a.EditorOverlay;
+                         }
+                         const bool transparentA = a.PipelineInstance && a.PipelineInstance->IsTransparent();
+                         const bool transparentB = b.PipelineInstance && b.PipelineInstance->IsTransparent();
+                         if (transparentA != transparentB)
+                         {
+                             return !transparentA;
+                         }
+                         if (transparentA && view && a.MeshData && b.MeshData)
+                         {
+                             const float depthA = (view->View * a.Transform * glm::vec4(a.MeshData->GetBoundsCenter(), 1)).z;
+                             const float depthB = (view->View * b.Transform * glm::vec4(b.MeshData->GetBoundsCenter(), 1)).z;
+                             return depthA < depthB;
+                         }
+
+                         if (a.PipelineInstance != b.PipelineInstance)
+                         {
+                             return a.PipelineInstance < b.PipelineInstance;
+                         }
+                         if (a.MaterialInstance != b.MaterialInstance)
+                         {
+                             return a.MaterialInstance < b.MaterialInstance;
+                         }
+                         return a.MeshData < b.MeshData;
+                     });
+
+    VkViewport viewport{
+        .x = 0.0f,
+        .y = static_cast<float>(height),
+        .width = static_cast<float>(width),
+        .height = -static_cast<float>(height),
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f
+    };
+    vkCmdSetViewport(cmd, 0, 1, &viewport);
+
+    VkRect2D scissor{
+        .offset = { 0, 0 },
+        .extent = { width, height }
+    };
+    vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+    VKPipeline* activePipeline = nullptr;
+    const Material* activeMaterial = nullptr;
+
+    std::vector<InstancePayload> instanceBatch;
+    instanceBatch.reserve(128);
+
+    size_t totalProcessed = 0;
+    size_t queueSize = indices.size();
+
+    while (totalProcessed < queueSize)
+    {
+        size_t batchStartIdx = indices[totalProcessed];
+        const auto& firstPacket = queue[batchStartIdx];
+
+        if (!firstPacket.MeshData || !firstPacket.PipelineInstance)
         {
-            const float depthA = (view->View*a.Transform*glm::vec4(a.MeshData->GetBoundsCenter(),1)).z;
-            const float depthB = (view->View*b.Transform*glm::vec4(b.MeshData->GetBoundsCenter(),1)).z;
-            return depthA < depthB;
+            totalProcessed++;
+            continue;
         }
 
-		if (a.PipelineInstance != b.PipelineInstance) {
-			return a.PipelineInstance < b.PipelineInstance;
-		}
-		if (a.MaterialInstance != b.MaterialInstance) {
-			return a.MaterialInstance < b.MaterialInstance;
-		}
-		return a.MeshData < b.MeshData;
-		});
+        size_t batchSize = 0;
+        instanceBatch.clear();
 
-	VkViewport viewport{
-		.x = 0.0f,
-		.y = static_cast<float>(height),
-		.width = static_cast<float>(width),
-		.height = -static_cast<float>(height),
-		.minDepth = 0.0f,
-		.maxDepth = 1.0f
-	};
-	vkCmdSetViewport(cmd, 0, 1, &viewport);
+        while ((totalProcessed + batchSize) < queueSize)
+        {
+            const auto& currPacket = queue[indices[totalProcessed + batchSize]];
+            bool sameBatch = (currPacket.PipelineInstance == firstPacket.PipelineInstance) &&
+                             (currPacket.MaterialInstance == firstPacket.MaterialInstance) &&
+                             (currPacket.MeshData == firstPacket.MeshData) &&
+                             currPacket.CustomPushData == firstPacket.CustomPushData && currPacket.Textures == firstPacket.Textures &&
+                             (batchSize == 0 || !firstPacket.PipelineInstance->IsTransparent());
+            if (!sameBatch)
+            {
+                break;
+            }
 
-	VkRect2D scissor{
-		.offset = { 0, 0 },
-		.extent = { width, height }
-	};
-	vkCmdSetScissor(cmd, 0, 1, &scissor);
+            InstancePayload payload{};
+            std::memcpy(&payload.Transform, &currPacket.Transform, sizeof(glm::mat4));
+            if (!currPacket.CustomPushData.empty())
+            {
+                size_t copySize = std::min<size_t>(64, currPacket.CustomPushData.size());
+                std::memcpy(payload.CustomData, currPacket.CustomPushData.data(), copySize);
+            }
+            instanceBatch.push_back(payload);
 
-	VKPipeline* activePipeline = nullptr;
-	const Material* activeMaterial = nullptr;
+            batchSize++;
+        }
 
-	std::vector<InstancePayload> instanceBatch;
-	instanceBatch.reserve(128);
+        auto* vkPipeline = static_cast<VKPipeline*>(firstPacket.PipelineInstance.get());
+        auto* vkMesh = static_cast<VKMesh*>(firstPacket.MeshData.get());
+        const auto* materialKey = firstPacket.MaterialInstance.get();
 
-	size_t totalProcessed = 0;
-	size_t queueSize = indices.size();
+        if (vkPipeline != activePipeline)
+        {
+            activePipeline = vkPipeline;
+            activePipeline->Bind(cmd);
+            if (statistics)
+            {
+                ++statistics->PipelineBinds;
+            }
 
-	while (totalProcessed < queueSize)
-	{
-		size_t batchStartIdx = indices[totalProcessed];
-		const auto& firstPacket = queue[batchStartIdx];
+            if (statistics)
+            {
+                ++statistics->DescriptorBinds;
+            }
+            vkCmdBindDescriptorSets(
+                cmd,
+                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                vkPipeline->GetVKLayout(),
+                0, 1,
+                &globalDescriptorSet,
+                0, nullptr);
+            activeMaterial = nullptr;
+        }
 
-		if (!firstPacket.MeshData || !firstPacket.PipelineInstance) {
-			totalProcessed++;
-			continue;
-		}
+        if (materialKey != activeMaterial)
+        {
+            activeMaterial = materialKey;
 
-		size_t batchSize = 0;
-		instanceBatch.clear();
-
-		while ((totalProcessed + batchSize) < queueSize)
-		{
-			const auto& currPacket = queue[indices[totalProcessed + batchSize]];
-			bool sameBatch = (currPacket.PipelineInstance == firstPacket.PipelineInstance) &&
-				(currPacket.MaterialInstance == firstPacket.MaterialInstance) &&
-				(currPacket.MeshData == firstPacket.MeshData) &&
-                currPacket.CustomPushData == firstPacket.CustomPushData && currPacket.Textures == firstPacket.Textures &&
-                (batchSize == 0 || !firstPacket.PipelineInstance->IsTransparent());
-			if (!sameBatch) break;
-
-			InstancePayload payload{};
-			std::memcpy(&payload.Transform, &currPacket.Transform, sizeof(glm::mat4));
-			if (!currPacket.CustomPushData.empty()) {
-				size_t copySize = std::min<size_t>(64, currPacket.CustomPushData.size());
-				std::memcpy(payload.CustomData, currPacket.CustomPushData.data(), copySize);
-			}
-			instanceBatch.push_back(payload);
-
-			batchSize++;
-		}
-
-		auto* vkPipeline = static_cast<VKPipeline*>(firstPacket.PipelineInstance.get());
-		auto* vkMesh = static_cast<VKMesh*>(firstPacket.MeshData.get());
-		const auto* materialKey = firstPacket.MaterialInstance.get();
-
-		if (vkPipeline != activePipeline)
-		{
-			activePipeline = vkPipeline;
-			activePipeline->Bind(cmd);
-            if (statistics) ++statistics->PipelineBinds;
-
-			if (statistics) ++statistics->DescriptorBinds;
-			vkCmdBindDescriptorSets(
-				cmd,
-				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				vkPipeline->GetVKLayout(),
-				0, 1,
-				&globalDescriptorSet,
-				0, nullptr
-			);
-			activeMaterial = nullptr;
-		}
-
-		if (materialKey != activeMaterial)
-		{
-			activeMaterial = materialKey;
-
-			if (!firstPacket.Textures.empty())
-			{
+            if (!firstPacket.Textures.empty())
+            {
                 const auto* textureKey = firstPacket.Textures.begin()->second.get();
-				auto it = m_MaterialDescriptorCache.find(textureKey);
-				VkDescriptorSet materialSet = VK_NULL_HANDLE;
+                auto it = m_MaterialDescriptorCache.find(textureKey);
+                VkDescriptorSet materialSet = VK_NULL_HANDLE;
 
-				if (it == m_MaterialDescriptorCache.end() || it->second.TextureReference.lock() != firstPacket.Textures.begin()->second)
-				{
+                if (it == m_MaterialDescriptorCache.end() || it->second.TextureReference.lock() != firstPacket.Textures.begin()->second)
+                {
                     if (it != m_MaterialDescriptorCache.end())
                     {
                         const auto old = it->second.Set;
-                        m_FrameDeletionQueues[m_ImageIndex].Push([this,old]() { m_MaterialDescriptorAllocator.Free(old); });
+                        m_FrameDeletionQueues[m_ImageIndex].Push([this, old]()
+                                                                 {
+                                                                     m_MaterialDescriptorAllocator.Free(old);
+                                                                 });
                     }
-					materialSet = m_MaterialDescriptorAllocator.Allocate(m_MaterialDescriptorSetLayout);
-					m_MaterialDescriptorCache[textureKey] = { materialSet, firstPacket.Textures.begin()->second };
+                    materialSet = m_MaterialDescriptorAllocator.Allocate(m_MaterialDescriptorSetLayout);
+                    m_MaterialDescriptorCache[textureKey] = { materialSet, firstPacket.Textures.begin()->second };
 
-					auto texIt = firstPacket.Textures.begin();
-					auto* vkTex = static_cast<VKTexture*>(texIt->second.get());
+                    auto texIt = firstPacket.Textures.begin();
+                    auto* vkTex = static_cast<VKTexture*>(texIt->second.get());
 
-					if (vkTex)
-					{
-						VkDescriptorImageInfo imageInfo{};
-						imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-						imageInfo.imageView = vkTex->GetImageView();
-						imageInfo.sampler = vkTex->GetSampler();
+                    if (vkTex)
+                    {
+                        VkDescriptorImageInfo imageInfo{};
+                        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                        imageInfo.imageView = vkTex->GetImageView();
+                        imageInfo.sampler = vkTex->GetSampler();
 
-						VkWriteDescriptorSet descriptorWrite{};
-						descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-						descriptorWrite.dstSet = materialSet;
-						descriptorWrite.dstBinding = 0;
-						descriptorWrite.dstArrayElement = 0;
-						descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-						descriptorWrite.descriptorCount = 1;
-						descriptorWrite.pImageInfo = &imageInfo;
+                        VkWriteDescriptorSet descriptorWrite{};
+                        descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                        descriptorWrite.dstSet = materialSet;
+                        descriptorWrite.dstBinding = 0;
+                        descriptorWrite.dstArrayElement = 0;
+                        descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                        descriptorWrite.descriptorCount = 1;
+                        descriptorWrite.pImageInfo = &imageInfo;
 
-						vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
-					}
-				}
-				else
-				{
-					materialSet = it->second.Set;
-				}
+                        vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
+                    }
+                }
+                else
+                {
+                    materialSet = it->second.Set;
+                }
 
-	            if (statistics) ++statistics->DescriptorBinds;
-			vkCmdBindDescriptorSets(
-					cmd,
-					VK_PIPELINE_BIND_POINT_GRAPHICS,
-					vkPipeline->GetVKLayout(),
-					1, 1,
-					&materialSet,
-					0, nullptr
-				);
-			}
-		}
+                if (statistics)
+                {
+                    ++statistics->DescriptorBinds;
+                }
+                vkCmdBindDescriptorSets(
+                    cmd,
+                    VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    vkPipeline->GetVKLayout(),
+                    1, 1,
+                    &materialSet,
+                    0, nullptr);
+            }
+        }
 
-		VkBuffer outInstanceBuffer = VK_NULL_HANDLE;
-		VkDeviceSize outInstanceBufferOffset = 0;
-		UploadToDynamicInstanceBuffer(
-			instanceBuffer,
-			instanceBufferMemory,
-			instanceBufferMapped,
-			instanceBufferCapacity,
-			instanceBufferOffset,
-			instanceBatch.data(),
-			instanceBatch.size() * sizeof(InstancePayload),
-			outInstanceBuffer,
-			outInstanceBufferOffset
-		);
+        VkBuffer outInstanceBuffer = VK_NULL_HANDLE;
+        VkDeviceSize outInstanceBufferOffset = 0;
+        UploadToDynamicInstanceBuffer(
+            instanceBuffer,
+            instanceBufferMemory,
+            instanceBufferMapped,
+            instanceBufferCapacity,
+            instanceBufferOffset,
+            instanceBatch.data(),
+            instanceBatch.size() * sizeof(InstancePayload),
+            outInstanceBuffer,
+            outInstanceBufferOffset);
 
-		vkMesh->Bind(cmd);
-		vkCmdBindVertexBuffers(cmd, 1, 1, &outInstanceBuffer, &outInstanceBufferOffset);
+        vkMesh->Bind(cmd);
+        vkCmdBindVertexBuffers(cmd, 1, 1, &outInstanceBuffer, &outInstanceBufferOffset);
 
-		if (!firstPacket.CustomPushData.empty())
-		{
-			vkCmdPushConstants(
-				cmd,
-				vkPipeline->GetVKLayout(),
-				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-				0,
-				static_cast<uint32_t>(firstPacket.CustomPushData.size()),
-				firstPacket.CustomPushData.data()
-			);
-		}
+        if (!firstPacket.CustomPushData.empty())
+        {
+            vkCmdPushConstants(
+                cmd,
+                vkPipeline->GetVKLayout(),
+                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                0,
+                static_cast<uint32_t>(firstPacket.CustomPushData.size()),
+                firstPacket.CustomPushData.data());
+        }
 
         if (statistics)
         {
@@ -555,331 +599,337 @@ void FINALITY::VKRenderDevice::DrawQueueToTarget(
             statistics->Vertices += vkMesh->GetVertexCount() * batchSize;
             statistics->Triangles += (vkMesh->HasIndices() ? vkMesh->GetIndexCount() : vkMesh->GetVertexCount()) / 3 * batchSize;
         }
-		uint32_t instanceCount = static_cast<uint32_t>(batchSize);
+        uint32_t instanceCount = static_cast<uint32_t>(batchSize);
 
-		if (vkMesh->HasIndices())
-		{
-			vkCmdDrawIndexed(cmd, vkMesh->GetIndexCount(), instanceCount, 0, 0, 0);
-		}
-		else
-		{
-			vkCmdDraw(cmd, vkMesh->GetVertexCount(), instanceCount, 0, 0);
-		}
+        if (vkMesh->HasIndices())
+        {
+            vkCmdDrawIndexed(cmd, vkMesh->GetIndexCount(), instanceCount, 0, 0, 0);
+        }
+        else
+        {
+            vkCmdDraw(cmd, vkMesh->GetVertexCount(), instanceCount, 0, 0);
+        }
 
-		totalProcessed += batchSize;
-	}
+        totalProcessed += batchSize;
+    }
 }
 
 void FINALITY::VKRenderDevice::Initialize(const NativeWindowHandle& handle)
 {
-	this->CreateInstance();
-	this->SetupDebugMessanger();
-	this->CreateSurface(handle);
+    this->CreateInstance();
+    this->SetupDebugMessanger();
+    this->CreateSurface(handle);
 
-	m_Devices.Initialize(m_Instance, m_Surface);
-	m_QueueFamily = m_Devices.SelectDevice(VK_QUEUE_GRAPHICS_BIT, true);
+    m_Devices.Initialize(m_Instance, m_Surface);
+    m_QueueFamily = m_Devices.SelectDevice(VK_QUEUE_GRAPHICS_BIT, true);
 
-	this->CreateDevice();
+    this->CreateDevice();
 
-	m_SwapChain = std::make_unique<VKSwapChain>(m_Device, m_Devices.SelectedDevice().device, m_Surface);
-	m_SwapChain->Initialize(handle, m_Spec);
+    m_SwapChain = std::make_unique<VKSwapChain>(m_Device, m_Devices.SelectedDevice().device, m_Surface);
+    m_SwapChain->Initialize(handle, m_Spec);
 
-	this->CreateCommandBufferPool();
+    this->CreateCommandBufferPool();
 
-	m_Queue.Initialize(m_Device, m_SwapChain->GetVKHandle(), m_SwapChain->GetImageCount(), m_QueueFamily, 0);
-	this->CreateCommandBuffers(m_SwapChain->GetImageCount());
+    m_Queue.Initialize(m_Device, m_SwapChain->GetVKHandle(), m_SwapChain->GetImageCount(), m_QueueFamily, 0);
+    this->CreateCommandBuffers(m_SwapChain->GetImageCount());
 
-	m_FrameDeletionQueues.resize(m_SwapChain->GetImageCount());
-	m_MaterialDescriptorAllocator.Initialize(m_Device);
+    m_FrameDeletionQueues.resize(m_SwapChain->GetImageCount());
+    m_MaterialDescriptorAllocator.Initialize(m_Device);
 
-	uint32_t imageCount = m_SwapChain->GetImageCount();
+    uint32_t imageCount = m_SwapChain->GetImageCount();
 
-	VkDescriptorSetLayoutBinding uboLayoutBinding{};
-	uboLayoutBinding.binding = 0;
-	uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	uboLayoutBinding.descriptorCount = 1;
-	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-	uboLayoutBinding.pImmutableSamplers = nullptr;
+    VkDescriptorSetLayoutBinding uboLayoutBinding{};
+    uboLayoutBinding.binding = 0;
+    uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    uboLayoutBinding.descriptorCount = 1;
+    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    uboLayoutBinding.pImmutableSamplers = nullptr;
 
-	VkDescriptorSetLayoutCreateInfo layoutInfo{};
-	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount = 1;
-	layoutInfo.pBindings = &uboLayoutBinding;
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = 1;
+    layoutInfo.pBindings = &uboLayoutBinding;
 
-	VkResult res = vkCreateDescriptorSetLayout(m_Device, &layoutInfo, nullptr, &m_GlobalDescriptorSetLayout);
-	CHECK_VK_RESULT(res, "vkCreateDescriptorSetLayout");
+    VkResult res = vkCreateDescriptorSetLayout(m_Device, &layoutInfo, nullptr, &m_GlobalDescriptorSetLayout);
+    CHECK_VK_RESULT(res, "vkCreateDescriptorSetLayout");
 
-	m_GlobalUBO.Initialize(m_Device, m_Devices.SelectedDevice().device, sizeof(GlobalUniformBufferObject), imageCount);
+    m_GlobalUBO.Initialize(m_Device, m_Devices.SelectedDevice().device, sizeof(GlobalUniformBufferObject), imageCount);
 
-	VkDescriptorPoolSize poolSize{};
-	poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSize.descriptorCount = imageCount;
+    VkDescriptorPoolSize poolSize{};
+    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSize.descriptorCount = imageCount;
 
-	VkDescriptorPoolCreateInfo poolInfo{};
-	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	poolInfo.poolSizeCount = 1;
-	poolInfo.pPoolSizes = &poolSize;
-	poolInfo.maxSets = imageCount;
+    VkDescriptorPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.poolSizeCount = 1;
+    poolInfo.pPoolSizes = &poolSize;
+    poolInfo.maxSets = imageCount;
 
-	res = vkCreateDescriptorPool(m_Device, &poolInfo, nullptr, &m_GlobalDescriptorPool);
-	CHECK_VK_RESULT(res, "vkCreateDescriptorPool");
+    res = vkCreateDescriptorPool(m_Device, &poolInfo, nullptr, &m_GlobalDescriptorPool);
+    CHECK_VK_RESULT(res, "vkCreateDescriptorPool");
 
-	std::vector<VkDescriptorSetLayout> layouts(imageCount, m_GlobalDescriptorSetLayout);
-	VkDescriptorSetAllocateInfo allocInfo{};
-	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocInfo.descriptorPool = m_GlobalDescriptorPool;
-	allocInfo.descriptorSetCount = imageCount;
-	allocInfo.pSetLayouts = layouts.data();
+    std::vector<VkDescriptorSetLayout> layouts(imageCount, m_GlobalDescriptorSetLayout);
+    VkDescriptorSetAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = m_GlobalDescriptorPool;
+    allocInfo.descriptorSetCount = imageCount;
+    allocInfo.pSetLayouts = layouts.data();
 
-	m_GlobalDescriptorSets.resize(imageCount);
-	res = vkAllocateDescriptorSets(m_Device, &allocInfo, m_GlobalDescriptorSets.data());
-	CHECK_VK_RESULT(res, "vkAllocateDescriptorSets");
+    m_GlobalDescriptorSets.resize(imageCount);
+    res = vkAllocateDescriptorSets(m_Device, &allocInfo, m_GlobalDescriptorSets.data());
+    CHECK_VK_RESULT(res, "vkAllocateDescriptorSets");
 
-	for (uint32_t i = 0; i < imageCount; i++)
-	{
-		VkDescriptorBufferInfo bufferInfo{};
-		bufferInfo.buffer = m_GlobalUBO.GetBuffer(i);
-		bufferInfo.offset = 0;
-		bufferInfo.range = sizeof(GlobalUniformBufferObject);
+    for (uint32_t i = 0; i < imageCount; i++)
+    {
+        VkDescriptorBufferInfo bufferInfo{};
+        bufferInfo.buffer = m_GlobalUBO.GetBuffer(i);
+        bufferInfo.offset = 0;
+        bufferInfo.range = sizeof(GlobalUniformBufferObject);
 
-		VkWriteDescriptorSet descriptorWrite{};
-		descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrite.dstSet = m_GlobalDescriptorSets[i];
-		descriptorWrite.dstBinding = 0;
-		descriptorWrite.dstArrayElement = 0;
-		descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrite.descriptorCount = 1;
-		descriptorWrite.pBufferInfo = &bufferInfo;
+        VkWriteDescriptorSet descriptorWrite{};
+        descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrite.dstSet = m_GlobalDescriptorSets[i];
+        descriptorWrite.dstBinding = 0;
+        descriptorWrite.dstArrayElement = 0;
+        descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrite.descriptorCount = 1;
+        descriptorWrite.pBufferInfo = &bufferInfo;
 
-		vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
-	}
+        vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
+    }
 
-	VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-	samplerLayoutBinding.binding = 0;
-	samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	samplerLayoutBinding.descriptorCount = 1;
-	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-	samplerLayoutBinding.pImmutableSamplers = nullptr;
+    VkDescriptorSetLayoutBinding samplerLayoutBinding{};
+    samplerLayoutBinding.binding = 0;
+    samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    samplerLayoutBinding.descriptorCount = 1;
+    samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    samplerLayoutBinding.pImmutableSamplers = nullptr;
 
-	VkDescriptorSetLayoutCreateInfo materialLayoutInfo{};
-	materialLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	materialLayoutInfo.bindingCount = 1;
-	materialLayoutInfo.pBindings = &samplerLayoutBinding;
+    VkDescriptorSetLayoutCreateInfo materialLayoutInfo{};
+    materialLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    materialLayoutInfo.bindingCount = 1;
+    materialLayoutInfo.pBindings = &samplerLayoutBinding;
 
-	res = vkCreateDescriptorSetLayout(m_Device, &materialLayoutInfo, nullptr, &m_MaterialDescriptorSetLayout);
-	CHECK_VK_RESULT(res, "vkCreateDescriptorSetLayout for Material");
+    res = vkCreateDescriptorSetLayout(m_Device, &materialLayoutInfo, nullptr, &m_MaterialDescriptorSetLayout);
+    CHECK_VK_RESULT(res, "vkCreateDescriptorSetLayout for Material");
 
-	FramebufferSpecification fbSpec{};
-	fbSpec.Width = m_SwapChain->GetWidth();
-	fbSpec.Height = m_SwapChain->GetHeight();
-	fbSpec.IsSwapChainTarget = false;
+    FramebufferSpecification fbSpec{};
+    fbSpec.Width = m_SwapChain->GetWidth();
+    fbSpec.Height = m_SwapChain->GetHeight();
+    fbSpec.IsSwapChainTarget = false;
 
-	m_PostProcessingFramebuffer = Framebuffer::Create(fbSpec);
+    m_PostProcessingFramebuffer = Framebuffer::Create(fbSpec);
 
-	VkDescriptorSetLayoutBinding samplerBinding{};
-	samplerBinding.binding = 0;
-	samplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	samplerBinding.descriptorCount = 1;
-	samplerBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    VkDescriptorSetLayoutBinding samplerBinding{};
+    samplerBinding.binding = 0;
+    samplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    samplerBinding.descriptorCount = 1;
+    samplerBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-	VkDescriptorSetLayoutCreateInfo ppLayoutInfo{};
-	ppLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	ppLayoutInfo.bindingCount = 1;
-	ppLayoutInfo.pBindings = &samplerBinding;
-	vkCreateDescriptorSetLayout(m_Device, &ppLayoutInfo, nullptr, &m_PostProcessDescriptorSetLayout);
+    VkDescriptorSetLayoutCreateInfo ppLayoutInfo{};
+    ppLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ppLayoutInfo.bindingCount = 1;
+    ppLayoutInfo.pBindings = &samplerBinding;
+    vkCreateDescriptorSetLayout(m_Device, &ppLayoutInfo, nullptr, &m_PostProcessDescriptorSetLayout);
 
-	VkDescriptorPoolSize ppPoolSize{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 };
-	VkDescriptorPoolCreateInfo ppPoolInfo{};
-	ppPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	ppPoolInfo.poolSizeCount = 1;
-	ppPoolInfo.pPoolSizes = &ppPoolSize;
-	ppPoolInfo.maxSets = 1;
-	vkCreateDescriptorPool(m_Device, &ppPoolInfo, nullptr, &m_PostProcessDescriptorPool);
+    VkDescriptorPoolSize ppPoolSize{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 };
+    VkDescriptorPoolCreateInfo ppPoolInfo{};
+    ppPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    ppPoolInfo.poolSizeCount = 1;
+    ppPoolInfo.pPoolSizes = &ppPoolSize;
+    ppPoolInfo.maxSets = 1;
+    vkCreateDescriptorPool(m_Device, &ppPoolInfo, nullptr, &m_PostProcessDescriptorPool);
 
-	VkDescriptorSetAllocateInfo ppAllocInfo{};
-	ppAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	ppAllocInfo.descriptorPool = m_PostProcessDescriptorPool;
-	ppAllocInfo.descriptorSetCount = 1;
-	ppAllocInfo.pSetLayouts = &m_PostProcessDescriptorSetLayout;
-	vkAllocateDescriptorSets(m_Device, &ppAllocInfo, &m_PostProcessDescriptorSet);
+    VkDescriptorSetAllocateInfo ppAllocInfo{};
+    ppAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    ppAllocInfo.descriptorPool = m_PostProcessDescriptorPool;
+    ppAllocInfo.descriptorSetCount = 1;
+    ppAllocInfo.pSetLayouts = &m_PostProcessDescriptorSetLayout;
+    vkAllocateDescriptorSets(m_Device, &ppAllocInfo, &m_PostProcessDescriptorSet);
 
-	auto* vkFB = static_cast<VKFramebuffer*>(m_PostProcessingFramebuffer.get());
-	VkDescriptorImageInfo imageInfo{};
-	imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	imageInfo.imageView = (VkImageView)vkFB->GetColorAttachmentRendererID();
+    auto* vkFB = static_cast<VKFramebuffer*>(m_PostProcessingFramebuffer.get());
+    VkDescriptorImageInfo imageInfo{};
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    imageInfo.imageView = (VkImageView)vkFB->GetColorAttachmentRendererID();
 
-	VkSamplerCreateInfo samplerCreateInfo{};
-	samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-	samplerCreateInfo.magFilter = VK_FILTER_LINEAR;
-	samplerCreateInfo.minFilter = VK_FILTER_LINEAR;
-	samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    VkSamplerCreateInfo samplerCreateInfo{};
+    samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerCreateInfo.magFilter = VK_FILTER_LINEAR;
+    samplerCreateInfo.minFilter = VK_FILTER_LINEAR;
+    samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 
-	vkCreateSampler(m_Device, &samplerCreateInfo, nullptr, &m_PostProcessSampler);
-	imageInfo.sampler = m_PostProcessSampler;
+    vkCreateSampler(m_Device, &samplerCreateInfo, nullptr, &m_PostProcessSampler);
+    imageInfo.sampler = m_PostProcessSampler;
 
-	VkWriteDescriptorSet descriptorWrite{};
-	descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrite.dstSet = m_PostProcessDescriptorSet;
-	descriptorWrite.dstBinding = 0;
-	descriptorWrite.descriptorCount = 1;
-	descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	descriptorWrite.pImageInfo = &imageInfo;
-	vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
+    VkWriteDescriptorSet descriptorWrite{};
+    descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrite.dstSet = m_PostProcessDescriptorSet;
+    descriptorWrite.dstBinding = 0;
+    descriptorWrite.descriptorCount = 1;
+    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descriptorWrite.pImageInfo = &imageInfo;
+    vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
 
-	this->CreateInstanceBuffers();
-	this->CheckTimeQuerySupport();
+    this->CreateInstanceBuffers();
+    this->CheckTimeQuerySupport();
 
-	if (m_timeQuerySupported)
-	{
-		m_TimeQueryPool = CreateQueryPool(m_Device, VK_QUERY_TYPE_TIMESTAMP, 2 * m_SwapChain->GetImageCount());
-	}
+    if (m_timeQuerySupported)
+    {
+        m_TimeQueryPool = CreateQueryPool(m_Device, VK_QUERY_TYPE_TIMESTAMP, 2 * m_SwapChain->GetImageCount());
+    }
 
-	pfnCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)vkGetDeviceProcAddr(m_Device, "vkCmdBeginRenderingKHR");
-	pfnCmdEndRenderingKHR = (PFN_vkCmdEndRenderingKHR)vkGetDeviceProcAddr(m_Device, "vkCmdEndRenderingKHR");
+    pfnCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)vkGetDeviceProcAddr(m_Device, "vkCmdBeginRenderingKHR");
+    pfnCmdEndRenderingKHR = (PFN_vkCmdEndRenderingKHR)vkGetDeviceProcAddr(m_Device, "vkCmdEndRenderingKHR");
 
-	if (!pfnCmdBeginRenderingKHR || !pfnCmdEndRenderingKHR) {
-		FI_CORE_ERROR("Failed to load VK_KHR_dynamic_rendering function pointers!");
-	}
+    if (!pfnCmdBeginRenderingKHR || !pfnCmdEndRenderingKHR)
+    {
+        FI_CORE_ERROR("Failed to load VK_KHR_dynamic_rendering function pointers!");
+    }
 }
 
 void FINALITY::VKRenderDevice::SetWindowSpec(const WindowSpec& spec)
 {
-	if (spec.width == 0 || spec.height == 0)
-	{
-		m_Spec = spec;
-		return;
-	}
+    if (spec.width == 0 || spec.height == 0)
+    {
+        m_Spec = spec;
+        return;
+    }
 
-	m_Spec = spec;
-	if (!m_SwapChain) return;
+    m_Spec = spec;
+    if (!m_SwapChain)
+    {
+        return;
+    }
 
-	RecreateSwapchainResources();
+    RecreateSwapchainResources();
 }
 
 void FINALITY::VKRenderDevice::CreateCommandBuffers(uint32_t count, VkCommandBuffer* cmdBufs) const
 {
-	VkCommandBufferAllocateInfo cmdBufAllocInfo{};
-	cmdBufAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	cmdBufAllocInfo.pNext = NULL;
-	cmdBufAllocInfo.commandPool = m_CMDBufPool;
-	cmdBufAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	cmdBufAllocInfo.commandBufferCount = count;
+    VkCommandBufferAllocateInfo cmdBufAllocInfo{};
+    cmdBufAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    cmdBufAllocInfo.pNext = NULL;
+    cmdBufAllocInfo.commandPool = m_CMDBufPool;
+    cmdBufAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cmdBufAllocInfo.commandBufferCount = count;
 
-	VkResult res = vkAllocateCommandBuffers(m_Device, &cmdBufAllocInfo, cmdBufs);
-	CHECK_VK_RESULT(res, "vkAllocateCommandBuffers\n");
+    VkResult res = vkAllocateCommandBuffers(m_Device, &cmdBufAllocInfo, cmdBufs);
+    CHECK_VK_RESULT(res, "vkAllocateCommandBuffers\n");
 }
 
 void FINALITY::VKRenderDevice::FreeCommandBuffers(uint32_t count, VkCommandBuffer* cmdBufs)
 {
-	m_Queue.WaitIdle();
-	vkFreeCommandBuffers(m_Device, m_CMDBufPool, count, cmdBufs);
+    m_Queue.WaitIdle();
+    vkFreeCommandBuffers(m_Device, m_CMDBufPool, count, cmdBufs);
 }
 
 void FINALITY::VKRenderDevice::DrawQueue(const std::vector<RenderPacket>& queue)
 {
-    m_FrameDeletionQueues[m_ImageIndex].Push([retained = queue]() {});
-	auto& fb = m_InstanceBuffers[m_ImageIndex];
-	DrawQueueToTarget(
-		m_CMDBuffers[m_ImageIndex],
-		m_SwapChain->GetWidth(),
-		m_SwapChain->GetHeight(),
-		m_GlobalDescriptorSets[m_ImageIndex],
-		fb.Buffer,
-		fb.Memory,
-		fb.MappedData,
-		fb.Capacity,
-		fb.CurrentOffset,
-		queue, nullptr, &m_FrameView
-	);
+    m_FrameDeletionQueues[m_ImageIndex].Push([retained = queue]()
+                                             {
+                                             });
+    auto& fb = m_InstanceBuffers[m_ImageIndex];
+    DrawQueueToTarget(
+        m_CMDBuffers[m_ImageIndex],
+        m_SwapChain->GetWidth(),
+        m_SwapChain->GetHeight(),
+        m_GlobalDescriptorSets[m_ImageIndex],
+        fb.Buffer,
+        fb.Memory,
+        fb.MappedData,
+        fb.Capacity,
+        fb.CurrentOffset,
+        queue, nullptr, &m_FrameView);
 }
 
 void FINALITY::VKRenderDevice::BeginDynamicRendering(VkCommandBuffer CmdBuf, int ImageIndex, VkClearValue* pClearColor, VkClearValue* pDepthValue)
 {
-	VkRenderingAttachmentInfoKHR ColorAttachment{};
-	ColorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
-	ColorAttachment.pNext = NULL;
-	ColorAttachment.imageView = m_SwapChain->GetImageView(ImageIndex);
-	ColorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	ColorAttachment.resolveMode = VK_RESOLVE_MODE_NONE;
-	ColorAttachment.resolveImageView = VK_NULL_HANDLE;
-	ColorAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	ColorAttachment.loadOp = pClearColor ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
-	ColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    VkRenderingAttachmentInfoKHR ColorAttachment{};
+    ColorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+    ColorAttachment.pNext = NULL;
+    ColorAttachment.imageView = m_SwapChain->GetImageView(ImageIndex);
+    ColorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    ColorAttachment.resolveMode = VK_RESOLVE_MODE_NONE;
+    ColorAttachment.resolveImageView = VK_NULL_HANDLE;
+    ColorAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    ColorAttachment.loadOp = pClearColor ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+    ColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
-	if (pClearColor) {
-		ColorAttachment.clearValue = *pClearColor;
-	}
+    if (pClearColor)
+    {
+        ColorAttachment.clearValue = *pClearColor;
+    }
 
-	VkRenderingAttachmentInfo DepthAttachment{};
-	DepthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-	DepthAttachment.pNext = NULL;
-	DepthAttachment.imageView = m_SwapChain->GetDepthView();
-	DepthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-	DepthAttachment.resolveMode = VK_RESOLVE_MODE_NONE;
-	DepthAttachment.resolveImageView = VK_NULL_HANDLE;
-	DepthAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	DepthAttachment.loadOp = pDepthValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
-	DepthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    VkRenderingAttachmentInfo DepthAttachment{};
+    DepthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+    DepthAttachment.pNext = NULL;
+    DepthAttachment.imageView = m_SwapChain->GetDepthView();
+    DepthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    DepthAttachment.resolveMode = VK_RESOLVE_MODE_NONE;
+    DepthAttachment.resolveImageView = VK_NULL_HANDLE;
+    DepthAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    DepthAttachment.loadOp = pDepthValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+    DepthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
-	if (pDepthValue) {
-		DepthAttachment.clearValue = *pDepthValue;
-	}
+    if (pDepthValue)
+    {
+        DepthAttachment.clearValue = *pDepthValue;
+    }
 
-	VkRenderingInfoKHR RenderingInfo{};
-	RenderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
-	RenderingInfo.renderArea = { {0, 0}, {(uint32_t)m_Spec.width, (uint32_t)m_Spec.height} };
-	RenderingInfo.layerCount = 1;
-	RenderingInfo.viewMask = 0;
-	RenderingInfo.colorAttachmentCount = 1;
-	RenderingInfo.pColorAttachments = &ColorAttachment;
-	RenderingInfo.pDepthAttachment = &DepthAttachment;
+    VkRenderingInfoKHR RenderingInfo{};
+    RenderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
+    RenderingInfo.renderArea = { { 0, 0 }, { (uint32_t)m_Spec.width, (uint32_t)m_Spec.height } };
+    RenderingInfo.layerCount = 1;
+    RenderingInfo.viewMask = 0;
+    RenderingInfo.colorAttachmentCount = 1;
+    RenderingInfo.pColorAttachments = &ColorAttachment;
+    RenderingInfo.pDepthAttachment = &DepthAttachment;
 
-	pfnCmdBeginRenderingKHR(CmdBuf, &RenderingInfo);
+    pfnCmdBeginRenderingKHR(CmdBuf, &RenderingInfo);
 }
 
 std::shared_ptr<FINALITY::Mesh> FINALITY::VKRenderDevice::CreateMesh(const std::vector<Vertex>& vertices)
 {
-	return std::make_shared<VKMesh>(*this, vertices);
+    return std::make_shared<VKMesh>(*this, vertices);
 }
 
 std::shared_ptr<FINALITY::Mesh> FINALITY::VKRenderDevice::CreateMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices)
 {
-	return std::make_shared<VKMesh>(*this, vertices, indices);
+    return std::make_shared<VKMesh>(*this, vertices, indices);
 }
 
 std::shared_ptr<FINALITY::Mesh> FINALITY::VKRenderDevice::CreateMesh(const std::string& meshPath)
 {
-	return std::make_shared<VKMesh>(*this, meshPath);
+    return std::make_shared<VKMesh>(*this, meshPath);
 }
 
 std::shared_ptr<FINALITY::Pipeline> FINALITY::VKRenderDevice::CreatePipeline(const PipelineConfig& config)
 {
-	return std::make_shared<VKPipeline>(m_Device, GetActiveRenderPass(), config, m_GlobalDescriptorSetLayout, m_MaterialDescriptorSetLayout);
+    return std::make_shared<VKPipeline>(m_Device, GetActiveRenderPass(), config, m_GlobalDescriptorSetLayout, m_MaterialDescriptorSetLayout);
 }
 
 std::shared_ptr<FINALITY::RenderTarget> FINALITY::VKRenderDevice::CreateRenderTarget(uint32_t width, uint32_t height)
 {
-	if (width == 0 || height == 0)
-	{
-		FI_CORE_ERROR("CreateRenderTarget called with zero size");
-		width = std::max(width, 1u);
-		height = std::max(height, 1u);
-	}
+    if (width == 0 || height == 0)
+    {
+        FI_CORE_ERROR("CreateRenderTarget called with zero size");
+        width = std::max(width, 1u);
+        height = std::max(height, 1u);
+    }
 
-	auto target = std::make_shared<VKRenderTarget>();
-	target->Width = width;
-	target->Height = height;
+    auto target = std::make_shared<VKRenderTarget>();
+    target->Width = width;
+    target->Height = height;
 
-	FramebufferSpecification fbSpec{};
-	fbSpec.Width = width;
-	fbSpec.Height = height;
-	fbSpec.IsSwapChainTarget = false;
+    FramebufferSpecification fbSpec{};
+    fbSpec.Width = width;
+    fbSpec.Height = height;
+    fbSpec.IsSwapChainTarget = false;
 
-	target->Framebuffer = Framebuffer::Create(fbSpec);
+    target->Framebuffer = Framebuffer::Create(fbSpec);
 
-
-	return target;
+    return target;
 }
 
 std::unique_ptr<FINALITY::Shader> FINALITY::VKRenderDevice::CreateShader(const std::string& path)
@@ -903,101 +953,143 @@ void FINALITY::VKRenderDevice::SetFrameView(const RenderView& view)
 
 void FINALITY::VKRenderDevice::SetRenderTargetView(const std::shared_ptr<RenderTarget>& target, const RenderView& view)
 {
-    if (!target) return;
+    if (!target)
+    {
+        return;
+    }
     target->View = view;
 }
 
 void FINALITY::VKRenderDevice::DestroyRenderTargetGpuResources(RenderTarget& target)
 {
-	auto it = m_TargetImGuiHandles.find(&target);
-	if (it != m_TargetImGuiHandles.end())
-	{
-		ImGui_ImplVulkan_RemoveTexture(it->second);
-		m_TargetImGuiHandles.erase(it);
-	}
-
-
+    auto it = m_TargetImGuiHandles.find(&target);
+    if (it != m_TargetImGuiHandles.end())
+    {
+        ImGui_ImplVulkan_RemoveTexture(it->second);
+        m_TargetImGuiHandles.erase(it);
+    }
 }
 
 void FINALITY::VKRenderDevice::ResizeRenderTarget(const std::shared_ptr<RenderTarget>& target, uint32_t width, uint32_t height)
 {
-	if (!target) return;
-	if (width == 0 || height == 0) return;
-	if (target->Width == width && target->Height == height) return;
+    if (!target)
+    {
+        return;
+    }
+    if (width == 0 || height == 0)
+    {
+        return;
+    }
+    if (target->Width == width && target->Height == height)
+    {
+        return;
+    }
 
-	target->PendingWidth = width;
-	target->PendingHeight = height;
-	target->ResizeRequested = true;
+    target->PendingWidth = width;
+    target->PendingHeight = height;
+    target->ResizeRequested = true;
 }
 
 void FINALITY::VKRenderDevice::RenderSceneToTarget(const std::shared_ptr<RenderTarget>& target, const std::vector<RenderPacket>& queue)
 {
-    if (!target) return;
+    if (!target)
+    {
+        return;
+    }
     const auto begin = std::chrono::steady_clock::now();
     if (target->ResizeRequested)
     {
         const auto previous = target->Framebuffer;
         auto specification = previous->GetSpecification();
-        specification.Width = target->PendingWidth; specification.Height = target->PendingHeight;
-        target->Framebuffer = std::make_shared<VKFramebuffer>(m_Device,GetActivePhysicalDevice(),specification);
-        target->Width = specification.Width; target->Height = specification.Height; target->ResizeRequested = false;
+        specification.Width = target->PendingWidth;
+        specification.Height = target->PendingHeight;
+        target->Framebuffer = std::make_shared<VKFramebuffer>(m_Device, GetActivePhysicalDevice(), specification);
+        target->Width = specification.Width;
+        target->Height = specification.Height;
+        target->ResizeRequested = false;
         VkDescriptorSet oldSet = VK_NULL_HANDLE;
         if (auto found = m_TargetImGuiHandles.find(target.get()); found != m_TargetImGuiHandles.end())
-        { oldSet = found->second; m_TargetImGuiHandles.erase(found); }
-        m_FrameDeletionQueues[m_ImageIndex].Push([previous,oldSet]()
-        { if (oldSet && ImGui::GetCurrentContext() && ImGui::GetIO().BackendRendererUserData) ImGui_ImplVulkan_RemoveTexture(oldSet); });
+        {
+            oldSet = found->second;
+            m_TargetImGuiHandles.erase(found);
+        }
+        m_FrameDeletionQueues[m_ImageIndex].Push([previous, oldSet]()
+                                                 {
+                                                     if (oldSet && ImGui::GetCurrentContext() && ImGui::GetIO().BackendRendererUserData)
+                                                     {
+                                                         ImGui_ImplVulkan_RemoveTexture(oldSet);
+                                                     }
+                                                 });
     }
     auto& passes = m_ViewportPasses[m_ImageIndex];
     if (m_ViewportPassCursor == passes.size())
     {
         auto pass = std::make_unique<VKViewportPass>();
-        try { pass->Initialize(m_Device,GetActivePhysicalDevice(),m_CMDBufPool,m_GlobalDescriptorSetLayout,m_timeQuerySupported); }
-        catch (...) { pass->Destroy(m_Device,m_CMDBufPool); throw; }
+        try
+        {
+            pass->Initialize(m_Device, GetActivePhysicalDevice(), m_CMDBufPool, m_GlobalDescriptorSetLayout, m_timeQuerySupported);
+        }
+        catch (...)
+        {
+            pass->Destroy(m_Device, m_CMDBufPool);
+            throw;
+        }
         passes.push_back(std::move(pass));
     }
     auto& pass = *passes[m_ViewportPassCursor++];
     pass.Target = target;
-    GlobalUniformBufferObject ubo{}; ubo.View = target->View.View; ubo.Projection = target->View.Projection;
-    pass.Camera.Update(0,&ubo); pass.Offset = 0;
-    BeginCommandBuffers(pass.Command,VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    GlobalUniformBufferObject ubo{};
+    ubo.View = target->View.View;
+    ubo.Projection = target->View.Projection;
+    pass.Camera.Update(0, &ubo);
+    pass.Offset = 0;
+    BeginCommandBuffers(pass.Command, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     if (pass.Queries)
     {
-        vkCmdResetQueryPool(pass.Command,pass.Queries,0,2);
-        vkCmdWriteTimestamp(pass.Command,VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,pass.Queries,0);
+        vkCmdResetQueryPool(pass.Command, pass.Queries, 0, 2);
+        vkCmdWriteTimestamp(pass.Command, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, pass.Queries, 0);
     }
     auto* framebuffer = static_cast<VKFramebuffer*>(target->Framebuffer.get());
     VkClearValue clear[2]{};
-    clear[0].color = {target->ClearColor.r,target->ClearColor.g,target->ClearColor.b,target->ClearColor.a};
-    clear[1].depthStencil = {1,0};
-    VkRenderPassBeginInfo rendering{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
-    rendering.renderPass = framebuffer->GetVKRenderPass(); rendering.framebuffer = framebuffer->GetVKFramebuffer();
-    rendering.renderArea = {{0,0},{target->Width,target->Height}}; rendering.clearValueCount = 2; rendering.pClearValues = clear;
-    vkCmdBeginRenderPass(pass.Command,&rendering,VK_SUBPASS_CONTENTS_INLINE);
+    clear[0].color = { target->ClearColor.r, target->ClearColor.g, target->ClearColor.b, target->ClearColor.a };
+    clear[1].depthStencil = { 1, 0 };
+    VkRenderPassBeginInfo rendering{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+    rendering.renderPass = framebuffer->GetVKRenderPass();
+    rendering.framebuffer = framebuffer->GetVKFramebuffer();
+    rendering.renderArea = { { 0, 0 }, { target->Width, target->Height } };
+    rendering.clearValueCount = 2;
+    rendering.pClearValues = clear;
+    vkCmdBeginRenderPass(pass.Command, &rendering, VK_SUBPASS_CONTENTS_INLINE);
     auto& statistics = target->Statistics;
     statistics.DrawCalls = statistics.Instances = statistics.Triangles = statistics.Vertices = 0;
     statistics.PipelineBinds = statistics.DescriptorBinds = 0;
-    DrawQueueToTarget(pass.Command,target->Width,target->Height,pass.Globals,pass.Instances,pass.InstanceMemory,pass.Mapped,pass.Capacity,pass.Offset,queue,&statistics,&target->View);
+    DrawQueueToTarget(pass.Command, target->Width, target->Height, pass.Globals, pass.Instances, pass.InstanceMemory, pass.Mapped, pass.Capacity, pass.Offset, queue, &statistics, &target->View);
     vkCmdEndRenderPass(pass.Command);
-    if (pass.Queries) vkCmdWriteTimestamp(pass.Command,VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,pass.Queries,1);
+    if (pass.Queries)
+    {
+        vkCmdWriteTimestamp(pass.Command, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, pass.Queries, 1);
+    }
     CHECK_VK_RESULT(vkEndCommandBuffer(pass.Command), "Cannot record viewport");
     pass.Submitted = true;
-    statistics.RecordMS = std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-begin).count();
-    m_FrameDeletionQueues[m_ImageIndex].Push([retainedTarget=target,retainedQueue=queue]() {});
+    statistics.RecordMS = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - begin).count();
+    m_FrameDeletionQueues[m_ImageIndex].Push([retainedTarget = target, retainedQueue = queue]()
+                                             {
+                                             });
 }
 
 void* FINALITY::VKRenderDevice::GetRenderTargetTextureHandle(const std::shared_ptr<RenderTarget>& target)
 {
-	return (void*)GetOrCreateTargetImGuiHandle(target);
+    return (void*)GetOrCreateTargetImGuiHandle(target);
 }
 
 void FINALITY::VKRenderDevice::SetGameRenderTarget(const std::shared_ptr<RenderTarget>& target)
 {
-	m_GameRenderTarget = target;
+    m_GameRenderTarget = target;
 }
 
 void FINALITY::VKRenderDevice::SetSwapchainClearColor(float r, float g, float b, float a)
 {
-	m_ClearColor = { .float32 = { r, g, b, a } };
+    m_ClearColor = { .float32 = { r, g, b, a } };
 }
 
 void FINALITY::VKRenderDevice::BeginTextureBatch()
@@ -1012,351 +1104,391 @@ void FINALITY::VKRenderDevice::EndAndSubmitTextureBatch()
 
 void FINALITY::VKRenderDevice::SetRenderTargetClearColor(const std::shared_ptr<RenderTarget>& target, float r, float g, float b, float a)
 {
-	if (!target) return;
-	target->ClearColor = { r, g, b, a };
+    if (!target)
+    {
+        return;
+    }
+    target->ClearColor = { r, g, b, a };
 }
 
 double FINALITY::VKRenderDevice::GetGPUTime()
 {
-	float period = m_Devices.SelectedDevice().properties.limits.timestampPeriod;
+    float period = m_Devices.SelectedDevice().properties.limits.timestampPeriod;
 
-	uint64_t timestamps[2] = {0, 0};
-	uint32_t timestampSlot = m_ImageIndex * 2;
-	VkResult res = vkGetQueryPoolResults(m_Device, m_TimeQueryPool, timestampSlot, 2, sizeof(timestamps), timestamps, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
-	CHECK_VK_RESULT(res, "vkGetQueryPoolResults");
+    uint64_t timestamps[2] = { 0, 0 };
+    uint32_t timestampSlot = m_ImageIndex * 2;
+    VkResult res = vkGetQueryPoolResults(m_Device, m_TimeQueryPool, timestampSlot, 2, sizeof(timestamps), timestamps, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+    CHECK_VK_RESULT(res, "vkGetQueryPoolResults");
 
-	uint64_t delta = timestamps[1] - timestamps[0];
-	double nanoseconds = delta * static_cast<double>(period);
-	double milliseconds = nanoseconds / 1000000.0;
+    uint64_t delta = timestamps[1] - timestamps[0];
+    double nanoseconds = delta * static_cast<double>(period);
+    double milliseconds = nanoseconds / 1000000.0;
 
-	return milliseconds;
+    return milliseconds;
 }
 
 VkDescriptorSet FINALITY::VKRenderDevice::GetOrCreateTargetImGuiHandle(const std::shared_ptr<RenderTarget>& target)
 {
-	if (!target) return VK_NULL_HANDLE;
+    if (!target)
+    {
+        return VK_NULL_HANDLE;
+    }
 
-	auto it = m_TargetImGuiHandles.find(target.get());
-	if (it != m_TargetImGuiHandles.end())
-		return it->second;
+    auto it = m_TargetImGuiHandles.find(target.get());
+    if (it != m_TargetImGuiHandles.end())
+    {
+        return it->second;
+    }
 
-	auto* vkFB = static_cast<VKFramebuffer*>(target->Framebuffer.get());
+    auto* vkFB = static_cast<VKFramebuffer*>(target->Framebuffer.get());
 
-	VkDescriptorSet imguiSet = ImGui_ImplVulkan_AddTexture(
-		vkFB->GetColorSampler(),
-		(VkImageView)vkFB->GetColorAttachmentRendererID(),
-		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-	);
+    VkDescriptorSet imguiSet = ImGui_ImplVulkan_AddTexture(
+        vkFB->GetColorSampler(),
+        (VkImageView)vkFB->GetColorAttachmentRendererID(),
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-	m_TargetImGuiHandles[target.get()] = imguiSet;
-	return imguiSet;
+    m_TargetImGuiHandles[target.get()] = imguiSet;
+    return imguiSet;
 }
 
 void FINALITY::VKRenderDevice::CheckTimeQuerySupport()
 {
-	m_ImageHasTimestamp.assign(m_SwapChain->GetImageCount(), false);
+    m_ImageHasTimestamp.assign(m_SwapChain->GetImageCount(), false);
 
-	uint32_t timestampValidBits = this->m_Devices.SelectedDevice().qFamilyProps[m_QueueFamily].timestampValidBits;
-	if (timestampValidBits == 0)
-	{
-		FI_CORE_WARN("Timestamp queries are not supported on this device.");
-	}
-	else
-	{
-		m_timeQuerySupported = true;
-	}
+    uint32_t timestampValidBits = this->m_Devices.SelectedDevice().qFamilyProps[m_QueueFamily].timestampValidBits;
+    if (timestampValidBits == 0)
+    {
+        FI_CORE_WARN("Timestamp queries are not supported on this device.");
+    }
+    else
+    {
+        m_timeQuerySupported = true;
+    }
 }
 
 void FINALITY::VKRenderDevice::Shutdown()
 {
     m_Uploads.Finish();
-	m_Queue.WaitIdle();
+    m_Queue.WaitIdle();
 
-	m_PostProcessPipeline.reset();
-	m_PostProcessingFramebuffer.reset();
+    m_PostProcessPipeline.reset();
+    m_PostProcessingFramebuffer.reset();
 
-	if (m_PostProcessDescriptorPool) {
-		vkDestroyDescriptorPool(m_Device, m_PostProcessDescriptorPool, nullptr);
-		m_PostProcessDescriptorPool = VK_NULL_HANDLE;
-	}
-	if (m_PostProcessSampler) vkDestroySampler(m_Device, m_PostProcessSampler, nullptr);
-	if (m_PostProcessDescriptorSetLayout) {
-		vkDestroyDescriptorSetLayout(m_Device, m_PostProcessDescriptorSetLayout, nullptr);
-		m_PostProcessDescriptorSetLayout = VK_NULL_HANDLE;
-	}
+    if (m_PostProcessDescriptorPool)
+    {
+        vkDestroyDescriptorPool(m_Device, m_PostProcessDescriptorPool, nullptr);
+        m_PostProcessDescriptorPool = VK_NULL_HANDLE;
+    }
+    if (m_PostProcessSampler)
+    {
+        vkDestroySampler(m_Device, m_PostProcessSampler, nullptr);
+    }
+    if (m_PostProcessDescriptorSetLayout)
+    {
+        vkDestroyDescriptorSetLayout(m_Device, m_PostProcessDescriptorSetLayout, nullptr);
+        m_PostProcessDescriptorSetLayout = VK_NULL_HANDLE;
+    }
 
-	for (auto& queue : m_FrameDeletionQueues)
-	{
-		queue.Flush();
-	}
+    for (auto& queue : m_FrameDeletionQueues)
+    {
+        queue.Flush();
+    }
     m_MaterialDescriptorCache.clear();
     m_MaterialDescriptorAllocator.Shutdown();
 
-	if (m_MaterialDescriptorSetLayout) vkDestroyDescriptorSetLayout(m_Device, m_MaterialDescriptorSetLayout, nullptr);
+    if (m_MaterialDescriptorSetLayout)
+    {
+        vkDestroyDescriptorSetLayout(m_Device, m_MaterialDescriptorSetLayout, nullptr);
+    }
 
-	if (m_GlobalDescriptorPool) vkDestroyDescriptorPool(m_Device, m_GlobalDescriptorPool, nullptr);
-	if (m_GlobalDescriptorSetLayout) vkDestroyDescriptorSetLayout(m_Device, m_GlobalDescriptorSetLayout, nullptr);
-	m_GlobalUBO.Shutdown();
+    if (m_GlobalDescriptorPool)
+    {
+        vkDestroyDescriptorPool(m_Device, m_GlobalDescriptorPool, nullptr);
+    }
+    if (m_GlobalDescriptorSetLayout)
+    {
+        vkDestroyDescriptorSetLayout(m_Device, m_GlobalDescriptorSetLayout, nullptr);
+    }
+    m_GlobalUBO.Shutdown();
 
-    for (auto& frame : m_ViewportPasses) for (auto& pass : frame) pass->Destroy(m_Device,m_CMDBufPool);
+    for (auto& frame : m_ViewportPasses)
+    {
+        for (auto& pass : frame)
+        {
+            pass->Destroy(m_Device, m_CMDBufPool);
+        }
+    }
     m_ViewportPasses.clear();
-	if (m_CMDBufPool) vkDestroyCommandPool(m_Device, m_CMDBufPool, nullptr);
+    if (m_CMDBufPool)
+    {
+        vkDestroyCommandPool(m_Device, m_CMDBufPool, nullptr);
+    }
 
-	m_Queue.ShutDown();
-	m_SwapChain->Shutdown();
+    m_Queue.ShutDown();
+    m_SwapChain->Shutdown();
 
-	vkDestroyQueryPool(m_Device, m_TimeQueryPool, nullptr); // Destroy the time query pool if it was created
+    vkDestroyQueryPool(m_Device, m_TimeQueryPool, nullptr); // Destroy the time query pool if it was created
 
-	vkDeviceWaitIdle(m_Device);
-	DestroyInstanceBuffers();
+    vkDeviceWaitIdle(m_Device);
+    DestroyInstanceBuffers();
 
-	DestroyDevice();
+    DestroyDevice();
 
-	if (m_EnableValidationLayers) {
-		VKDebug::DestroyDebugUtilsMessengerEXT(m_Instance, m_DebugMessanger, nullptr);
-	}
+    if (m_EnableValidationLayers)
+    {
+        VKDebug::DestroyDebugUtilsMessengerEXT(m_Instance, m_DebugMessanger, nullptr);
+    }
 
-	DestroySurface();
-	vkDestroyInstance(m_Instance, nullptr);
+    DestroySurface();
+    vkDestroyInstance(m_Instance, nullptr);
 }
 
 void FINALITY::VKRenderDevice::BeginFrame()
 {
-	bool needsRecreate = false;
-	m_ImageIndex = m_Queue.AcquireNextImage(needsRecreate);
+    bool needsRecreate = false;
+    m_ImageIndex = m_Queue.AcquireNextImage(needsRecreate);
 
-	if (m_ImageIndex == UINT32_MAX)
-	{
-		RecreateSwapchainResources();
-		m_ImageIndex = m_Queue.AcquireNextImage(needsRecreate);
-	}
+    if (m_ImageIndex == UINT32_MAX)
+    {
+        RecreateSwapchainResources();
+        m_ImageIndex = m_Queue.AcquireNextImage(needsRecreate);
+    }
 
-	if (needsRecreate)
-	{
-		m_PendingSwapchainRecreate = true;
-	}
+    if (needsRecreate)
+    {
+        m_PendingSwapchainRecreate = true;
+    }
 
-    if (m_ViewportPasses.size() < m_SwapChain->GetImageCount()) m_ViewportPasses.resize(m_SwapChain->GetImageCount());
+    if (m_ViewportPasses.size() < m_SwapChain->GetImageCount())
+    {
+        m_ViewportPasses.resize(m_SwapChain->GetImageCount());
+    }
     for (auto& pass : m_ViewportPasses[m_ImageIndex])
-        pass->CollectTiming(m_Device,m_Devices.SelectedDevice().properties.limits.timestampPeriod,m_Devices.SelectedDevice().qFamilyProps[m_QueueFamily].timestampValidBits);
+    {
+        pass->CollectTiming(m_Device, m_Devices.SelectedDevice().properties.limits.timestampPeriod, m_Devices.SelectedDevice().qFamilyProps[m_QueueFamily].timestampValidBits);
+    }
     m_ViewportPassCursor = 0;
-	m_FrameDeletionQueues[m_ImageIndex].Flush();
+    m_FrameDeletionQueues[m_ImageIndex].Flush();
 
+    if (m_timeQuerySupported && m_TimeQueryPool != VK_NULL_HANDLE && m_ImageHasTimestamp[m_ImageIndex])
+    {
+        m_LastGPUTime = GetGPUTime();
+    }
 
-	if (m_timeQuerySupported && m_TimeQueryPool != VK_NULL_HANDLE && m_ImageHasTimestamp[m_ImageIndex])
-	{
-		m_LastGPUTime = GetGPUTime();
-	}
+    BeginCommandBuffers(m_CMDBuffers[m_ImageIndex], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
-	BeginCommandBuffers(m_CMDBuffers[m_ImageIndex], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    if (m_timeQuerySupported && m_TimeQueryPool != VK_NULL_HANDLE)
+    {
+        uint32_t timestampSlot = m_ImageIndex * 2;
+        vkCmdResetQueryPool(m_CMDBuffers[m_ImageIndex], m_TimeQueryPool, timestampSlot, 2);
+        vkCmdWriteTimestamp(m_CMDBuffers[m_ImageIndex], VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, m_TimeQueryPool, timestampSlot);
+    }
 
-	if (m_timeQuerySupported && m_TimeQueryPool != VK_NULL_HANDLE)
-	{
-		uint32_t timestampSlot = m_ImageIndex * 2;
-		vkCmdResetQueryPool(m_CMDBuffers[m_ImageIndex], m_TimeQueryPool, timestampSlot, 2);
-		vkCmdWriteTimestamp(m_CMDBuffers[m_ImageIndex], VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, m_TimeQueryPool, timestampSlot);
-	}
+    std::vector<VkClearValue> clearValues(2);
+    clearValues[0].color = m_ClearColor;
+    clearValues[1].depthStencil = { 1.0f, 0 };
 
-	std::vector<VkClearValue> clearValues(2);
-	clearValues[0].color = m_ClearColor;
-	clearValues[1].depthStencil = { 1.0f, 0 };
+    auto* vkFB = static_cast<VKFramebuffer*>(m_PostProcessingFramebuffer.get());
 
-	auto* vkFB = static_cast<VKFramebuffer*>(m_PostProcessingFramebuffer.get());
+    VkRenderPassBeginInfo RenderPassBeginInfo{};
+    RenderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    RenderPassBeginInfo.pNext = nullptr;
+    RenderPassBeginInfo.renderPass = vkFB->GetVKRenderPass();
+    RenderPassBeginInfo.framebuffer = vkFB->GetVKFramebuffer();
+    RenderPassBeginInfo.renderArea.offset = { 0, 0 };
+    RenderPassBeginInfo.renderArea.extent.width = m_PostProcessingFramebuffer->GetSpecification().Width;
+    RenderPassBeginInfo.renderArea.extent.height = m_PostProcessingFramebuffer->GetSpecification().Height;
+    RenderPassBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    RenderPassBeginInfo.pClearValues = clearValues.data();
 
-	VkRenderPassBeginInfo RenderPassBeginInfo{};
-	RenderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	RenderPassBeginInfo.pNext = nullptr;
-	RenderPassBeginInfo.renderPass = vkFB->GetVKRenderPass();
-	RenderPassBeginInfo.framebuffer = vkFB->GetVKFramebuffer();
-	RenderPassBeginInfo.renderArea.offset = { 0, 0 };
-	RenderPassBeginInfo.renderArea.extent.width = m_PostProcessingFramebuffer->GetSpecification().Width;
-	RenderPassBeginInfo.renderArea.extent.height = m_PostProcessingFramebuffer->GetSpecification().Height;
-	RenderPassBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-	RenderPassBeginInfo.pClearValues = clearValues.data();
+    vkCmdBeginRenderPass(m_CMDBuffers[m_ImageIndex], &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-	vkCmdBeginRenderPass(m_CMDBuffers[m_ImageIndex], &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-	m_InstanceBuffers[m_ImageIndex].CurrentOffset = 0;
+    m_InstanceBuffers[m_ImageIndex].CurrentOffset = 0;
 }
 
 void FINALITY::VKRenderDevice::EndFrame()
 {
-	VkCommandBuffer cmd = m_CMDBuffers[m_ImageIndex];
+    VkCommandBuffer cmd = m_CMDBuffers[m_ImageIndex];
 
-	vkCmdEndRenderPass(cmd);
+    vkCmdEndRenderPass(cmd);
 
-	auto* vkFB = static_cast<VKFramebuffer*>(m_PostProcessingFramebuffer.get());
+    auto* vkFB = static_cast<VKFramebuffer*>(m_PostProcessingFramebuffer.get());
 
-	if (m_PostProcessPipeline)
-	{
-		VkImageMemoryBarrier scBarrier{};
-		scBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		scBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		scBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		scBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		scBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		scBarrier.image = m_SwapChain->GetVKImage(m_ImageIndex);
-		scBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		scBarrier.subresourceRange.baseMipLevel = 0;
-		scBarrier.subresourceRange.levelCount = 1;
-		scBarrier.subresourceRange.baseArrayLayer = 0;
-		scBarrier.subresourceRange.layerCount = 1;
-		scBarrier.srcAccessMask = 0;
-		scBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    if (m_PostProcessPipeline)
+    {
+        VkImageMemoryBarrier scBarrier{};
+        scBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        scBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        scBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        scBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        scBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        scBarrier.image = m_SwapChain->GetVKImage(m_ImageIndex);
+        scBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        scBarrier.subresourceRange.baseMipLevel = 0;
+        scBarrier.subresourceRange.levelCount = 1;
+        scBarrier.subresourceRange.baseArrayLayer = 0;
+        scBarrier.subresourceRange.layerCount = 1;
+        scBarrier.srcAccessMask = 0;
+        scBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &scBarrier);
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &scBarrier);
 
-		std::vector<VkClearValue> screenClearValues(2);
-		screenClearValues[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
-		screenClearValues[1].depthStencil = { 1.0f, 0 };
+        std::vector<VkClearValue> screenClearValues(2);
+        screenClearValues[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
+        screenClearValues[1].depthStencil = { 1.0f, 0 };
 
-		VkRenderPassBeginInfo swapchainPassInfo{};
-		swapchainPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		swapchainPassInfo.renderPass = m_SwapChain->GetVKRenderPass();
-		swapchainPassInfo.framebuffer = m_SwapChain->GetVKFramebuffer(m_ImageIndex);
-		swapchainPassInfo.renderArea.offset = { 0, 0 };
-		swapchainPassInfo.renderArea.extent.width = m_SwapChain->GetWidth();
-		swapchainPassInfo.renderArea.extent.height = m_SwapChain->GetHeight();
-		swapchainPassInfo.clearValueCount = static_cast<uint32_t>(screenClearValues.size());
-		swapchainPassInfo.pClearValues = screenClearValues.data();
+        VkRenderPassBeginInfo swapchainPassInfo{};
+        swapchainPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        swapchainPassInfo.renderPass = m_SwapChain->GetVKRenderPass();
+        swapchainPassInfo.framebuffer = m_SwapChain->GetVKFramebuffer(m_ImageIndex);
+        swapchainPassInfo.renderArea.offset = { 0, 0 };
+        swapchainPassInfo.renderArea.extent.width = m_SwapChain->GetWidth();
+        swapchainPassInfo.renderArea.extent.height = m_SwapChain->GetHeight();
+        swapchainPassInfo.clearValueCount = static_cast<uint32_t>(screenClearValues.size());
+        swapchainPassInfo.pClearValues = screenClearValues.data();
 
-		vkCmdBeginRenderPass(cmd, &swapchainPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBeginRenderPass(cmd, &swapchainPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-		auto* vkPipeline = static_cast<VKPipeline*>(m_PostProcessPipeline.get());
-		vkPipeline->Bind(cmd);
+        auto* vkPipeline = static_cast<VKPipeline*>(m_PostProcessPipeline.get());
+        vkPipeline->Bind(cmd);
 
-		vkCmdBindDescriptorSets(
-			cmd,
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			vkPipeline->GetVKLayout(),
-			0, 1,
-			&m_PostProcessDescriptorSet,
-			0, nullptr
-		);
+        vkCmdBindDescriptorSets(
+            cmd,
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            vkPipeline->GetVKLayout(),
+            0, 1,
+            &m_PostProcessDescriptorSet,
+            0, nullptr);
 
-		VkViewport viewport{ 0.0f, 0.0f, static_cast<float>(m_SwapChain->GetWidth()), static_cast<float>(m_SwapChain->GetHeight()), 0.0f, 1.0f };
-		vkCmdSetViewport(cmd, 0, 1, &viewport);
+        VkViewport viewport{ 0.0f, 0.0f, static_cast<float>(m_SwapChain->GetWidth()), static_cast<float>(m_SwapChain->GetHeight()), 0.0f, 1.0f };
+        vkCmdSetViewport(cmd, 0, 1, &viewport);
 
-		VkRect2D scissor{ {0, 0}, {m_SwapChain->GetWidth(), m_SwapChain->GetHeight()} };
-		vkCmdSetScissor(cmd, 0, 1, &scissor);
+        VkRect2D scissor{ { 0, 0 }, { m_SwapChain->GetWidth(), m_SwapChain->GetHeight() } };
+        vkCmdSetScissor(cmd, 0, 1, &scissor);
 
-		vkCmdDraw(cmd, 3, 1, 0, 0);
-		vkCmdEndRenderPass(cmd);
-	}
-	else
-	{
-		VkImageMemoryBarrier fbBarrier{};
-		fbBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		fbBarrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		fbBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-		fbBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		fbBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		fbBarrier.image = vkFB->GetVKColorImage();
-		fbBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		fbBarrier.subresourceRange.baseMipLevel = 0;
-		fbBarrier.subresourceRange.levelCount = 1;
-		fbBarrier.subresourceRange.baseArrayLayer = 0;
-		fbBarrier.subresourceRange.layerCount = 1;
-		fbBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		fbBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        vkCmdDraw(cmd, 3, 1, 0, 0);
+        vkCmdEndRenderPass(cmd);
+    }
+    else
+    {
+        VkImageMemoryBarrier fbBarrier{};
+        fbBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        fbBarrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        fbBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        fbBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        fbBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        fbBarrier.image = vkFB->GetVKColorImage();
+        fbBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        fbBarrier.subresourceRange.baseMipLevel = 0;
+        fbBarrier.subresourceRange.levelCount = 1;
+        fbBarrier.subresourceRange.baseArrayLayer = 0;
+        fbBarrier.subresourceRange.layerCount = 1;
+        fbBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        fbBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
-		VkImageMemoryBarrier scBarrier{};
-		scBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		scBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		scBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		scBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		scBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		scBarrier.image = m_SwapChain->GetVKImage(m_ImageIndex);
-		scBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		scBarrier.subresourceRange.baseMipLevel = 0;
-		scBarrier.subresourceRange.levelCount = 1;
-		scBarrier.subresourceRange.baseArrayLayer = 0;
-		scBarrier.subresourceRange.layerCount = 1;
-		scBarrier.srcAccessMask = 0;
-		scBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        VkImageMemoryBarrier scBarrier{};
+        scBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        scBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        scBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        scBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        scBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        scBarrier.image = m_SwapChain->GetVKImage(m_ImageIndex);
+        scBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        scBarrier.subresourceRange.baseMipLevel = 0;
+        scBarrier.subresourceRange.levelCount = 1;
+        scBarrier.subresourceRange.baseArrayLayer = 0;
+        scBarrier.subresourceRange.layerCount = 1;
+        scBarrier.srcAccessMask = 0;
+        scBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &fbBarrier);
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &scBarrier);
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &fbBarrier);
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &scBarrier);
 
-		VkImageBlit blitRegion{};
-		blitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		blitRegion.srcSubresource.mipLevel = 0;
-		blitRegion.srcSubresource.baseArrayLayer = 0;
-		blitRegion.srcSubresource.layerCount = 1;
-		blitRegion.srcOffsets[0] = { 0, 0, 0 };
-		blitRegion.srcOffsets[1] = { static_cast<int32_t>(m_PostProcessingFramebuffer->GetSpecification().Width), static_cast<int32_t>(m_PostProcessingFramebuffer->GetSpecification().Height), 1 };
+        VkImageBlit blitRegion{};
+        blitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blitRegion.srcSubresource.mipLevel = 0;
+        blitRegion.srcSubresource.baseArrayLayer = 0;
+        blitRegion.srcSubresource.layerCount = 1;
+        blitRegion.srcOffsets[0] = { 0, 0, 0 };
+        blitRegion.srcOffsets[1] = { static_cast<int32_t>(m_PostProcessingFramebuffer->GetSpecification().Width), static_cast<int32_t>(m_PostProcessingFramebuffer->GetSpecification().Height), 1 };
 
-		blitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		blitRegion.dstSubresource.mipLevel = 0;
-		blitRegion.dstSubresource.baseArrayLayer = 0;
-		blitRegion.dstSubresource.layerCount = 1;
-		blitRegion.dstOffsets[0] = { 0, 0, 0 };
-		blitRegion.dstOffsets[1] = { static_cast<int32_t>(m_SwapChain->GetWidth()), static_cast<int32_t>(m_SwapChain->GetHeight()), 1 };
+        blitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blitRegion.dstSubresource.mipLevel = 0;
+        blitRegion.dstSubresource.baseArrayLayer = 0;
+        blitRegion.dstSubresource.layerCount = 1;
+        blitRegion.dstOffsets[0] = { 0, 0, 0 };
+        blitRegion.dstOffsets[1] = { static_cast<int32_t>(m_SwapChain->GetWidth()), static_cast<int32_t>(m_SwapChain->GetHeight()), 1 };
 
-		vkCmdBlitImage(
-			cmd,
-			vkFB->GetVKColorImage(),
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			m_SwapChain->GetVKImage(m_ImageIndex),
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			1, &blitRegion,
-			VK_FILTER_LINEAR
-		);
+        vkCmdBlitImage(
+            cmd,
+            vkFB->GetVKColorImage(),
+            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            m_SwapChain->GetVKImage(m_ImageIndex),
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            1, &blitRegion,
+            VK_FILTER_LINEAR);
 
-		VkImageMemoryBarrier presentBarrier{};
-		presentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		presentBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		presentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-		presentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		presentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		presentBarrier.image = m_SwapChain->GetVKImage(m_ImageIndex);
-		presentBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		presentBarrier.subresourceRange.baseMipLevel = 0;
-		presentBarrier.subresourceRange.levelCount = 1;
-		presentBarrier.subresourceRange.baseArrayLayer = 0;
-		presentBarrier.subresourceRange.layerCount = 1;
-		presentBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		presentBarrier.dstAccessMask = 0;
+        VkImageMemoryBarrier presentBarrier{};
+        presentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        presentBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        presentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        presentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        presentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        presentBarrier.image = m_SwapChain->GetVKImage(m_ImageIndex);
+        presentBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        presentBarrier.subresourceRange.baseMipLevel = 0;
+        presentBarrier.subresourceRange.levelCount = 1;
+        presentBarrier.subresourceRange.baseArrayLayer = 0;
+        presentBarrier.subresourceRange.layerCount = 1;
+        presentBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        presentBarrier.dstAccessMask = 0;
 
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &presentBarrier);
-	}
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &presentBarrier);
+    }
 
-	if (m_timeQuerySupported && m_TimeQueryPool != VK_NULL_HANDLE)
-	{
-		uint32_t timestampSlot = m_ImageIndex * 2 + 1;
-		vkCmdWriteTimestamp(m_CMDBuffers[m_ImageIndex], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, m_TimeQueryPool, timestampSlot);
-	}
+    if (m_timeQuerySupported && m_TimeQueryPool != VK_NULL_HANDLE)
+    {
+        uint32_t timestampSlot = m_ImageIndex * 2 + 1;
+        vkCmdWriteTimestamp(m_CMDBuffers[m_ImageIndex], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, m_TimeQueryPool, timestampSlot);
+    }
 
-	VkResult res = vkEndCommandBuffer(cmd);
-	CHECK_VK_RESULT(res, "vkEndCommandBuffer error");
+    VkResult res = vkEndCommandBuffer(cmd);
+    CHECK_VK_RESULT(res, "vkEndCommandBuffer error");
 
     std::vector<VkCommandBuffer> commands;
-    for (size_t index = 0; index < m_ViewportPassCursor; ++index) commands.push_back(m_ViewportPasses[m_ImageIndex][index]->Command);
+    for (size_t index = 0; index < m_ViewportPassCursor; ++index)
+    {
+        commands.push_back(m_ViewportPasses[m_ImageIndex][index]->Command);
+    }
     commands.push_back(cmd);
-    if (m_OverlayRenderer) commands.push_back(m_OverlayRenderer->PrepareCommandBuffer(m_ImageIndex));
-    m_Queue.SubmitFrame(commands,m_ImageIndex);
+    if (m_OverlayRenderer)
+    {
+        commands.push_back(m_OverlayRenderer->PrepareCommandBuffer(m_ImageIndex));
+    }
+    m_Queue.SubmitFrame(commands, m_ImageIndex);
 
-	if (m_timeQuerySupported && m_TimeQueryPool != VK_NULL_HANDLE) {
-		m_ImageHasTimestamp[m_ImageIndex] = true;
-	}
+    if (m_timeQuerySupported && m_TimeQueryPool != VK_NULL_HANDLE)
+    {
+        m_ImageHasTimestamp[m_ImageIndex] = true;
+    }
 }
 
 void FINALITY::VKRenderDevice::PresentFrame()
 {
-	bool needsRecreate = m_Queue.Present(m_ImageIndex);
-	if (needsRecreate || m_PendingSwapchainRecreate)
-	{
-		RecreateSwapchainResources();
-		m_PendingSwapchainRecreate = false;
-	}
+    bool needsRecreate = m_Queue.Present(m_ImageIndex);
+    if (needsRecreate || m_PendingSwapchainRecreate)
+    {
+        RecreateSwapchainResources();
+        m_PendingSwapchainRecreate = false;
+    }
 }
 
 void FINALITY::VKRenderDevice::Clear(float r, float g, float b, float a)
 {
-	if (m_GameRenderTarget)
-	{
-		m_GameRenderTarget->ClearColor = { r, g, b, a };
-		return;
-	}
-	m_ClearColor = { .float32 = { r, g, b, a } };
+    if (m_GameRenderTarget)
+    {
+        m_GameRenderTarget->ClearColor = { r, g, b, a };
+        return;
+    }
+    m_ClearColor = { .float32 = { r, g, b, a } };
 }

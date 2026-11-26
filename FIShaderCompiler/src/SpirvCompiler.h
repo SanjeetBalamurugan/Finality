@@ -13,8 +13,7 @@ public:
 
     bool Compile(
         const std::string& inputFile,
-        const std::string& outputFile
-    ) override;
+        const std::string& outputFile) override;
 
 private:
     shaderc_shader_kind GetShaderKind(const std::string& file);

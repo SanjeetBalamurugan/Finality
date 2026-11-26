@@ -16,7 +16,12 @@
 namespace FINALITY
 {
     /** @todo TODO: Document TextureColorSpace enum semantics, ownership and usage. */
-    enum class TextureColorSpace { Automatic, SRGB, Linear };
+    enum class TextureColorSpace
+    {
+        Automatic,
+        SRGB,
+        Linear
+    };
     FAPI TextureColorSpace ReadTextureColorSpace(const std::filesystem::path& texture);
     FAPI bool SaveTextureColorSpace(const std::filesystem::path& texture, TextureColorSpace colorSpace, std::string& error);
-}
+} // namespace FINALITY

@@ -5,8 +5,11 @@
  */
 #pragma once
 #include <Core/RenderTarget.h>
+
 namespace FINALITY
 {
     /** @todo TODO: Document VKRenderTarget struct semantics, ownership and usage. */
-    struct VKRenderTarget : public RenderTarget {};
-}
+    struct VKRenderTarget : public RenderTarget
+    {
+    };
+} // namespace FINALITY

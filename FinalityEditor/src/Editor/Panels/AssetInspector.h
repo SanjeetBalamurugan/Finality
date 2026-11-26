@@ -11,6 +11,7 @@
 namespace FINALITY
 {
     class ExternalTools;
+
     /** @todo TODO: Document AssetInspector class semantics, ownership and usage. */
     class AssetInspector
     {
@@ -27,4 +28,4 @@ namespace FINALITY
         ModelImportPanel m_ModelImport;
         std::string m_TextureImportError;
     };
-}
+} // namespace FINALITY

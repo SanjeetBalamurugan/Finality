@@ -69,4 +69,4 @@ namespace FINALITY
         float m_RotationAngle = 0.0f;
         float m_TotalTime = 0.0f;
     };
-}
+} // namespace FINALITY

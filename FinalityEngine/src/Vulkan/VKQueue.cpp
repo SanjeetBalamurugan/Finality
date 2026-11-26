@@ -29,8 +29,7 @@ namespace FINALITY
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
         {
-            if (vkCreateFence(m_Device, &fenceInfo, nullptr, &m_InFlightFences[i]) != VK_SUCCESS ||
-                vkCreateSemaphore(m_Device, &semaphoreInfo, nullptr, &m_ImageAvailableSemaphores[i]) != VK_SUCCESS)
+            if (vkCreateFence(m_Device, &fenceInfo, nullptr, &m_InFlightFences[i]) != VK_SUCCESS || vkCreateSemaphore(m_Device, &semaphoreInfo, nullptr, &m_ImageAvailableSemaphores[i]) != VK_SUCCESS)
             {
                 throw std::runtime_error("Failed to create per-frame GPU synchronization objects!");
             }
@@ -53,7 +52,8 @@ namespace FINALITY
         VkSemaphore waitSemaphores[] = { m_ImageAvailableSemaphores[m_CurrentFrame] };
         VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 
-        if (isFirst) {
+        if (isFirst)
+        {
             submitInfo.waitSemaphoreCount = 1;
             submitInfo.pWaitSemaphores = waitSemaphores;
             submitInfo.pWaitDstStageMask = waitStages;
@@ -63,7 +63,8 @@ namespace FINALITY
         submitInfo.pCommandBuffers = &cmdBuf;
 
         VkSemaphore signalSemaphores[] = { m_RenderFinishedSemaphores[imageIndex] };
-        if (isLast) {
+        if (isLast)
+        {
             submitInfo.signalSemaphoreCount = 1;
             submitInfo.pSignalSemaphores = signalSemaphores;
         }
@@ -82,11 +83,15 @@ namespace FINALITY
         const auto available = m_ImageAvailableSemaphores[m_CurrentFrame];
         const auto finished = m_RenderFinishedSemaphores[imageIndex];
         const VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT;
-        VkSubmitInfo submit{VK_STRUCTURE_TYPE_SUBMIT_INFO};
-        submit.waitSemaphoreCount = 1; submit.pWaitSemaphores = &available; submit.pWaitDstStageMask = &waitStage;
-        submit.commandBufferCount = static_cast<uint32_t>(commands.size()); submit.pCommandBuffers = commands.data();
-        submit.signalSemaphoreCount = 1; submit.pSignalSemaphores = &finished;
-        CHECK_VK_RESULT(vkQueueSubmit(m_Queue,1,&submit,m_InFlightFences[m_CurrentFrame]), "Cannot submit frame");
+        VkSubmitInfo submit{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
+        submit.waitSemaphoreCount = 1;
+        submit.pWaitSemaphores = &available;
+        submit.pWaitDstStageMask = &waitStage;
+        submit.commandBufferCount = static_cast<uint32_t>(commands.size());
+        submit.pCommandBuffers = commands.data();
+        submit.signalSemaphoreCount = 1;
+        submit.pSignalSemaphores = &finished;
+        CHECK_VK_RESULT(vkQueueSubmit(m_Queue, 1, &submit, m_InFlightFences[m_CurrentFrame]), "Cannot submit frame");
     }
 
     void VKQueue::SubmitSync(VkCommandBuffer cmdBuf)
@@ -102,11 +107,13 @@ namespace FINALITY
 
     void VKQueue::ShutDown()
     {
-        for (size_t i = 0; i < m_InFlightFences.size(); i++) {
+        for (size_t i = 0; i < m_InFlightFences.size(); i++)
+        {
             vkDestroyFence(m_Device, m_InFlightFences[i], nullptr);
             vkDestroySemaphore(m_Device, m_ImageAvailableSemaphores[i], nullptr);
         }
-        for (size_t i = 0; i < m_RenderFinishedSemaphores.size(); i++) {
+        for (size_t i = 0; i < m_RenderFinishedSemaphores.size(); i++)
+        {
             vkDestroySemaphore(m_Device, m_RenderFinishedSemaphores[i], nullptr);
         }
     }
@@ -123,8 +130,7 @@ namespace FINALITY
             UINT64_MAX,
             m_ImageAvailableSemaphores[m_CurrentFrame],
             VK_NULL_HANDLE,
-            &imageIndex
-        );
+            &imageIndex);
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR)
         {
@@ -178,5 +184,4 @@ namespace FINALITY
         CHECK_VK_RESULT(result, "vkQueuePresentKHR");
         return false;
     }
-}
-
+} // namespace FINALITY

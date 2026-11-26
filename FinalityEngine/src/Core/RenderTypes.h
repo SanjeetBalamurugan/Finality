@@ -8,18 +8,18 @@
 
 namespace FINALITY
 {
-	/** @todo TODO: Document RendererAPI enum semantics, ownership and usage. */
-	enum RendererAPI
-	{
-		VULKAN,
+    /** @todo TODO: Document RendererAPI enum semantics, ownership and usage. */
+    enum RendererAPI
+    {
+        VULKAN,
 
-		NONE
-	};
+        NONE
+    };
 
-	/** @todo TODO: Document GlobalUniformBufferObject struct semantics, ownership and usage. */
-	struct GlobalUniformBufferObject
-	{
-		glm::mat4 View;
-		glm::mat4 Projection;
-	};
-}
+    /** @todo TODO: Document GlobalUniformBufferObject struct semantics, ownership and usage. */
+    struct GlobalUniformBufferObject
+    {
+        glm::mat4 View;
+        glm::mat4 Projection;
+    };
+} // namespace FINALITY

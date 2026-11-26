@@ -11,7 +11,8 @@ layout(location = 0) out vec4 outColor;
 // Material Descriptor Set (Set 1)
 layout(set = 1, binding = 0) uniform sampler2D mainTexture;
 
-void main() {
+void main()
+{
     vec4 texColor = texture(mainTexture, fragTexCoord);
     outColor = texColor * vec4(fragColor, 1.0);
 }

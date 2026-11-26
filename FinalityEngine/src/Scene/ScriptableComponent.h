@@ -22,7 +22,9 @@
 #include <Assets/AssetRegistry.h>
 
 #ifdef FINALITY_REFLECTION_SCAN
-#define FISerializeField friend struct ::FINALITY::ScriptFieldAccess; [[clang::annotate("finality.serialize")]]
+#define FISerializeField                         \
+    friend struct ::FINALITY::ScriptFieldAccess; \
+    [[clang::annotate("finality.serialize")]]
 #else
 #define FISerializeField friend struct ::FINALITY::ScriptFieldAccess;
 #endif
@@ -71,7 +73,7 @@ namespace FINALITY
             std::function<std::unique_ptr<ScriptableComponent>()> Factory;
 
             FAPI ScriptInstance(std::unique_ptr<ScriptableComponent> instance, bool started,
-                std::function<std::unique_ptr<ScriptableComponent>()> factory = {}, std::shared_ptr<void> moduleLease = {});
+                                std::function<std::unique_ptr<ScriptableComponent>()> factory = {}, std::shared_ptr<void> moduleLease = {});
 
             ScriptInstance(ScriptInstance&&) noexcept = default;
             FAPI ScriptInstance& operator=(ScriptInstance&& other) noexcept;
@@ -101,10 +103,10 @@ namespace FINALITY
         const Entity GetEntity() const;
 
     protected:
-        template<typename T>
+        template <typename T>
         bool HasComponent() const;
 
-        template<typename T>
+        template <typename T>
         T& GetComponent();
 
     protected:
@@ -113,19 +115,42 @@ namespace FINALITY
         std::weak_ptr<void> m_Lifetime;
 
     private:
-        virtual void Awake() {}
-        virtual void Start() {}
-        virtual void OnEnable() {}
-        virtual void OnDisable() {}
-        virtual void FixedUpdate(float dt) {}
-        virtual void Update(float dt) {}
-        virtual void LateUpdate(float dt) {}
-        virtual void OnDestroy() {}
+        virtual void Awake()
+        {
+        }
+
+        virtual void Start()
+        {
+        }
+
+        virtual void OnEnable()
+        {
+        }
+
+        virtual void OnDisable()
+        {
+        }
+
+        virtual void FixedUpdate(float dt)
+        {
+        }
+
+        virtual void Update(float dt)
+        {
+        }
+
+        virtual void LateUpdate(float dt)
+        {
+        }
+
+        virtual void OnDestroy()
+        {
+        }
 
         friend class Scene;
         friend class Entity;
         friend class ScriptRegistry;
     };
-}
+} // namespace FINALITY
 
 #include "ScriptableComponent.inl"

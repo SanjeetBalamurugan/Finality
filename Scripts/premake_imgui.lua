@@ -1,31 +1,31 @@
 project "ImGui"
-	kind "SharedLib"
-	language "C++"
+    kind "SharedLib"
+    language "C++"
     staticruntime "off"
 
-	targetdir ("../bin/" .. outputdir)
-	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
+    targetdir ("../bin/" .. outputdir)
+    objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
 
-	includedirs
-	{
-		"../vendor/imgui",
-		"../vendor/glfw/include/"
-	}
+    includedirs
+    {
+        "../vendor/imgui",
+        "../vendor/glfw/include/"
+    }
 
-	files
-	{
-		"../vendor/imgui/imconfig.h",
-		"../vendor/imgui/imgui.h",
-		"../vendor/imgui/imgui.cpp",
-		"../vendor/imgui/imgui_draw.cpp",
-		"../vendor/imgui/imgui_internal.h",
-		"../vendor/imgui/imgui_tables.cpp",
-		"../vendor/imgui/imgui_widgets.cpp",
-		"../vendor/imgui/imstb_rectpack.h",
-		"../vendor/imgui/imstb_textedit.h",
-		"../vendor/imgui/imstb_truetype.h",
-		"../vendor/imgui/imgui_demo.cpp"
-	}
+    files
+    {
+        "../vendor/imgui/imconfig.h",
+        "../vendor/imgui/imgui.h",
+        "../vendor/imgui/imgui.cpp",
+        "../vendor/imgui/imgui_draw.cpp",
+        "../vendor/imgui/imgui_internal.h",
+        "../vendor/imgui/imgui_tables.cpp",
+        "../vendor/imgui/imgui_widgets.cpp",
+        "../vendor/imgui/imstb_rectpack.h",
+        "../vendor/imgui/imstb_textedit.h",
+        "../vendor/imgui/imstb_truetype.h",
+        "../vendor/imgui/imgui_demo.cpp"
+    }
 
     local vulkan = GetVulkanSDK()
     if vulkan then
@@ -34,7 +34,7 @@ project "ImGui"
             "../vendor/imgui/backends/imgui_impl_vulkan.h"
         }
 
-		includedirs { vulkan.include }
+        includedirs { vulkan.include }
         libdirs     { vulkan.lib }
         defines     { "FINALITY_INCLUDE_VULKAN" }
 
@@ -43,29 +43,29 @@ project "ImGui"
         filter "system:linux or macosx"
             links { "vulkan" }
         filter {}
-	else
+    else
         print("Vulkan SDK not found.")
     end
 
-	filter "system:windows"
-		defines { "IMGUI_API=__declspec(dllexport)" }
-		systemversion "latest"
-		cppdialect "C++17"
+    filter "system:windows"
+        defines { "IMGUI_API=__declspec(dllexport)" }
+        systemversion "latest"
+        cppdialect "C++17"
 
-	filter "system:linux"
-		pic "On"
-		systemversion "latest"
-		cppdialect "C++17"
+    filter "system:linux"
+        pic "On"
+        systemversion "latest"
+        cppdialect "C++17"
 
-	filter "configurations:Debug"
-		runtime "Debug"
-		symbols "on"
+    filter "configurations:Debug"
+        runtime "Debug"
+        symbols "on"
 
-	filter "configurations:Release"
-		runtime "Release"
-		optimize "on"
+    filter "configurations:Release"
+        runtime "Release"
+        optimize "on"
 
     filter "configurations:Dist"
-		runtime "Release"
-		optimize "on"
+        runtime "Release"
+        optimize "on"
         symbols "off"

@@ -30,4 +30,4 @@ namespace FINALITY
         virtual uint32_t GetImageCount() const = 0;
         virtual uint32_t GetCurrentImageIndex() const = 0;
     };
-}
+} // namespace FINALITY

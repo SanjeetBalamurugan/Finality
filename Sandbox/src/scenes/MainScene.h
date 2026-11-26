@@ -25,36 +25,36 @@ public:
         cameraEntity.AddScript<FINALITY::CameraMovementScript>();
 
         std::vector<FINALITY::Vertex> cubeVertices = {
-            { { -0.3f, -0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
-            { {  0.3f, -0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
-            { {  0.3f,  0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
-            { { -0.3f,  0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
-            { {  0.3f, -0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
+            { { -0.3f, -0.3f, 0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
+            { { 0.3f, -0.3f, 0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
+            { { 0.3f, 0.3f, 0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
+            { { -0.3f, 0.3f, 0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
+            { { 0.3f, -0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
             { { -0.3f, -0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
-            { { -0.3f,  0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
-            { {  0.3f,  0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
-            { { -0.3f,  0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
-            { {  0.3f,  0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
-            { {  0.3f,  0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
-            { { -0.3f,  0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
+            { { -0.3f, 0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
+            { { 0.3f, 0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
+            { { -0.3f, 0.3f, 0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
+            { { 0.3f, 0.3f, 0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
+            { { 0.3f, 0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
+            { { -0.3f, 0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
             { { -0.3f, -0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
-            { {  0.3f, -0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
-            { {  0.3f, -0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
-            { { -0.3f, -0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
-            { {  0.3f, -0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
-            { {  0.3f, -0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
-            { {  0.3f,  0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
-            { {  0.3f,  0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
+            { { 0.3f, -0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
+            { { 0.3f, -0.3f, 0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
+            { { -0.3f, -0.3f, 0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
+            { { 0.3f, -0.3f, 0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
+            { { 0.3f, -0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
+            { { 0.3f, 0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
+            { { 0.3f, 0.3f, 0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
             { { -0.3f, -0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
-            { { -0.3f, -0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
-            { { -0.3f,  0.3f,  0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
-            { { -0.3f,  0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } }
+            { { -0.3f, -0.3f, 0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
+            { { -0.3f, 0.3f, 0.3f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
+            { { -0.3f, 0.3f, -0.3f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } }
         };
 
         std::vector<uint32_t> cubeIndices = {
-            0,  1,  2,  2,  3,  0,
-            4,  5,  6,  6,  7,  4,
-            8,  9,  10, 10, 11, 8,
+            0, 1, 2, 2, 3, 0,
+            4, 5, 6, 6, 7, 4,
+            8, 9, 10, 10, 11, 8,
             12, 13, 14, 14, 15, 12,
             16, 17, 18, 18, 19, 16,
             20, 21, 22, 22, 23, 20
@@ -119,9 +119,9 @@ public:
 
         std::vector<FINALITY::Vertex> planeVertices = {
             { { -5.0f, 0.0f, -5.0f }, { 0.5f, 0.5f, 0.5f }, { 0.0f, 0.0f } },
-            { {  5.0f, 0.0f, -5.0f }, { 0.5f, 0.5f, 0.5f }, { 1.0f, 0.0f } },
-            { {  5.0f, 0.0f,  5.0f }, { 0.5f, 0.5f, 0.5f }, { 1.0f, 1.0f } },
-            { { -5.0f, 0.0f,  5.0f }, { 0.5f, 0.5f, 0.5f }, { 0.0f, 1.0f } }
+            { { 5.0f, 0.0f, -5.0f }, { 0.5f, 0.5f, 0.5f }, { 1.0f, 0.0f } },
+            { { 5.0f, 0.0f, 5.0f }, { 0.5f, 0.5f, 0.5f }, { 1.0f, 1.0f } },
+            { { -5.0f, 0.0f, 5.0f }, { 0.5f, 0.5f, 0.5f }, { 0.0f, 1.0f } }
         };
 
         std::vector<uint32_t> planeIndices = {
@@ -173,7 +173,7 @@ public:
             panel.Checkbox("Enable Advanced Settings", &enableFeature);
 
             static int radioValue = 0;
-            panel.RadioButton("Option A", &radioValue, 0); 
+            panel.RadioButton("Option A", &radioValue, 0);
             panel.SameLine();
             panel.RadioButton("Option B", &radioValue, 1);
 
@@ -190,7 +190,8 @@ public:
             static float col[4] = { 0.4f, 0.7f, 0.0f, 1.0f };
             panel.ColorEdit4("Color Picker", col);
 
-            if (panel.Button("Action Button")) {
+            if (panel.Button("Action Button"))
+            {
                 // Button clicked logic
             }
         }
@@ -198,8 +199,10 @@ public:
         {
             FINALITY::ImGUIPanel panel("Tabs & Graphs Panel");
 
-            if (panel.BeginTabBar("TestTabBar")) {
-                if (panel.BeginTabItem("Plot Tab")) {
+            if (panel.BeginTabBar("TestTabBar"))
+            {
+                if (panel.BeginTabItem("Plot Tab"))
+                {
                     panel.Text("Real-time data visualization simulation:");
                     static float values[90] = { 0 };
                     static int values_offset = 0;
@@ -214,8 +217,10 @@ public:
                     panel.EndTabItem();
                 }
 
-                if (panel.BeginTabItem("Collapsing Tree Tab")) {
-                    if (panel.TreeNode("Parent Node")) {
+                if (panel.BeginTabItem("Collapsing Tree Tab"))
+                {
+                    if (panel.TreeNode("Parent Node"))
+                    {
                         panel.Text("Child node leaf contents.");
                         panel.TreePop();
                     }
@@ -223,7 +228,6 @@ public:
                 }
                 panel.EndTabBar();
             }
-
         }
     }
 

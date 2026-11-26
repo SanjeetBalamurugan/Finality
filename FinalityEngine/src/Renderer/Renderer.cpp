@@ -43,18 +43,25 @@ namespace FINALITY
     void Renderer::PushEntity(Entity entity)
     {
         glm::mat4 transform(1);
-        if (entity.HasComponent<TransformComponent>()) transform = entity.GetComponent<TransformComponent>().GetTransformMatrix();
-        PushEntity(entity,transform);
+        if (entity.HasComponent<TransformComponent>())
+        {
+            transform = entity.GetComponent<TransformComponent>().GetTransformMatrix();
+        }
+        PushEntity(entity, transform);
     }
 
     void Renderer::PushEntity(Entity entity, const glm::mat4& worldTransform)
     {
         if (!entity.HasComponent<MeshComponent>() || !entity.HasComponent<MaterialComponent>())
+        {
             return;
+        }
 
         const auto& meshComp = entity.GetComponent<MeshComponent>();
         if (!meshComp.MeshData)
+        {
             return;
+        }
 
         RenderPacket packet{};
         packet.MeshData = meshComp.MeshData;
@@ -77,30 +84,46 @@ namespace FINALITY
 
     void Renderer::EndScene()
     {
-        if (!s_Device) return;
-        if (!s_DirectRenderingEnabled) return;
+        if (!s_Device)
+        {
+            return;
+        }
+        if (!s_DirectRenderingEnabled)
+        {
+            return;
+        }
 
         if (s_ActiveCamera)
         {
-            const RenderView view{s_ActiveCamera->GetViewMatrix(), s_ActiveCamera->GetProjection(), s_ActiveCamera->GetOcclusionCulling()};
+            const RenderView view{ s_ActiveCamera->GetViewMatrix(), s_ActiveCamera->GetProjection(), s_ActiveCamera->GetOcclusionCulling() };
             s_Device->SetFrameView(view);
             RenderStatistics statistics;
             s_Device->DrawQueue(BuildViewQueue(s_RenderQueue, view, statistics, &s_VisibilityState));
         }
-        else s_Device->DrawQueue(s_RenderQueue);
+        else
+        {
+            s_Device->DrawQueue(s_RenderQueue);
+        }
     }
 
     void Renderer::SetPostProcessPipeline(std::shared_ptr<Pipeline> pipeline)
     {
-        if (!s_Device) throw std::runtime_error("Renderer is not initialized");
+        if (!s_Device)
+        {
+            throw std::runtime_error("Renderer is not initialized");
+        }
         s_Device->SetPostProcessPipeline(std::move(pipeline));
     }
 
     std::shared_ptr<Pipeline> Renderer::CreatePostProcessPipeline(const PipelineConfig& config)
     {
-        if (!s_Device) throw std::runtime_error("Renderer is not initialized");
+        if (!s_Device)
+        {
+            throw std::runtime_error("Renderer is not initialized");
+        }
         return s_Device->CreatePostProcessPipeline(config);
     }
+
     bool Renderer::TryGetCullingFrustum(const Frustum*& outFrustum)
     {
         if (!s_FrustumCullingEnabled || !s_ActiveCamera)
@@ -112,4 +135,4 @@ namespace FINALITY
         outFrustum = &s_CurrentFrustum;
         return true;
     }
-}
+} // namespace FINALITY
